@@ -1,24 +1,20 @@
-from PyQt5.QtWidgets import QMainWindow
-from app.views.main_window import MainWindow
-from app.views.dialogs import EngenhariaDialog, ComercialDialog
+from ..views.main_window import MainWindow
+from src.app.controllers.dialogs_controller import DialogsController
 
 
 class MainController:
     def __init__(self):
         self.main_window = MainWindow()
-        self.setup_connections()
+        self.dialogs_controller = DialogsController()
 
-    def setup_connections(self):
-        self.main_window.engenharia_button.clicked.connect(self.show_engenharia_dialog)
-        self.main_window.comercial_button.clicked.connect(self.show_comercial_dialog)
+        self.main_window.btn_eng.clicked.connect(self.show_engenharia_dialog)
+        self.main_window.btn_comercial.clicked.connect(self.show_comercial_dialog)
 
     def show_main_window(self):
         self.main_window.show()
 
     def show_engenharia_dialog(self):
-        dialog = EngenhariaDialog()
-        dialog.exec_()
+        self.dialogs_controller.show_engenharia_dialog()
 
     def show_comercial_dialog(self):
-        dialog = ComercialDialog()
-        dialog.exec_()
+        self.dialogs_controller.show_comercial_dialog()

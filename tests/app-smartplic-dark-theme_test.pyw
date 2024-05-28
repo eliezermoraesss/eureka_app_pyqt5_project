@@ -14,7 +14,7 @@ import tkinter as tk
 from tkinter import messagebox
 
 
-class EngenhariaApp(QWidget):
+class EngenhariaApp(Dialog):
     # Adicione este sinal à classe
     guia_fechada = pyqtSignal()
         
