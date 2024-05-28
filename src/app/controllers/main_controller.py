@@ -1,20 +1,23 @@
 from ..views.main_window import MainWindow
-from src.app.controllers.dialogs_controller import DialogsController
+from ..views.dialogs import EngenhariaDialog, ComercialDialog
 
 
 class MainController:
     def __init__(self):
         self.main_window = MainWindow()
-        self.dialogs_controller = DialogsController()
+        self.setup_connections()
 
-        self.main_window.btn_eng.clicked.connect(self.show_engenharia_dialog)
-        self.main_window.btn_comercial.clicked.connect(self.show_comercial_dialog)
+    def setup_connections(self):
+        self.main_window.engenharia_button.clicked.connect(self.show_engenharia_dialog)
+        self.main_window.comercial_button.clicked.connect(self.show_comercial_dialog)
 
     def show_main_window(self):
         self.main_window.show()
 
     def show_engenharia_dialog(self):
-        self.dialogs_controller.show_engenharia_dialog()
+        dialog = EngenhariaDialog()
+        dialog.exec_()
 
     def show_comercial_dialog(self):
-        self.dialogs_controller.show_comercial_dialog()
+        dialog = ComercialDialog()
+        dialog.exec_()

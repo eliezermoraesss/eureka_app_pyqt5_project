@@ -62,18 +62,18 @@ class MainWindow(QMainWindow):
         """)
 
         # Botões
-        self.btn_eng = QPushButton("Engenharia", self)
-        self.btn_eng.setMinimumWidth(150)
+        self.engenharia_button  = QPushButton("Engenharia", self)
+        self.engenharia_button .setMinimumWidth(150)
 
-        self.btn_comercial = QPushButton("Comercial", self)
-        self.btn_comercial.setMinimumWidth(150)
+        self.comercial_button  = QPushButton("Comercial", self)
+        self.comercial_button .setMinimumWidth(150)
 
         layout = QVBoxLayout()
         layout_linha_01 = QHBoxLayout()
 
         layout_linha_01.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        layout_linha_01.addWidget(self.btn_eng)
-        layout_linha_01.addWidget(self.btn_comercial)
+        layout_linha_01.addWidget(self.engenharia_button)
+        layout_linha_01.addWidget(self.comercial_button )
         layout_linha_01.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
         layout.addLayout(layout_linha_01)
