@@ -307,7 +307,8 @@ class ComercialApp(QWidget):
         FROM SG1010 AS mat
         INNER JOIN ListMP AS pai ON mat.G1_COD = pai."CÓDIGO"
         INNER JOIN SB1010 AS prod ON mat.G1_COMP = prod.B1_COD
-        WHERE prod.B1_TIPO = 'MP' 
+        WHERE prod.B1_TIPO = 'MP'
+        AND prod.B1_LOCPAD IN ('01','03')
         AND mat.G1_REVFIM <> 'ZZZ' 
         AND mat.D_E_L_E_T_ <> '*'
         ORDER BY mat.G1_COMP ASC;
@@ -338,6 +339,11 @@ class ComercialApp(QWidget):
                         if not value.isspace():
                             data_obj = datetime.strptime(value, "%Y%m%d")
                             value = data_obj.strftime("%d/%m/%Y")
+                    elif j == 6:
+                        if value == '01':
+                            value = 'MATÉRIA-PRIMA'
+                        elif value == '03':
+                            value = 'COMERCIAL'
 
                     item = QTableWidgetItem(str(value).strip())
 
