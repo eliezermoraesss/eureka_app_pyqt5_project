@@ -13,8 +13,12 @@ class MainController:
             script_path = "src/models/engenharia_model.py"
             subprocess.run(["python", script_path])
 
+        def execute_comercial_model():
+            script_path = "src/models/comercial_model.py"
+            subprocess.run(["python", script_path])
+
         self.main_window.engenharia_button.clicked.connect(execute_engenharia_model)
-        self.main_window.comercial_button.clicked.connect(self.show_comercial_dialog)
+        self.main_window.comercial_button.clicked.connect(execute_comercial_model)
 
     def show_main_window(self):
         self.main_window.show()

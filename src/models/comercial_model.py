@@ -5,18 +5,14 @@ from PyQt5.QtGui import QFont, QIcon, QColor
 from PyQt5.QtCore import Qt, QCoreApplication
 import pyodbc
 import pyperclip
-import time
 import pandas as pd
 import ctypes
 from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
-from babel.numbers import format_currency
 from sqlalchemy import create_engine
-from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Font
-import numpy as np
 
 
 class ComercialApp(QWidget):
@@ -178,7 +174,7 @@ class ComercialApp(QWidget):
         return botao_limpar
 
     def exportar_excel(self):
-        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como', 'M-XXX-XXX-XXX_MP',
+        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como', f'{self.campo_codigo.text().upper().strip()}_MP',
                                                    'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
         if file_path:
             # Obter os dados da tabela
@@ -356,12 +352,6 @@ class ComercialApp(QWidget):
         ORDER BY mat.G1_COMP ASC;
         """
         return query
-
-    def formatar_moeda(self, valor):
-        try:
-            return format_currency(valor, 'BRL', locale='pt-BR')
-        except ValueError:
-            return valor
 
     def executar_consulta(self):
         select_query = self.verificar_query()
