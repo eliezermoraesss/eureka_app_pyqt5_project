@@ -1,17 +1,18 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QTableWidget, QTableWidgetItem, QHeaderView, QSizePolicy, QSpacerItem, QMessageBox, QFileDialog, QToolButton
-from PyQt5.QtGui import QFont, QIcon, QDesktopServices, QColor
-from PyQt5.QtCore import Qt, QUrl, QCoreApplication
+    QTableWidget, QTableWidgetItem, QHeaderView, QSizePolicy, QSpacerItem, QFileDialog, QToolButton
+from PyQt5.QtGui import QFont, QIcon, QColor
+from PyQt5.QtCore import Qt, QCoreApplication
 import pyodbc
 import pyperclip
-import os
 import time
 import pandas as pd
 import ctypes
 from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
+from babel.numbers import format_currency
+from sqlalchemy import create_engine
 
 
 class ComercialApp(QWidget):
@@ -199,9 +200,9 @@ class ComercialApp(QWidget):
             data.append(row_data)
         return data
 
-    def configurar_tabela(self, cursor):
-        self.tree.setColumnCount(len(cursor.description))
-        self.tree.setHorizontalHeaderLabels([desc[0] for desc in cursor.description])
+    def configurar_tabela(self, dataframe):
+        self.tree.setColumnCount(len(dataframe.columns))
+        self.tree.setHorizontalHeaderLabels(dataframe.columns)
         self.tree.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.tree.setEditTriggers(QTableWidget.NoEditTriggers)
         self.tree.setSelectionBehavior(QTableWidget.SelectRows)
@@ -315,30 +316,51 @@ class ComercialApp(QWidget):
         """
         return query
 
+    def formatar_moeda(self, valor):
+        try:
+            return format_currency(valor, 'BRL', locale='pt-BR')
+        except ValueError:
+            return valor
+
     def executar_consulta(self):
         select_query = self.verificar_query()
         self.bloquear_campos_pesquisa()
 
-        conn = pyodbc.connect(
-            f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}')
+        conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
+        engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
 
         try:
-            cursor = conn.cursor()
-            cursor.execute(select_query)
-            self.configurar_tabela(cursor)
+            valor_unitario = 'VALOR UNIT. (R$)'
+            valor_total = 'VALOR TOTAL (R$)'
+            dataframe = pd.read_sql(select_query, engine)
+            consolidated_dataframe = dataframe.groupby('CÓDIGO').agg({
+                'DESCRIÇÃO': 'first',
+                'QUANT.': 'sum',
+                'UNID. MED.': 'first',
+                'ULT. ATUALIZ.': 'first',
+                'TIPO': 'first',
+                'ARMAZÉM': 'first',
+                valor_unitario: 'first',
+                valor_total: 'sum'
+            }).reset_index()
+
+            consolidated_dataframe[valor_unitario] = consolidated_dataframe[valor_unitario].apply(
+                self.formatar_moeda)
+            consolidated_dataframe[valor_total] = consolidated_dataframe[valor_total].apply(
+                self.formatar_moeda)
+
+            self.configurar_tabela(consolidated_dataframe)
             self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
             self.tree.setRowCount(0)
             time.sleep(0.1)
 
-            for i, row in enumerate(cursor.fetchall()):
-
+            for i, row in consolidated_dataframe.iterrows():
                 self.tree.setSortingEnabled(False)
                 self.tree.insertRow(i)
                 for j, value in enumerate(row):
-                    if j == 4:
-                        if not value.isspace():
-                            data_obj = datetime.strptime(value, "%Y%m%d")
-                            value = data_obj.strftime("%d/%m/%Y")
+                    if j == 4 and not pd.isna(value):
+                        data_obj = datetime.strptime(value, "%Y%m%d")
+                        value = data_obj.strftime("%d/%m/%Y")
                     elif j == 6:
                         if value == '01':
                             value = 'MATÉRIA-PRIMA'
@@ -361,7 +383,9 @@ class ComercialApp(QWidget):
             self.exibir_mensagem('Erro ao consultar tabela', f'Erro: {str(ex)}', 'error')
 
         finally:
-            conn.close()
+            # Fecha a conexão com o banco de dados se estiver aberta
+            if 'engine' in locals():
+                engine.dispose()
 
     def fechar_janela(self):
         self.close()
