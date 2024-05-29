@@ -13,6 +13,10 @@ import tkinter as tk
 from tkinter import messagebox
 from babel.numbers import format_currency
 from sqlalchemy import create_engine
+from openpyxl import load_workbook
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import Font
+import numpy as np
 
 
 class ComercialApp(QWidget):
@@ -54,14 +58,14 @@ class ComercialApp(QWidget):
             QPushButton {
                 background-color: #3f7c24;
                 color: #fff;
-                padding: 5px 15px;
+                padding: 15px;
                 border: 2px;
                 border-radius: 20px;
-                font-size: 14px;
-                height: 40px;
+                font-size: 12px;
+                height: 15px;
                 font-weight: bold;
-                margin-top: 6px;
-                margin-bottom: 6px;
+                margin-top: 15px;
+                margin-bottom: 15px;
             }
 
             QPushButton:hover {
@@ -174,7 +178,7 @@ class ComercialApp(QWidget):
         return botao_limpar
 
     def exportar_excel(self):
-        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como', '',
+        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como', 'M-XXX-XXX-XXX_MP',
                                                    'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
         if file_path:
             # Obter os dados da tabela
@@ -183,8 +187,44 @@ class ComercialApp(QWidget):
             column_headers = [self.tree.horizontalHeaderItem(i).text() for i in range(self.tree.columnCount())]
             # Criar um DataFrame pandas
             df = pd.DataFrame(data, columns=column_headers)
+
+            # Converter as colunas 'QUANT.', 'VALOR UNIT. (R$)' e 'VALOR TOTAL (R$)' para números
+            numeric_columns = ['QUANT.', 'VALOR UNIT. (R$)', 'VALOR TOTAL (R$)']
+            df[numeric_columns] = df[numeric_columns].apply(pd.to_numeric, errors='coerce')
+
             # Salvar o DataFrame como um arquivo Excel
-            df.to_excel(file_path, index=False)
+            with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
+                df.to_excel(writer, index=False, sheet_name='Dados')
+
+                # Obter a planilha
+                workbook = writer.book
+                worksheet = writer.sheets['Dados']
+
+                # Ajustar a largura das colunas automaticamente
+                for col in worksheet.columns:
+                    max_length = 0
+                    column = col[0].column_letter  # Obter a letra da coluna
+                    for cell in col:
+                        try:
+                            if len(str(cell.value)) > max_length:
+                                max_length = len(str(cell.value))
+                        except:
+                            pass
+                    adjusted_width = (max_length + 2)
+                    worksheet.column_dimensions[column].width = adjusted_width
+
+                # Adicionar fórmula de soma na coluna 'VALOR TOTAL (R$)'
+                last_row = len(df) + 1
+                valor_total_col = df.columns.get_loc('VALOR TOTAL (R$)') + 1
+                quantidade_col = df.columns.get_loc('QUANT.') + 1
+                unidade_med_col = df.columns.get_loc('UNID. MED.') + 1
+
+                worksheet[
+                    f'{get_column_letter(valor_total_col)}{last_row + 1}'] = f'=SUM({get_column_letter(valor_total_col)}2:{get_column_letter(valor_total_col)}{last_row})'
+                worksheet[f'{get_column_letter(valor_total_col)}{last_row + 1}'].font = Font(bold=True)
+                worksheet[
+                    f'{get_column_letter(quantidade_col)}{last_row + 1}'] = f'=SUMIF({get_column_letter(unidade_med_col)}2:{get_column_letter(unidade_med_col)}{last_row}, "kg", {get_column_letter(quantidade_col)}2:{get_column_letter(quantidade_col)}{last_row})'
+                worksheet[f'{get_column_letter(quantidade_col)}{last_row + 1}'].font = Font(bold=True)
 
     def obter_dados_tabela(self):
         # Obter os dados da tabela
@@ -295,7 +335,8 @@ class ComercialApp(QWidget):
         )
 
         -- Selecione todas as matérias-primas (tipo = 'MP') que correspondem aos itens encontrados
-        SELECT DISTINCT 
+        SELECT DISTINCT
+            mat.G1_COD AS "CODIGO PAI",
             mat.G1_COMP AS "CÓDIGO", 
             prod.B1_DESC AS "DESCRIÇÃO", 
             mat.G1_QUANT AS "QUANT.", 
@@ -330,8 +371,6 @@ class ComercialApp(QWidget):
         engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
 
         try:
-            valor_unitario = 'VALOR UNIT. (R$)'
-            valor_total = 'VALOR TOTAL (R$)'
             dataframe = pd.read_sql(select_query, engine)
             consolidated_dataframe = dataframe.groupby('CÓDIGO').agg({
                 'DESCRIÇÃO': 'first',
@@ -340,17 +379,19 @@ class ComercialApp(QWidget):
                 'ULT. ATUALIZ.': 'first',
                 'TIPO': 'first',
                 'ARMAZÉM': 'first',
-                valor_unitario: 'first',
-                valor_total: 'sum'
+                'VALOR UNIT. (R$)': 'first',
+                'VALOR TOTAL (R$)': 'sum'
             }).reset_index()
 
-            consolidated_dataframe[[valor_unitario, valor_total]] = (consolidated_dataframe[[valor_unitario, valor_total]]
-                                                                     .map(lambda x: format_currency(x, 'BRL', locale='pt_BR')))
+            # Converter para float com duas casas decimais
+            columns_to_convert = ['QUANT.', 'VALOR UNIT. (R$)', 'VALOR TOTAL (R$)']
+            consolidated_dataframe[columns_to_convert] = (consolidated_dataframe[columns_to_convert]
+                                                          .map(lambda x: round(float(x), 2)))
 
             self.configurar_tabela(consolidated_dataframe)
+
             self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
             self.tree.setRowCount(0)
-            time.sleep(0.1)
 
             for i, row in consolidated_dataframe.iterrows():
                 self.tree.setSortingEnabled(False)
