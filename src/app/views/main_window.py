@@ -1,3 +1,4 @@
+from PyQt5 import QtGui
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QSizePolicy, QSpacerItem
 from PyQt5.QtGui import QIcon, QColor, QPalette
 
@@ -6,7 +7,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("SMARTPLIC® v2.2.1 - Dark theme - TEST_DB")
+        self.setWindowTitle("EUREKA® Home")
 
         # Configurar o ícone da janela
         icon_path = "src/resources/images/010.png"
@@ -44,7 +45,7 @@ class MainWindow(QMainWindow):
                 border: 2px;
                 border-radius: 8px;
                 font-size: 11px;
-                height: 20px;
+                height: 60px;
                 font-weight: bold;
                 margin-top: 6px;
                 margin-bottom: 6px;

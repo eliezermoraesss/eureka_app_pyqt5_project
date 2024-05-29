@@ -1,7 +1,6 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QTableWidget, \
-    QTableWidgetItem, QHeaderView, QSizePolicy, QSpacerItem, QMessageBox, QFileDialog, QToolButton
+    QTableWidget, QTableWidgetItem, QHeaderView, QSizePolicy, QSpacerItem, QMessageBox, QFileDialog, QToolButton
 from PyQt5.QtGui import QFont, QIcon, QDesktopServices, QColor
 from PyQt5.QtCore import Qt, QUrl, QCoreApplication
 import pyodbc
@@ -19,7 +18,10 @@ class ComercialApp(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.tree = None
+        self.tree = QTableWidget(self)
+        self.tree.setColumnCount(0)
+        self.tree.setRowCount(0)
+
         self.setWindowTitle("EUREKA® Comercial")
 
         self.setAutoFillBackground(True)
@@ -31,28 +33,31 @@ class ComercialApp(QWidget):
             * {
                 background-color: #363636;
             }
-            
-            QLabel, QCheckBox {
+
+            QLabel {
                 color: #EEEEEE;
-                font-size: 11px;
+                font-size: 14px;
+                padding: 5px;
                 font-weight: bold;
             }
 
             QLineEdit {
-                background-color: #A7A6A6;
+                background-color: #FFFFFF;
                 border: 1px solid #262626;
-                padding: 5px;
-                border-radius: 8px;
+                padding: 5px 25px;
+                border-radius: 20px;
+                height: 40px;
+                font-size: 18px;
             }
 
             QPushButton {
-                background-color: #0a79f8;
+                background-color: #3f7c24;
                 color: #fff;
                 padding: 5px 15px;
                 border: 2px;
-                border-radius: 8px;
-                font-size: 11px;
-                height: 20px;
+                border-radius: 20px;
+                font-size: 14px;
+                height: 40px;
                 font-weight: bold;
                 margin-top: 6px;
                 margin-bottom: 6px;
@@ -83,13 +88,13 @@ class ComercialApp(QWidget):
             QTableWidget QHeaderView::section:horizontal {
                 border-top: 1px solid #333;
             }
-            
+
             QTableWidget::item {
                 background-color: #363636;
                 color: #fff;
                 font-weight: bold;
             }
-            
+
             QTableWidget::item:selected {
                 background-color: #000000;
                 color: #EEEEEE;
@@ -101,7 +106,7 @@ class ComercialApp(QWidget):
         self.campo_codigo.setFont(QFont("Segoe UI", 10))
         self.campo_codigo.setMinimumWidth(200)
 
-        self.btn_consultar = QPushButton("Relação de MP", self)
+        self.btn_consultar = QPushButton("Gerar relatório de MP", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setMinimumWidth(100)
 
@@ -118,18 +123,24 @@ class ComercialApp(QWidget):
 
         layout = QVBoxLayout()
         layout_linha_01 = QHBoxLayout()
+        layout_linha_02 = QHBoxLayout()
         layout_linha_03 = QHBoxLayout()
-        layout_linha_01.addWidget(QLabel("Código: "))
-        layout_linha_01.addWidget(self.campo_codigo)
-        layout_linha_01.addWidget(self.criar_botao_limpar(self.campo_codigo))
+        layout_linha_01.addWidget(QLabel("Digite o código da máquina/equipamento: "))
+        layout_linha_02.addWidget(self.campo_codigo)
+        layout_linha_02.addWidget(self.criar_botao_limpar(self.campo_codigo))
+
+        # Adicione um espaçador esticável para centralizar os botões
         layout_linha_03.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
         layout_linha_03.addWidget(self.btn_consultar)
         layout_linha_03.addWidget(self.btn_exportar_excel)
         layout_linha_03.addWidget(self.btn_fechar)
+        # Adicione um espaçador esticável para centralizar os botões
         layout_linha_03.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
         layout.addLayout(layout_linha_01)
+        layout.addLayout(layout_linha_02)
         layout.addLayout(layout_linha_03)
+        layout.addWidget(self.tree)
         self.setLayout(layout)
 
     def setup_mssql(self):
@@ -167,9 +178,10 @@ class ComercialApp(QWidget):
         if file_path:
             # Obter os dados da tabela
             data = self.obter_dados_tabela()
+            # Obter o nome das colunas da tabela
+            column_headers = [self.tree.horizontalHeaderItem(i).text() for i in range(self.tree.columnCount())]
             # Criar um DataFrame pandas
-            df = pd.DataFrame(data, columns=["CÓDIGO", "DESCRIÇÃO", "DESC. COMP.", "TIPO", "UM", "ARMAZÉM", "GRUPO",
-                                             "DESC. GRUPO", "CC", "BLOQUEADO?", "REV.", ""])
+            df = pd.DataFrame(data, columns=column_headers)
             # Salvar o DataFrame como um arquivo Excel
             df.to_excel(file_path, index=False)
 
@@ -188,7 +200,6 @@ class ComercialApp(QWidget):
         return data
 
     def configurar_tabela(self, cursor):
-        self.tree = QTableWidget(self)
         self.tree.setColumnCount(len(cursor.description))
         self.tree.setHorizontalHeaderLabels([desc[0] for desc in cursor.description])
         self.tree.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -202,10 +213,8 @@ class ComercialApp(QWidget):
         self.tree.verticalHeader().setDefaultSectionSize(altura_linha)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
         self.tree.horizontalHeader().setStretchLastSection(True)
-        self.layout.addWidget(self.tree)
 
     def copiar_linha(self, item):
-        # Verificar se um item foi clicado
         if item is not None:
             valor_campo = item.text()
             pyperclip.copy(str(valor_campo))
@@ -273,9 +282,9 @@ class ComercialApp(QWidget):
                 FROM SG1010 
                 WHERE G1_COD = @CodigoPai AND G1_REVFIM <> 'ZZZ' AND D_E_L_E_T_ <> '*'
             ) AND G1_REVFIM <> 'ZZZ' AND D_E_L_E_T_ <> '*'
-        
+
             UNION ALL
-        
+
             -- Selecione os subitens de cada item pai
             SELECT sub.G1_COD, sub.G1_COMP, pai.Nivel + 1
             FROM SG1010 AS sub
@@ -283,7 +292,7 @@ class ComercialApp(QWidget):
             WHERE pai.Nivel < 100 -- Defina o limite máximo de recursão aqui
             AND sub.G1_REVFIM <> 'ZZZ' AND sub.D_E_L_E_T_ <> '*'
         )
-        
+
         -- Selecione todas as matérias-primas (tipo = 'MP') que correspondem aos itens encontrados
         SELECT DISTINCT 
             mat.G1_COMP AS "CÓDIGO", 
@@ -343,7 +352,7 @@ class ComercialApp(QWidget):
             self.desbloquear_campos_pesquisa()
 
         except pyodbc.Error as ex:
-            print(f"Falha na consulta. Erro: {str(ex)}")
+            self.exibir_mensagem('Erro ao consultar tabela', f'Erro: {str(ex)}', 'error')
 
         finally:
             conn.close()
@@ -358,8 +367,8 @@ if __name__ == "__main__":
     username, password, database, server = ComercialApp().setup_mssql()
     driver = '{ODBC Driver 17 for SQL Server}'
 
-    largura_janela = 640  # Substitua pelo valor desejado
-    altura_janela = 480  # Substitua pelo valor desejado
+    largura_janela = 1400  # Substitua pelo valor desejado
+    altura_janela = 700  # Substitua pelo valor desejado
 
     largura_tela = app.primaryScreen().size().width()
     altura_tela = app.primaryScreen().size().height()
