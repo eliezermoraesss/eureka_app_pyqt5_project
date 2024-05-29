@@ -344,10 +344,8 @@ class ComercialApp(QWidget):
                 valor_total: 'sum'
             }).reset_index()
 
-            consolidated_dataframe[valor_unitario] = consolidated_dataframe[valor_unitario].apply(
-                self.formatar_moeda)
-            consolidated_dataframe[valor_total] = consolidated_dataframe[valor_total].apply(
-                self.formatar_moeda)
+            consolidated_dataframe[[valor_unitario, valor_total]] = (consolidated_dataframe[[valor_unitario, valor_total]]
+                                                                     .map(lambda x: format_currency(x, 'BRL', locale='pt_BR')))
 
             self.configurar_tabela(consolidated_dataframe)
             self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
