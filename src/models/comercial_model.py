@@ -1,8 +1,8 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QTableWidget, QTableWidgetItem, QHeaderView, QSizePolicy, QSpacerItem, QFileDialog, QToolButton
-from PyQt5.QtGui import QFont, QIcon, QColor
-from PyQt5.QtCore import Qt, QCoreApplication
+    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QToolButton, QStyle
+from PyQt5.QtGui import QFont, QColor
+from PyQt5.QtCore import Qt, QCoreApplication, QSize
 import pyodbc
 import pyperclip
 import pandas as pd
@@ -11,8 +11,6 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
 from sqlalchemy import create_engine
-from openpyxl.utils import get_column_letter
-from openpyxl.styles import Font
 
 
 class ComercialApp(QWidget):
@@ -27,17 +25,17 @@ class ComercialApp(QWidget):
 
         self.setAutoFillBackground(True)
         palette = self.palette()
-        palette.setColor(self.backgroundRole(), QColor('#363636'))
+        palette.setColor(self.backgroundRole(), QColor('#c9c9c9'))
         self.setPalette(palette)
 
         self.setStyleSheet("""
             * {
-                background-color: #363636;
+                background-color: #c9c9c9;
             }
 
             QLabel {
-                color: #EEEEEE;
-                font-size: 14px;
+                color: #262626;
+                font-size: 18px;
                 padding: 5px;
                 font-weight: bold;
             }
@@ -58,7 +56,7 @@ class ComercialApp(QWidget):
                 border: 2px;
                 border-radius: 20px;
                 font-size: 12px;
-                height: 12px;
+                height: 14px;
                 font-weight: bold;
                 margin-top: 15px;
                 margin-bottom: 15px;
@@ -105,7 +103,7 @@ class ComercialApp(QWidget):
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont("Segoe UI", 10))
-        self.campo_codigo.setMinimumWidth(200)
+        self.campo_codigo.setFixedWidth(400)
 
         self.btn_consultar = QPushButton("MP", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
@@ -126,17 +124,17 @@ class ComercialApp(QWidget):
         layout_linha_01 = QHBoxLayout()
         layout_linha_02 = QHBoxLayout()
         layout_linha_03 = QHBoxLayout()
+
         layout_linha_01.addWidget(QLabel("Digite o código da máquina/equipamento: "))
+
         layout_linha_02.addWidget(self.campo_codigo)
         layout_linha_02.addWidget(self.criar_botao_limpar(self.campo_codigo))
+        layout_linha_02.addStretch()
 
-        # Adicione um espaçador esticável para centralizar os botões
-        layout_linha_03.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
         layout_linha_03.addWidget(self.btn_consultar)
         layout_linha_03.addWidget(self.btn_exportar_excel)
         layout_linha_03.addWidget(self.btn_fechar)
-        # Adicione um espaçador esticável para centralizar os botões
-        layout_linha_03.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        layout_linha_03.addStretch()
 
         layout.addLayout(layout_linha_01)
         layout.addLayout(layout_linha_02)
@@ -168,9 +166,30 @@ class ComercialApp(QWidget):
 
     def criar_botao_limpar(self, campo):
         botao_limpar = QToolButton(self)
-        botao_limpar.setIcon(QIcon('clear_icon.png'))
+        botao_limpar.setIcon(self.style().standardIcon(QStyle.SP_DialogCloseButton))  # Ícone integrado do Qt
         botao_limpar.setCursor(Qt.PointingHandCursor)
         botao_limpar.clicked.connect(lambda: campo.clear())
+
+        # Definindo o tamanho do ícone
+        botao_limpar.setIconSize(QSize(32, 32))
+
+        # Estilizando o botão usando QSS
+        botao_limpar.setStyleSheet("""
+            QToolButton {
+                border: none;
+                background: transparent;
+                padding: 2px;
+                width: 48px;
+                height: 48px;
+            }
+            QToolButton:hover {
+                background-color: #f0f0f0;
+            }
+            QToolButton:pressed {
+                background-color: #d0d0d0;
+            }
+        """)
+
         return botao_limpar
 
     def exportar_excel(self):
