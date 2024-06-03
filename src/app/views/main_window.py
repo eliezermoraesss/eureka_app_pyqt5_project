@@ -1,6 +1,5 @@
-from PyQt5 import QtGui
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QSizePolicy, QSpacerItem
-from PyQt5.QtGui import QIcon, QColor, QPalette
+from PyQt5.QtGui import QIcon
 
 
 class MainWindow(QMainWindow):
@@ -12,12 +11,6 @@ class MainWindow(QMainWindow):
         # Configurar o ícone da janela
         icon_path = "src/resources/images/010.png"
         self.setWindowIcon(QIcon(icon_path))
-
-        # Ajuste a cor de fundo da janela
-        self.setAutoFillBackground(True)
-        palette = self.palette()
-        palette.setColor(self.backgroundRole(), QColor('#363636'))  # Substitua pela cor desejada
-        self.setPalette(palette)
 
         # Aplicar folha de estilo ao aplicativo
         self.setStyleSheet("""

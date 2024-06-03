@@ -1,5 +1,4 @@
 from ..views.main_window import MainWindow
-from ..views.dialogs import EngenhariaDialog, ComercialDialog
 import subprocess
 
 
@@ -10,11 +9,11 @@ class MainController:
 
     def setup_connections(self):
         def execute_engenharia_model():
-            script_path = "src/models/engenharia_model.py"
+            script_path = "src/models/engenharia_model.pyw"
             subprocess.run(["python", script_path])
 
         def execute_comercial_model():
-            script_path = "src/models/comercial_model.py"
+            script_path = "src/models/comercial_model.pyw"
             subprocess.run(["python", script_path])
 
         self.main_window.engenharia_button.clicked.connect(execute_engenharia_model)
@@ -22,11 +21,3 @@ class MainController:
 
     def show_main_window(self):
         self.main_window.show()
-
-    def show_engenharia_dialog(self):
-        dialog = EngenhariaDialog()
-        dialog.exec_()
-
-    def show_comercial_dialog(self):
-        dialog = ComercialDialog()
-        dialog.exec_()
