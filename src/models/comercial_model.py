@@ -23,7 +23,7 @@ class ComercialApp(QWidget):
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
 
-        self.setWindowTitle("EUREKA® Comercial")
+        self.setWindowTitle("EUREKA® - Comercial")
 
         self.setAutoFillBackground(True)
         palette = self.palette()
@@ -58,7 +58,7 @@ class ComercialApp(QWidget):
                 border: 2px;
                 border-radius: 20px;
                 font-size: 12px;
-                height: 15px;
+                height: 12px;
                 font-weight: bold;
                 margin-top: 15px;
                 margin-bottom: 15px;
@@ -107,11 +107,11 @@ class ComercialApp(QWidget):
         self.campo_codigo.setFont(QFont("Segoe UI", 10))
         self.campo_codigo.setMinimumWidth(200)
 
-        self.btn_consultar = QPushButton("Gerar relatório de MP", self)
+        self.btn_consultar = QPushButton("MP", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setMinimumWidth(100)
 
-        self.btn_exportar_excel = QPushButton("Exportar Excel", self)
+        self.btn_exportar_excel = QPushButton("Exportar para Excel", self)
         self.btn_exportar_excel.clicked.connect(self.exportar_excel)
         self.btn_exportar_excel.setMinimumWidth(100)
         self.btn_exportar_excel.setEnabled(False)
@@ -174,53 +174,46 @@ class ComercialApp(QWidget):
         return botao_limpar
 
     def exportar_excel(self):
-        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como', f'{self.campo_codigo.text().upper().strip()}_MP',
+        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
+                                                   f'{self.campo_codigo.text().upper().strip()}_MP.xlsx',
                                                    'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
+
         if file_path:
-            # Obter os dados da tabela
             data = self.obter_dados_tabela()
-            # Obter o nome das colunas da tabela
             column_headers = [self.tree.horizontalHeaderItem(i).text() for i in range(self.tree.columnCount())]
-            # Criar um DataFrame pandas
             df = pd.DataFrame(data, columns=column_headers)
 
             # Converter as colunas 'QUANT.', 'VALOR UNIT. (R$)' e 'VALOR TOTAL (R$)' para números
             numeric_columns = ['QUANT.', 'VALOR UNIT. (R$)', 'VALOR TOTAL (R$)']
             df[numeric_columns] = df[numeric_columns].apply(pd.to_numeric, errors='coerce')
 
-            # Salvar o DataFrame como um arquivo Excel
-            with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
-                df.to_excel(writer, index=False, sheet_name='Dados')
+            writer = pd.ExcelWriter(file_path, engine='xlsxwriter')
+            df.to_excel(writer, sheet_name='Dados', index=False)
 
-                # Obter a planilha
-                workbook = writer.book
-                worksheet = writer.sheets['Dados']
+            workbook = writer.book
+            worksheet = writer.sheets['Dados']
 
-                # Ajustar a largura das colunas automaticamente
-                for col in worksheet.columns:
-                    max_length = 0
-                    column = col[0].column_letter  # Obter a letra da coluna
-                    for cell in col:
-                        try:
-                            if len(str(cell.value)) > max_length:
-                                max_length = len(str(cell.value))
-                        except:
-                            pass
-                    adjusted_width = (max_length + 2)
-                    worksheet.column_dimensions[column].width = adjusted_width
+            # Definindo um formato contábil
+            accounting_format = workbook.add_format(
+                {'num_format': '[$R$-pt-BR] #,##0.00'})
 
-                # Adicionar fórmula de soma na coluna 'VALOR TOTAL (R$)'
-                last_row = len(df) + 1
-                valor_total_col = df.columns.get_loc('VALOR TOTAL (R$)') + 1
-                quantidade_col = df.columns.get_loc('QUANT.') + 1
-                unidade_med_col = df.columns.get_loc('UNID. MED.') + 1
+            # Adicionar fórmulas
+            worksheet.write('L2', 'TOTAL COMERCIAL (R$)')
+            worksheet.write_formula('M2', '=SUMIF(G:G, "COMERCIAL", I:I)', accounting_format)
 
-                worksheet[
-                    f'{get_column_letter(valor_total_col)}{last_row + 1}'] = f'=SUM({get_column_letter(valor_total_col)}2:{get_column_letter(valor_total_col)}{last_row})'
-                worksheet[f'{get_column_letter(valor_total_col)}{last_row + 1}'].font = Font(bold=True)
-                worksheet[
-                    f'{get_column_letter(quantidade_col)}{last_row + 1}'] = f'=SUMIF({get_column_letter(unidade_med_col)}2:{get_column_letter(unidade_med_col)}{last_row}, "kg", {get_column_letter(quantidade_col)}2:{get_column_letter(quantidade_col)}{last_row})'
-                worksheet[f'{get_column_letter(quantidade_col)}{last_row + 1}'].font = Font(bold=True)
+            worksheet.write('L3', 'TOTAL MP (R$)')
+            worksheet.write_formula('M3', '=SUMIF(G:G, "MATÉRIA-PRIMA", I:I)', accounting_format)
+            worksheet.write('N3', 'TOTAL kg')
+            worksheet.write_formula('O3', '=SUMIF(D:D, "KG", C:C)')
+
+            worksheet.write('L5', 'TOTAL GERAL (R$)')
+            worksheet.write_formula('M5', '=SUBTOTAL(9, M2:M3)', accounting_format)
+
+            for i, col in enumerate(df.columns):
+                max_len = df[col].astype(str).map(len).max()
+                worksheet.set_column(i, i, max_len + 2)
+
+            writer.close()
 
     def obter_dados_tabela(self):
         # Obter os dados da tabela
@@ -426,8 +419,8 @@ if __name__ == "__main__":
     username, password, database, server = ComercialApp().setup_mssql()
     driver = '{ODBC Driver 17 for SQL Server}'
 
-    largura_janela = 1400  # Substitua pelo valor desejado
-    altura_janela = 700  # Substitua pelo valor desejado
+    largura_janela = 1400
+    altura_janela = 700
 
     largura_tela = app.primaryScreen().size().width()
     altura_tela = app.primaryScreen().size().height()
