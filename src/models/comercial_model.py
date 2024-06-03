@@ -11,6 +11,12 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
 from sqlalchemy import create_engine
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Image
+from reportlab.lib.units import inch, mm
+from reportlab.lib import colors
+import os
 
 
 class ComercialApp(QWidget):
@@ -21,11 +27,11 @@ class ComercialApp(QWidget):
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
 
-        self.setWindowTitle("EUREKA® - Comercial")
+        self.setWindowTitle("EUREKA® COMERCIAL")
 
         self.setAutoFillBackground(True)
         palette = self.palette()
-        palette.setColor(self.backgroundRole(), QColor('#c9c9c9'))
+        palette.setColor(self.backgroundRole(), QColor('#363636'))
         self.setPalette(palette)
 
         self.setStyleSheet("""
@@ -247,6 +253,68 @@ class ComercialApp(QWidget):
                     row_data.append("")
             data.append(row_data)
         return data
+
+    def exportar_pdf(self):
+        # Obter dados da tabela
+        data = self.obter_dados_tabela()
+        column_headers = [self.tree.horizontalHeaderItem(i).text() for i in range(self.tree.columnCount())]
+        df = pd.DataFrame(data, columns=column_headers)
+
+        # Converter as colunas 'QUANT.', 'VALOR UNIT. (R$)' e 'VALOR TOTAL (R$)' para números
+        numeric_columns = ['QUANT.', 'VALOR UNIT. (R$)', 'VALOR TOTAL (R$)']
+        df[numeric_columns] = df[numeric_columns].apply(pd.to_numeric, errors='coerce')
+
+        # Caminho para salvar o PDF
+        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
+                                                   f'{self.campo_codigo.text().upper().strip()}_MP.pdf',
+                                                   'Arquivos PDF (*.pdf);;Todos os arquivos (*)')
+
+        if not file_path:
+            return
+
+        # Criação do documento PDF
+        doc = SimpleDocTemplate(file_path, pagesize=A4)
+        elements = []
+
+        # Adicionar logo
+        logo_path = "path/to/logo.png"  # Atualize com o caminho correto do logo
+        if os.path.exists(logo_path):
+            logo = Image(logo_path, 2 * inch, 2 * inch)
+            elements.append(logo)
+
+        # Adicionar título e data/hora
+        styles = getSampleStyleSheet()
+        title = Paragraph("Relatório de Materiais", styles['Title'])
+        date_time = Paragraph(datetime.now().strftime("%d/%m/%Y %H:%M"), styles['Normal'])
+
+        elements.append(title)
+        elements.append(date_time)
+        elements.append(Paragraph("<br/><br/>", styles['Normal']))  # Espaço entre título e tabela
+
+        # Adicionar tabela
+        data_for_table = [column_headers] + df.values.tolist()
+        table = Table(data_for_table)
+
+        # Estilo da tabela
+        style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ])
+        table.setStyle(style)
+        elements.append(table)
+
+        # Função para adicionar rodapé com paginação
+        def add_page_number(canvas, doc):
+            page_num = canvas.getPageNumber()
+            text = f"Página {page_num}"
+            canvas.drawRightString(200 * mm, 15 * mm, text)
+
+        doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
 
     def configurar_tabela(self, dataframe):
         self.tree.setColumnCount(len(dataframe.columns))
