@@ -11,7 +11,7 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
 from sqlalchemy import create_engine
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Image
 from reportlab.lib.units import inch, mm
@@ -49,7 +49,7 @@ class ComercialApp(QWidget):
             QLineEdit {
                 background-color: #FFFFFF;
                 border: 1px solid #262626;
-                padding: 5px 25px;
+                padding: 5px 10px;
                 border-radius: 20px;
                 height: 40px;
                 font-size: 18px;
@@ -111,11 +111,16 @@ class ComercialApp(QWidget):
         self.campo_codigo.setFont(QFont("Segoe UI", 10))
         self.campo_codigo.setFixedWidth(400)
 
-        self.btn_consultar = QPushButton("MP", self)
+        self.btn_consultar = QPushButton("Consultar MP", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setMinimumWidth(100)
 
-        self.btn_exportar_excel = QPushButton("Exportar para Excel", self)
+        self.btn_exportar_pdf = QPushButton("Exportar PDF", self)
+        self.btn_exportar_pdf.clicked.connect(self.exportar_pdf)
+        self.btn_exportar_pdf.setMinimumWidth(100)
+        self.btn_exportar_pdf.setEnabled(False)
+
+        self.btn_exportar_excel = QPushButton("Exportar Excel", self)
         self.btn_exportar_excel.clicked.connect(self.exportar_excel)
         self.btn_exportar_excel.setMinimumWidth(100)
         self.btn_exportar_excel.setEnabled(False)
@@ -139,6 +144,7 @@ class ComercialApp(QWidget):
 
         layout_linha_03.addWidget(self.btn_consultar)
         layout_linha_03.addWidget(self.btn_exportar_excel)
+        layout_linha_03.addWidget(self.btn_exportar_pdf)
         layout_linha_03.addWidget(self.btn_fechar)
         layout_linha_03.addStretch()
 
@@ -353,11 +359,13 @@ class ComercialApp(QWidget):
         self.campo_codigo.setEnabled(False)
         self.btn_consultar.setEnabled(False)
         self.btn_exportar_excel.setEnabled(False)
+        self.btn_exportar_pdf.setEnabled(False)
 
     def desbloquear_campos_pesquisa(self):
         self.campo_codigo.setEnabled(True)
         self.btn_consultar.setEnabled(True)
         self.btn_exportar_excel.setEnabled(True)
+        self.btn_exportar_pdf.setEnabled(True)
 
     def exibir_mensagem(self, title, message, icon_type):
         root = tk.Tk()
@@ -467,7 +475,7 @@ class ComercialApp(QWidget):
                 self.tree.setSortingEnabled(False)
                 self.tree.insertRow(i)
                 for j, value in enumerate(row):
-                    if j == 4 and not pd.isna(value):
+                    if j == 4 and not value.isspace():
                         data_obj = datetime.strptime(value, "%Y%m%d")
                         value = data_obj.strftime("%d/%m/%Y")
                     elif j == 6:
