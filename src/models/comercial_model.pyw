@@ -216,8 +216,8 @@ class ComercialApp(QWidget):
             column_headers = [self.tree.horizontalHeaderItem(i).text() for i in range(self.tree.columnCount())]
             df = pd.DataFrame(data, columns=column_headers)
 
-            # Converter as colunas 'QUANT.', 'VALOR UNIT. (R$)' e 'VALOR TOTAL (R$)' para números
-            numeric_columns = ['QUANT.', 'VALOR UNIT. (R$)', 'VALOR TOTAL (R$)']
+            # Converter as colunas 'QUANT.', 'VALOR UNIT. (R$)' e 'SUB-TOTAL (R$)' para números
+            numeric_columns = ['QUANT.', 'VALOR UNIT. (R$)', 'SUB-TOTAL (R$)']
             df[numeric_columns] = df[numeric_columns].apply(pd.to_numeric, errors='coerce')
 
             writer = pd.ExcelWriter(file_path, engine='xlsxwriter')
@@ -268,8 +268,8 @@ class ComercialApp(QWidget):
         column_headers = [self.tree.horizontalHeaderItem(i).text() for i in range(self.tree.columnCount())]
         df = pd.DataFrame(data, columns=column_headers)
 
-        # Converter as colunas 'QUANT.', 'VALOR UNIT. (R$)' e 'VALOR TOTAL (R$)' para números
-        numeric_columns = ['QUANT.', 'VALOR UNIT. (R$)', 'VALOR TOTAL (R$)']
+        # Converter as colunas 'QUANT.', 'VALOR UNIT. (R$)' e 'SUB-TOTAL (R$)' para números
+        numeric_columns = ['QUANT.', 'VALOR UNIT. (R$)', 'SUB-TOTAL (R$)']
         df[numeric_columns] = df[numeric_columns].apply(pd.to_numeric, errors='coerce')
 
         # Caminho para salvar o PDF
@@ -431,12 +431,12 @@ class ComercialApp(QWidget):
             prod.B1_TIPO AS "TIPO", 
             prod.B1_LOCPAD AS "ARMAZÉM", 
             prod.B1_UPRC AS "VALOR UNIT. (R$)",
-            (G1_QUANT * B1_UPRC) AS "VALOR TOTAL (R$)"
+            (G1_QUANT * B1_UPRC) AS "SUB-TOTAL (R$)"
         FROM SG1010 AS mat
         INNER JOIN ListMP AS pai ON mat.G1_COD = pai."CÓDIGO"
         INNER JOIN SB1010 AS prod ON mat.G1_COMP = prod.B1_COD
         WHERE prod.B1_TIPO = 'MP'
-        AND prod.B1_LOCPAD IN ('01','03', '97')
+        AND prod.B1_LOCPAD IN ('01','03', '11', '12', '97')
         AND mat.G1_REVFIM <> 'ZZZ' 
         AND mat.D_E_L_E_T_ <> '*'
         ORDER BY mat.G1_COMP ASC;
@@ -460,11 +460,11 @@ class ComercialApp(QWidget):
                 'TIPO': 'first',
                 'ARMAZÉM': 'first',
                 'VALOR UNIT. (R$)': 'first',
-                'VALOR TOTAL (R$)': 'sum'
+                'SUB-TOTAL (R$)': 'sum'
             }).reset_index()
 
             # Converter para float com duas casas decimais
-            columns_to_convert = ['QUANT.', 'VALOR UNIT. (R$)', 'VALOR TOTAL (R$)']
+            columns_to_convert = ['QUANT.', 'VALOR UNIT. (R$)', 'SUB-TOTAL (R$)']
             consolidated_dataframe[columns_to_convert] = (consolidated_dataframe[columns_to_convert]
                                                           .map(lambda x: round(float(x), 2)))
 
@@ -485,6 +485,10 @@ class ComercialApp(QWidget):
                             value = 'MATÉRIA-PRIMA'
                         elif value == '03':
                             value = 'COMERCIAL'
+                        elif value == '11':
+                            value = 'PROD. COMER. IMPORT. DIRETO'
+                        elif value == '12':
+                            value = 'MAT. PRIMA IMPORT. DIRETO'
                         elif value == '97':
                             value = 'TRAT. SUPERFICIAL'
 
@@ -518,16 +522,5 @@ if __name__ == "__main__":
     username, password, database, server = ComercialApp().setup_mssql()
     driver = '{ODBC Driver 17 for SQL Server}'
 
-    largura_janela = 1400
-    altura_janela = 700
-
-    largura_tela = app.primaryScreen().size().width()
-    altura_tela = app.primaryScreen().size().height()
-
-    pos_x = (largura_tela - largura_janela) // 2
-    pos_y = (altura_tela - altura_janela) // 2
-
-    window.setGeometry(pos_x, pos_y, largura_janela, altura_janela)
-
-    window.show()
+    window.showMaximized()
     sys.exit(app.exec_())
