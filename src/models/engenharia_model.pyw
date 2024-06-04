@@ -23,7 +23,7 @@ class ConsultaApp(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("SMARTPLIC® v2.2.1 - Dark theme")
+        self.setWindowTitle("EUREKA® ENGENHARIA - v0.1")
 
         # Configurar o ícone da janela
         icon_path = "010.png"
