@@ -328,10 +328,10 @@ class ConsultaApp(QWidget):
 
     def configurar_tabela(self):
         self.tree = QTableWidget(self)
-        self.tree.setColumnCount(14)
+        self.tree.setColumnCount(15)
         self.tree.setHorizontalHeaderLabels(
             ["CÓDIGO", "DESCRIÇÃO", "DESC. COMP.", "TIPO", "UM", "ARMAZÉM", "GRUPO", "DESC. GRUPO", "CC", "BLOQUEADO?",
-             "REV.", "DATA CADASTRO", "DATA ULT. REV.", ""])
+             "REV.", "DATA CADASTRO", "DATA ULT. REV.", "LOCALIZ." , ""])
         self.tree.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.tree.setEditTriggers(QTableWidget.NoEditTriggers)
         self.tree.setSelectionBehavior(QTableWidget.SelectRows)
@@ -482,7 +482,7 @@ class ConsultaApp(QWidget):
         status_clause = f"AND B1_MSBLQL = '{status_bloqueado}'" if status_checkbox else ''
 
         query = f"""
-        SELECT B1_COD, B1_DESC, B1_XDESC2, B1_TIPO, B1_UM, B1_LOCPAD, B1_GRUPO, B1_ZZNOGRP, B1_CC, B1_MSBLQL, B1_REVATU, B1_DATREF, B1_UREV
+        SELECT B1_COD, B1_DESC, B1_XDESC2, B1_TIPO, B1_UM, B1_LOCPAD, B1_GRUPO, B1_ZZNOGRP, B1_CC, B1_MSBLQL, B1_REVATU, B1_DATREF, B1_UREV, B1_ZZLOCAL
         FROM {database}.dbo.SB1010
         WHERE B1_COD LIKE '{codigo}%' AND B1_DESC LIKE '{descricao}%' AND {descricao2_clauses}
         AND B1_TIPO LIKE '{tipo}%' AND B1_UM LIKE '{um}%' AND B1_LOCPAD LIKE '{armazem}%' AND B1_GRUPO LIKE '{grupo}%' 
