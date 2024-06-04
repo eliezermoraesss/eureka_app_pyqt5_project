@@ -27,7 +27,7 @@ class ComercialApp(QWidget):
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
 
-        self.setWindowTitle("EUREKA® COMERCIAL")
+        self.setWindowTitle("EUREKA® COMERCIAL - v0.1")
 
         self.setAutoFillBackground(True)
         palette = self.palette()
@@ -36,18 +36,18 @@ class ComercialApp(QWidget):
 
         self.setStyleSheet("""
             * {
-                background-color: #363636;
+                background-color: #C9C9C9;
             }
 
             QLabel {
-                color: #EEEEEE;
+                color: #262626;
                 font-size: 18px;
                 padding: 5px;
                 font-weight: bold;
             }
 
             QLineEdit {
-                background-color: #c9c9c9;
+                background-color: #FFFFFF;
                 border: 1px solid #262626;
                 padding: 5px 10px;
                 border-radius: 20px;
@@ -110,7 +110,8 @@ class ComercialApp(QWidget):
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont("Segoe UI", 10))
-        self.campo_codigo.setFixedWidth(400)
+        self.campo_codigo.setFixedWidth(600)
+        self.campo_codigo.setPlaceholderText("Digite o código da máquina ou equipamento...")
 
         self.btn_consultar = QPushButton("Consultar MP", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
@@ -137,17 +138,16 @@ class ComercialApp(QWidget):
         layout_linha_02 = QHBoxLayout()
         layout_linha_03 = QHBoxLayout()
 
-        layout_linha_01.addWidget(QLabel("Digite o código da máquina/equipamento: "))
+        #layout_linha_01.addWidget(QLabel("Digite o código da máquina/equipamento: "))
 
         layout_linha_02.addWidget(self.campo_codigo)
         layout_linha_02.addWidget(self.criar_botao_limpar(self.campo_codigo))
-        layout_linha_02.addStretch()
 
-        layout_linha_03.addWidget(self.btn_consultar)
-        layout_linha_03.addWidget(self.btn_exportar_excel)
-        layout_linha_03.addWidget(self.btn_exportar_pdf)
-        layout_linha_03.addWidget(self.btn_fechar)
-        layout_linha_03.addStretch()
+        layout_linha_02.addWidget(self.btn_consultar)
+        layout_linha_02.addWidget(self.btn_exportar_excel)
+        layout_linha_02.addWidget(self.btn_exportar_pdf)
+        layout_linha_02.addWidget(self.btn_fechar)
+        layout_linha_02.addStretch()
 
         layout.addLayout(layout_linha_01)
         layout.addLayout(layout_linha_02)
@@ -231,22 +231,34 @@ class ComercialApp(QWidget):
                 {'num_format': '[$R$-pt-BR] #,##0.00'})
 
             # Adicionar fórmulas
-            worksheet.write('L2', 'TOTAL COMERCIAL (R$)')
-            worksheet.write_formula('M2', '=SUMIF(G:G, "COMERCIAL", I:I)', accounting_format)
+            worksheet.write('K2', 'TOTAL COMERCIAL')
+            worksheet.write_formula('L2', '=SUMIF(G:G, "COMERCIAL", I:I)', accounting_format)
 
-            worksheet.write('L3', 'TOTAL MP (R$)')
-            worksheet.write_formula('M3', '=SUMIF(G:G, "MATÉRIA-PRIMA", I:I)', accounting_format)
-            worksheet.write('N3', 'TOTAL kg')
-            worksheet.write_formula('O3', '=SUMIF(D:D, "KG", C:C)')
+            worksheet.write('K3', 'TOTAL MP')
+            worksheet.write_formula('L3', '=SUMIF(G:G, "MATÉRIA-PRIMA", I:I)', accounting_format)
+            
+            worksheet.write('K4', 'TOTAL PROD. COMER. IMPORT. DIR.')
+            worksheet.write_formula('L4', '=SUMIF(G:G, "PROD. COMER. IMPORT. DIRETO", I:I)', accounting_format)
+            
+            worksheet.write('K5', 'TOTAL MAT. PRIMA IMPORTADA')
+            worksheet.write_formula('L5', '=SUMIF(G:G, "MAT. PRIMA IMPORT. DIRETO", I:I)', accounting_format)
+            
+            worksheet.write('K6', 'TOTAL TRAT. SUPERF.')
+            worksheet.write_formula('L6', '=SUMIF(G:G, "TRAT. SUPERFICIAL", I:I)', accounting_format)
+            
+            worksheet.write('M3', 'TOTAL (kg)')
+            worksheet.write_formula('N3', '=SUMIF(D:D, "KG", C:C)')
 
-            worksheet.write('L5', 'TOTAL GERAL (R$)')
-            worksheet.write_formula('M5', '=SUBTOTAL(9, M2:M3)', accounting_format)
+            worksheet.write('K8', 'TOTAL GERAL')
+            worksheet.write_formula('L8', '=SUBTOTAL(9, L2:L6)', accounting_format)
 
             for i, col in enumerate(df.columns):
                 max_len = df[col].astype(str).map(len).max()
                 worksheet.set_column(i, i, max_len + 2)
 
             writer.close()
+            
+            os.startfile(file_path)
 
     def obter_dados_tabela(self):
         # Obter os dados da tabela
@@ -274,8 +286,8 @@ class ComercialApp(QWidget):
 
         # Caminho para salvar o PDF
         file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
-                                                   f'{self.campo_codigo.text().upper().strip()}_MP.pdf',
-                                                   'Arquivos PDF (*.pdf);;Todos os arquivos (*)')
+                                                    f'{self.campo_codigo.text().upper().strip()}_MP.pdf',
+                                                    'Arquivos PDF (*.pdf);;Todos os arquivos (*)')
 
         if not file_path:
             return
@@ -323,6 +335,7 @@ class ComercialApp(QWidget):
             canvas.drawRightString(200 * mm, 15 * mm, text)
 
         doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
+        os.startfile(file_path)
 
     def configurar_tabela(self, dataframe):
         self.tree.setColumnCount(len(dataframe.columns))
@@ -466,10 +479,11 @@ class ComercialApp(QWidget):
             # Converter para float com duas casas decimais
             columns_to_convert = ['QUANT.', 'VALOR UNIT. (R$)', 'SUB-TOTAL (R$)']
             consolidated_dataframe[columns_to_convert] = (consolidated_dataframe[columns_to_convert]
-                                                          .map(lambda x: round(float(x), 2)))
-
+                        .map(lambda x: round(float(x), 2)))
+            consolidated_dataframe[''] = ''
+            
             self.configurar_tabela(consolidated_dataframe)
-
+            
             self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
             self.tree.setRowCount(0)
 
