@@ -27,7 +27,7 @@ class ComercialApp(QWidget):
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
 
-        self.setWindowTitle("EUREKA® COMERCIAL")
+        self.setWindowTitle("EUREKA® COMERCIAL - v0.1")
 
         self.setAutoFillBackground(True)
         palette = self.palette()
@@ -231,22 +231,34 @@ class ComercialApp(QWidget):
                 {'num_format': '[$R$-pt-BR] #,##0.00'})
 
             # Adicionar fórmulas
-            worksheet.write('L2', 'TOTAL COMERCIAL (R$)')
-            worksheet.write_formula('M2', '=SUMIF(G:G, "COMERCIAL", I:I)', accounting_format)
+            worksheet.write('K2', 'TOTAL COMERCIAL')
+            worksheet.write_formula('L2', '=SUMIF(G:G, "COMERCIAL", I:I)', accounting_format)
 
-            worksheet.write('L3', 'TOTAL MP (R$)')
-            worksheet.write_formula('M3', '=SUMIF(G:G, "MATÉRIA-PRIMA", I:I)', accounting_format)
-            worksheet.write('N3', 'TOTAL kg')
-            worksheet.write_formula('O3', '=SUMIF(D:D, "KG", C:C)')
+            worksheet.write('K3', 'TOTAL MP')
+            worksheet.write_formula('L3', '=SUMIF(G:G, "MATÉRIA-PRIMA", I:I)', accounting_format)
+            
+            worksheet.write('K4', 'TOTAL PROD. COMER. IMPORT. DIR.')
+            worksheet.write_formula('L4', '=SUMIF(G:G, "PROD. COMER. IMPORT. DIRETO", I:I)', accounting_format)
+            
+            worksheet.write('K5', 'TOTAL MAT. PRIMA IMPORTADA')
+            worksheet.write_formula('L5', '=SUMIF(G:G, "MAT. PRIMA IMPORT. DIRETO", I:I)', accounting_format)
+            
+            worksheet.write('K6', 'TOTAL TRAT. SUPERF.')
+            worksheet.write_formula('L6', '=SUMIF(G:G, "TRAT. SUPERFICIAL", I:I)', accounting_format)
+            
+            worksheet.write('M3', 'TOTAL (kg)')
+            worksheet.write_formula('N3', '=SUMIF(D:D, "KG", C:C)')
 
-            worksheet.write('L5', 'TOTAL GERAL (R$)')
-            worksheet.write_formula('M5', '=SUBTOTAL(9, M2:M3)', accounting_format)
+            worksheet.write('K8', 'TOTAL GERAL')
+            worksheet.write_formula('L8', '=SUBTOTAL(9, L2:L6)', accounting_format)
 
             for i, col in enumerate(df.columns):
                 max_len = df[col].astype(str).map(len).max()
                 worksheet.set_column(i, i, max_len + 2)
 
             writer.close()
+            
+            os.startfile(file_path)
 
     def obter_dados_tabela(self):
         # Obter os dados da tabela
