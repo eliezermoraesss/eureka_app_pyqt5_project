@@ -110,7 +110,8 @@ class ComercialApp(QWidget):
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont("Segoe UI", 10))
-        self.campo_codigo.setFixedWidth(400)
+        self.campo_codigo.setFixedWidth(600)
+        self.campo_codigo.setPlaceholderText("Digite o código da máquina ou equipamento...")
 
         self.btn_consultar = QPushButton("Consultar MP", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
@@ -137,7 +138,7 @@ class ComercialApp(QWidget):
         layout_linha_02 = QHBoxLayout()
         layout_linha_03 = QHBoxLayout()
 
-        layout_linha_01.addWidget(QLabel("Digite o código da máquina/equipamento: "))
+        #layout_linha_01.addWidget(QLabel("Digite o código da máquina/equipamento: "))
 
         layout_linha_02.addWidget(self.campo_codigo)
         layout_linha_02.addWidget(self.criar_botao_limpar(self.campo_codigo))
