@@ -508,8 +508,10 @@ class ComercialApp(QWidget):
 
                     item = QTableWidgetItem(str(value).strip())
 
-                    if j != 0 and j != 1:
+                    if j >= 2 and j < 7:
                         item.setTextAlignment(Qt.AlignCenter)
+                    elif j == 7 or j == 8:
+                        item.setTextAlignment(Qt.AlignRight)
 
                     self.tree.setItem(i, j, item)
 
@@ -534,7 +536,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = ComercialApp()
     username, password, database, server = ComercialApp().setup_mssql()
-    driver = '{ODBC Driver 17 for SQL Server}'
+    driver = '{SQL Server}'
 
     window.showMaximized()
     sys.exit(app.exec_())
