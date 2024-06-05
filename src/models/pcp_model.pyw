@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QToolButton, QStyle
-from PyQt5.QtGui import QFont, QColor
+    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QToolButton, QStyle, QAction
+from PyQt5.QtGui import QFont, QColor, QIcon
 from PyQt5.QtCore import Qt, QCoreApplication, QSize
 import pyodbc
 import pyperclip
@@ -19,7 +19,7 @@ from reportlab.lib import colors
 import os
 
 
-class ComercialApp(QWidget):
+class PcpApp(QWidget):
     def __init__(self):
         super().__init__()
 
@@ -27,21 +27,21 @@ class ComercialApp(QWidget):
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
 
-        self.setWindowTitle("EUREKA® COMERCIAL - v0.1")
+        self.setWindowTitle("EUREKA® PCP - v0.1")
 
         self.setAutoFillBackground(True)
         palette = self.palette()
-        palette.setColor(self.backgroundRole(), QColor('#C9C9C9'))
+        palette.setColor(self.backgroundRole(), QColor('#363636'))
         self.setPalette(palette)
 
         self.setStyleSheet("""
             * {
-                background-color: #C9C9C9;
+                background-color: #363636;
             }
 
             QLabel {
                 color: #262626;
-                font-size: 18px;
+                font-size: 12px;
                 padding: 5px;
                 font-weight: bold;
             }
@@ -49,10 +49,11 @@ class ComercialApp(QWidget):
             QLineEdit {
                 background-color: #FFFFFF;
                 border: 1px solid #262626;
+                margin-top: 20px;
                 padding: 5px 10px;
-                border-radius: 20px;
-                height: 40px;
-                font-size: 22px;
+                border-radius: 10px;
+                height: 24px;
+                font-size: 16px;
             }
 
             QPushButton {
@@ -80,7 +81,7 @@ class ComercialApp(QWidget):
 
             QTableWidget {
                 border: 1px solid #000000;
-                background-color: #363636;
+                background-color: #c9c9c9;
                 padding-left: 10px;
             }
 
@@ -110,10 +111,23 @@ class ComercialApp(QWidget):
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont("Segoe UI", 10))
-        self.campo_codigo.setFixedWidth(500)
-        self.campo_codigo.setPlaceholderText("Digite o código da máquina ou equipamento...")
+        self.campo_codigo.setFixedWidth(200)
+        self.campo_codigo.setPlaceholderText("Digite o código...")
+        self.add_clear_button(self.campo_codigo)
 
-        self.btn_consultar = QPushButton("Consultar MP", self)
+        self.campo_qp = QLineEdit(self)
+        self.campo_qp.setFont(QFont("Segoe UI", 10))
+        self.campo_qp.setFixedWidth(300)
+        self.campo_qp.setPlaceholderText("Digite o número da QP...")
+        self.add_clear_button(self.campo_qp)
+
+        self.campo_OP = QLineEdit(self)
+        self.campo_OP.setFont(QFont("Segoe UI", 10))
+        self.campo_OP.setFixedWidth(300)
+        self.campo_OP.setPlaceholderText("Digite o número da OP...")
+        self.add_clear_button(self.campo_OP)
+
+        self.btn_consultar = QPushButton("Pesquisar", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setMinimumWidth(100)
 
@@ -132,28 +146,38 @@ class ComercialApp(QWidget):
         self.btn_fechar.setMinimumWidth(100)
 
         self.campo_codigo.returnPressed.connect(self.executar_consulta)
+        self.campo_qp.returnPressed.connect(self.executar_consulta)
+        self.campo_OP.returnPressed.connect(self.executar_consulta)
 
         layout = QVBoxLayout()
         layout_linha_01 = QHBoxLayout()
         layout_linha_02 = QHBoxLayout()
         layout_linha_03 = QHBoxLayout()
 
-        #layout_linha_01.addWidget(QLabel("Digite o código da máquina/equipamento: "))
-
         layout_linha_02.addWidget(self.campo_codigo)
-        layout_linha_02.addWidget(self.criar_botao_limpar(self.campo_codigo))
-
-        layout_linha_02.addWidget(self.btn_consultar)
-        layout_linha_02.addWidget(self.btn_exportar_excel)
-        layout_linha_02.addWidget(self.btn_exportar_pdf)
-        layout_linha_02.addWidget(self.btn_fechar)
+        layout_linha_02.addWidget(self.campo_qp)
+        layout_linha_02.addWidget(self.campo_OP)
         layout_linha_02.addStretch()
+
+        layout_linha_03.addWidget(self.btn_consultar)
+        layout_linha_03.addWidget(self.btn_exportar_excel)
+        layout_linha_03.addWidget(self.btn_exportar_pdf)
+        layout_linha_03.addWidget(self.btn_fechar)
+        layout_linha_03.addStretch()
 
         layout.addLayout(layout_linha_01)
         layout.addLayout(layout_linha_02)
         layout.addLayout(layout_linha_03)
         layout.addWidget(self.tree)
         self.setLayout(layout)
+
+    def add_clear_button(self, line_edit):
+        clear_icon = self.style().standardIcon(QStyle.SP_LineEditClearButton)
+        pixmap = clear_icon.pixmap(40, 40)  # Redimensionar o ícone para 20x20 pixels
+        larger_clear_icon = QIcon(pixmap)
+        clear_action = QAction(larger_clear_icon, "Clear", line_edit)
+        clear_action.triggered.connect(line_edit.clear)
+        line_edit.addAction(clear_action, QLineEdit.TrailingPosition)
 
     def setup_mssql(self):
         caminho_do_arquivo = (r"\\192.175.175.4\f\INTEGRANTES\ELIEZER\PROJETO SOLIDWORKS "
@@ -177,34 +201,6 @@ class ComercialApp(QWidget):
                                              16 | 0)
             sys.exit()
 
-    def criar_botao_limpar(self, campo):
-        botao_limpar = QToolButton(self)
-        botao_limpar.setIcon(self.style().standardIcon(QStyle.SP_DialogCloseButton))  # Ícone integrado do Qt
-        botao_limpar.setCursor(Qt.PointingHandCursor)
-        botao_limpar.clicked.connect(lambda: campo.clear())
-
-        # Definindo o tamanho do ícone
-        botao_limpar.setIconSize(QSize(32, 32))
-
-        # Estilizando o botão usando QSS
-        botao_limpar.setStyleSheet("""
-            QToolButton {
-                border: none;
-                background: #c9c9c9;
-                padding: 2px;
-                width: 40px;
-                height: 40px;
-                border-radius: 20px;
-            }
-            QToolButton:hover {
-                background-color: #f0f0f0;
-            }
-            QToolButton:pressed {
-                background-color: #d0d0d0;
-            }
-        """)
-
-        return botao_limpar
 
     def exportar_excel(self):
         file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
@@ -534,8 +530,8 @@ class ComercialApp(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = ComercialApp()
-    username, password, database, server = ComercialApp().setup_mssql()
+    window = PcpApp()
+    username, password, database, server = PcpApp().setup_mssql()
     driver = '{SQL Server}'
 
     window.showMaximized()
