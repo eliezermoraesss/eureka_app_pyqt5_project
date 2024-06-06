@@ -36,7 +36,7 @@ class PcpApp(QWidget):
 
         self.setStyleSheet("""
             * {
-                background-color: #363636;
+                background-color: #373A40;
             }
 
             QLabel {
@@ -50,6 +50,7 @@ class PcpApp(QWidget):
                 background-color: #FFFFFF;
                 border: 1px solid #262626;
                 margin-top: 20px;
+                margin-bottom: 20px;
                 padding: 5px 10px;
                 border-radius: 10px;
                 height: 24px;
@@ -57,20 +58,18 @@ class PcpApp(QWidget):
             }
 
             QPushButton {
-                background-color: #3f7c24;
+                background-color: #DC5F00;
                 color: #fff;
                 padding: 15px;
                 border: 2px;
-                border-radius: 20px;
+                border-radius: 8px;
                 font-size: 12px;
-                height: 14px;
+                height: 20px;
                 font-weight: bold;
-                margin-top: 15px;
-                margin-bottom: 15px;
             }
 
             QPushButton:hover {
-                background-color: #fff;
+                background-color: #0a79f8;
                 color: #0a79f8
             }
 
@@ -81,7 +80,7 @@ class PcpApp(QWidget):
 
             QTableWidget {
                 border: 1px solid #000000;
-                background-color: #c9c9c9;
+                background-color: #686D76;
                 padding-left: 10px;
             }
 
@@ -131,11 +130,6 @@ class PcpApp(QWidget):
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setMinimumWidth(100)
 
-        self.btn_exportar_pdf = QPushButton("Exportar PDF", self)
-        self.btn_exportar_pdf.clicked.connect(self.exportar_pdf)
-        self.btn_exportar_pdf.setMinimumWidth(100)
-        self.btn_exportar_pdf.setEnabled(False)
-
         self.btn_exportar_excel = QPushButton("Exportar Excel", self)
         self.btn_exportar_excel.clicked.connect(self.exportar_excel)
         self.btn_exportar_excel.setMinimumWidth(100)
@@ -150,7 +144,7 @@ class PcpApp(QWidget):
         self.campo_OP.returnPressed.connect(self.executar_consulta)
 
         layout = QVBoxLayout()
-        layout_linha_01 = QHBoxLayout()
+        #layout_linha_01 = QHBoxLayout()
         layout_linha_02 = QHBoxLayout()
         layout_linha_03 = QHBoxLayout()
 
@@ -161,11 +155,10 @@ class PcpApp(QWidget):
 
         layout_linha_03.addWidget(self.btn_consultar)
         layout_linha_03.addWidget(self.btn_exportar_excel)
-        layout_linha_03.addWidget(self.btn_exportar_pdf)
         layout_linha_03.addWidget(self.btn_fechar)
         layout_linha_03.addStretch()
 
-        layout.addLayout(layout_linha_01)
+        #layout.addLayout(layout_linha_01)
         layout.addLayout(layout_linha_02)
         layout.addLayout(layout_linha_03)
         layout.addWidget(self.tree)
@@ -201,7 +194,6 @@ class PcpApp(QWidget):
                                              16 | 0)
             sys.exit()
 
-
     def exportar_excel(self):
         file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
                                                    f'{self.campo_codigo.text().upper().strip()}_MP.xlsx',
@@ -212,48 +204,18 @@ class PcpApp(QWidget):
             column_headers = [self.tree.horizontalHeaderItem(i).text() for i in range(self.tree.columnCount())]
             df = pd.DataFrame(data, columns=column_headers)
 
-            # Converter as colunas 'QUANT.', 'VALOR UNIT. (R$)' e 'SUB-TOTAL (R$)' para números
-            numeric_columns = ['QUANT.', 'VALOR UNIT. (R$)', 'SUB-TOTAL (R$)']
-            df[numeric_columns] = df[numeric_columns].apply(pd.to_numeric, errors='coerce')
-
             writer = pd.ExcelWriter(file_path, engine='xlsxwriter')
             df.to_excel(writer, sheet_name='Dados', index=False)
 
             workbook = writer.book
             worksheet = writer.sheets['Dados']
 
-            # Definindo um formato contábil
-            accounting_format = workbook.add_format(
-                {'num_format': '[$R$-pt-BR] #,##0.00'})
-
-            # Adicionar fórmulas
-            worksheet.write('K2', 'TOTAL COMERCIAL')
-            worksheet.write_formula('L2', '=SUMIF(G:G, "COMERCIAL", I:I)', accounting_format)
-
-            worksheet.write('K3', 'TOTAL MP')
-            worksheet.write_formula('L3', '=SUMIF(G:G, "MATÉRIA-PRIMA", I:I)', accounting_format)
-            
-            worksheet.write('K4', 'TOTAL PROD. COMER. IMPORT. DIR.')
-            worksheet.write_formula('L4', '=SUMIF(G:G, "PROD. COMER. IMPORT. DIRETO", I:I)', accounting_format)
-            
-            worksheet.write('K5', 'TOTAL MAT. PRIMA IMPORTADA')
-            worksheet.write_formula('L5', '=SUMIF(G:G, "MAT. PRIMA IMPORT. DIRETO", I:I)', accounting_format)
-            
-            worksheet.write('K6', 'TOTAL TRAT. SUPERF.')
-            worksheet.write_formula('L6', '=SUMIF(G:G, "TRAT. SUPERFICIAL", I:I)', accounting_format)
-            
-            worksheet.write('M3', 'TOTAL (kg)')
-            worksheet.write_formula('N3', '=SUMIF(D:D, "KG", C:C)')
-
-            worksheet.write('K8', 'TOTAL GERAL')
-            worksheet.write_formula('L8', '=SUBTOTAL(9, L2:L6)', accounting_format)
-
             for i, col in enumerate(df.columns):
                 max_len = df[col].astype(str).map(len).max()
                 worksheet.set_column(i, i, max_len + 2)
 
             writer.close()
-            
+
             os.startfile(file_path)
 
     def obter_dados_tabela(self):
@@ -269,69 +231,6 @@ class PcpApp(QWidget):
                     row_data.append("")
             data.append(row_data)
         return data
-
-    def exportar_pdf(self):
-        # Obter dados da tabela
-        data = self.obter_dados_tabela()
-        column_headers = [self.tree.horizontalHeaderItem(i).text() for i in range(self.tree.columnCount())]
-        df = pd.DataFrame(data, columns=column_headers)
-
-        # Converter as colunas 'QUANT.', 'VALOR UNIT. (R$)' e 'SUB-TOTAL (R$)' para números
-        numeric_columns = ['QUANT.', 'VALOR UNIT. (R$)', 'SUB-TOTAL (R$)']
-        df[numeric_columns] = df[numeric_columns].apply(pd.to_numeric, errors='coerce')
-
-        # Caminho para salvar o PDF
-        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
-                                                    f'{self.campo_codigo.text().upper().strip()}_MP.pdf',
-                                                    'Arquivos PDF (*.pdf);;Todos os arquivos (*)')
-
-        if not file_path:
-            return
-
-        # Criação do documento PDF
-        doc = SimpleDocTemplate(file_path, pagesize=A4)
-        elements = []
-
-        # Adicionar logo
-        logo_path = "path/to/logo.png"  # Atualize com o caminho correto do logo
-        if os.path.exists(logo_path):
-            logo = Image(logo_path, 2 * inch, 2 * inch)
-            elements.append(logo)
-
-        # Adicionar título e data/hora
-        styles = getSampleStyleSheet()
-        title = Paragraph("Relatório de Materiais", styles['Title'])
-        date_time = Paragraph(datetime.now().strftime("%d/%m/%Y %H:%M"), styles['Normal'])
-
-        elements.append(title)
-        elements.append(date_time)
-        elements.append(Paragraph("<br/><br/>", styles['Normal']))  # Espaço entre título e tabela
-
-        # Adicionar tabela
-        data_for_table = [column_headers] + df.values.tolist()
-        table = Table(data_for_table)
-
-        # Estilo da tabela
-        style = TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ])
-        table.setStyle(style)
-        elements.append(table)
-
-        # Função para adicionar rodapé com paginação
-        def add_page_number(canvas, doc):
-            page_num = canvas.getPageNumber()
-            text = f"Página {page_num}"
-            canvas.drawRightString(200 * mm, 15 * mm, text)
-
-        doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
-        os.startfile(file_path)
 
     def configurar_tabela(self, dataframe):
         self.tree.setColumnCount(len(dataframe.columns))
@@ -370,13 +269,11 @@ class PcpApp(QWidget):
         self.campo_codigo.setEnabled(False)
         self.btn_consultar.setEnabled(False)
         self.btn_exportar_excel.setEnabled(False)
-        self.btn_exportar_pdf.setEnabled(False)
 
     def desbloquear_campos_pesquisa(self):
         self.campo_codigo.setEnabled(True)
         self.btn_consultar.setEnabled(True)
         self.btn_exportar_excel.setEnabled(True)
-        self.btn_exportar_pdf.setEnabled(True)
 
     def exibir_mensagem(self, title, message, icon_type):
         root = tk.Tk()
@@ -394,10 +291,12 @@ class PcpApp(QWidget):
 
         root.destroy()
 
-    def verificar_query(self):
-        codigo = self.campo_codigo.text().upper().strip()
+    def selecionar_query_conforme_filtro(self):
+        codigo_produto = self.campo_codigo.text().upper().strip()
+        numero_QP = self.campo_qp.text().upper().strip()
+        numero_OP = self.campo_OP.text().upper().strip()
 
-        if codigo == '':
+        if codigo_produto == '' and numero_QP == '' and numero_OP == '':
             self.btn_consultar.setEnabled(False)
             self.exibir_mensagem("ATENÇÃO!",
                                  "Os campos de pesquisa estão vazios.\nPreencha algum campo e tente "
@@ -406,54 +305,28 @@ class PcpApp(QWidget):
             return True
 
         query = f"""
-        DECLARE @CodigoPai VARCHAR(50) = '{codigo}'; -- Substitua pelo código pai que deseja consultar
-
-        -- CTE para selecionar os itens pai e seus subitens recursivamente
-        WITH ListMP AS (
-            -- Selecionar o item pai inicialmente
-            SELECT G1_COD AS "CÓDIGO", G1_COMP AS "COMPONENTE", 0 AS Nivel
-            FROM SG1010
-            WHERE G1_COD = @CodigoPai AND G1_REVFIM = (
-                SELECT MAX(G1_REVFIM) 
-                FROM SG1010 
-                WHERE G1_COD = @CodigoPai AND G1_REVFIM <> 'ZZZ' AND D_E_L_E_T_ <> '*'
-            ) AND G1_REVFIM <> 'ZZZ' AND D_E_L_E_T_ <> '*'
-
-            UNION ALL
-
-            -- Selecione os subitens de cada item pai
-            SELECT sub.G1_COD, sub.G1_COMP, pai.Nivel + 1
-            FROM SG1010 AS sub
-            INNER JOIN ListMP AS pai ON sub.G1_COD = pai."COMPONENTE"
-            WHERE pai.Nivel < 100 -- Defina o limite máximo de recursão aqui
-            AND sub.G1_REVFIM <> 'ZZZ' AND sub.D_E_L_E_T_ <> '*'
-        )
-
-        -- Selecione todas as matérias-primas (tipo = 'MP') que correspondem aos itens encontrados
-        SELECT DISTINCT
-            mat.G1_COD AS "CODIGO PAI",
-            mat.G1_COMP AS "CÓDIGO", 
-            prod.B1_DESC AS "DESCRIÇÃO", 
-            mat.G1_QUANT AS "QUANT.", 
-            mat.G1_XUM AS "UNID. MED.", 
-            prod.B1_UCOM AS "ULT. ATUALIZ.",
-            prod.B1_TIPO AS "TIPO", 
-            prod.B1_LOCPAD AS "ARMAZÉM", 
-            prod.B1_UPRC AS "VALOR UNIT. (R$)",
-            (G1_QUANT * B1_UPRC) AS "SUB-TOTAL (R$)"
-        FROM SG1010 AS mat
-        INNER JOIN ListMP AS pai ON mat.G1_COD = pai."CÓDIGO"
-        INNER JOIN SB1010 AS prod ON mat.G1_COMP = prod.B1_COD
-        WHERE prod.B1_TIPO = 'MP'
-        AND prod.B1_LOCPAD IN ('01','03', '11', '12', '97')
-        AND mat.G1_REVFIM <> 'ZZZ' 
-        AND mat.D_E_L_E_T_ <> '*'
-        ORDER BY mat.G1_COMP ASC;
+            SELECT C2_ZZNUMQP AS "NUM. QP", C2_NUM AS "NUM. OP", C2_PRODUTO AS "CÓDIGO",
+            B1_DESC AS "DESCRIÇÃO", C2_QUANT AS "QUANT.", C2_UM AS "UNID. MED.", 
+            C2_REVISAO AS "REV.", C2_SEQUEN AS "SEQ.", C2_DATPRI AS "DT. PREV. INÍCIO", C2_DATPRF AS "DT. PREV. ENTREGA", 
+            C2_EMISSAO AS "DT. EMISSÃO OP", C2_DATRF AS "DT. REAL. FIM", C2_OBS AS "OBSERVAÇÃO",
+            C2_QUJE AS "QTD. PRODUZIDA", C2_APRATU1 AS "VALOR APROP. ESTOQUE", C2_AGLUT AS "OP AGLUTINADA", C2_XMAQUIN AS "ABERTO POR:"
+            FROM PROTHEUS12_R27.dbo.SC2010 op
+            INNER JOIN SB1010 prod ON C2_PRODUTO = B1_COD
+            WHERE C2_ZZNUMQP LIKE '%{numero_QP}'
+            AND C2_PRODUTO LIKE '{codigo_produto}%'
+            AND C2_NUM LIKE '{numero_OP}%'
+            AND op.D_E_L_E_T_ <> '*'
+            ORDER BY op.R_E_C_N_O_ DESC;
         """
         return query
 
     def executar_consulta(self):
-        select_query = self.verificar_query()
+        select_query = self.selecionar_query_conforme_filtro()
+        
+        if isinstance(select_query, bool) and select_query:
+            self.btn_consultar.setEnabled(True)
+            return
+        
         self.bloquear_campos_pesquisa()
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
@@ -461,53 +334,26 @@ class PcpApp(QWidget):
 
         try:
             dataframe = pd.read_sql(select_query, engine)
-            consolidated_dataframe = dataframe.groupby('CÓDIGO').agg({
-                'DESCRIÇÃO': 'first',
-                'QUANT.': 'sum',
-                'UNID. MED.': 'first',
-                'ULT. ATUALIZ.': 'first',
-                'TIPO': 'first',
-                'ARMAZÉM': 'first',
-                'VALOR UNIT. (R$)': 'first',
-                'SUB-TOTAL (R$)': 'sum'
-            }).reset_index()
 
-            # Converter para float com duas casas decimais
-            columns_to_convert = ['QUANT.', 'VALOR UNIT. (R$)', 'SUB-TOTAL (R$)']
-            consolidated_dataframe[columns_to_convert] = (consolidated_dataframe[columns_to_convert]
-                        .map(lambda x: round(float(x), 2)))
-            consolidated_dataframe[''] = ''
-            
-            self.configurar_tabela(consolidated_dataframe)
-            
+            dataframe[''] = ''
+
+            self.configurar_tabela(dataframe)
+
             self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
             self.tree.setRowCount(0)
 
-            for i, row in consolidated_dataframe.iterrows():
+            for i, row in dataframe.iterrows():
                 self.tree.setSortingEnabled(False)
                 self.tree.insertRow(i)
                 for j, value in enumerate(row):
-                    if j == 4 and not value.isspace():
+                    if j >= 8 and j <= 11 and not value.isspace():
                         data_obj = datetime.strptime(value, "%Y%m%d")
                         value = data_obj.strftime("%d/%m/%Y")
-                    elif j == 6:
-                        if value == '01':
-                            value = 'MATÉRIA-PRIMA'
-                        elif value == '03':
-                            value = 'COMERCIAL'
-                        elif value == '11':
-                            value = 'PROD. COMER. IMPORT. DIRETO'
-                        elif value == '12':
-                            value = 'MAT. PRIMA IMPORT. DIRETO'
-                        elif value == '97':
-                            value = 'TRAT. SUPERFICIAL'
 
                     item = QTableWidgetItem(str(value).strip())
 
-                    if j >= 2 and j < 7:
+                    if j != 2 and j != 3:
                         item.setTextAlignment(Qt.AlignCenter)
-                    elif j == 7 or j == 8:
-                        item.setTextAlignment(Qt.AlignRight)
 
                     self.tree.setItem(i, j, item)
 
