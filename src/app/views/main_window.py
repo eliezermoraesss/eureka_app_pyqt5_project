@@ -6,7 +6,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("EUREKA® Home")
+        self.setWindowTitle("EUREKA SMARTPLIC® HOME - v0.1")
 
         # Configurar o ícone da janela
         icon_path = "src/resources/images/010.png"
@@ -56,11 +56,14 @@ class MainWindow(QMainWindow):
         """)
 
         # Botões
-        self.engenharia_button  = QPushButton("Engenharia", self)
+        self.engenharia_button = QPushButton("Engenharia", self)
         self.engenharia_button .setMinimumWidth(150)
 
-        self.comercial_button  = QPushButton("Comercial", self)
+        self.comercial_button = QPushButton("Comercial", self)
         self.comercial_button .setMinimumWidth(150)
+
+        self.pcp_button = QPushButton("PCP", self)
+        self.pcp_button.setMinimumWidth(150)
 
         layout = QVBoxLayout()
         layout_linha_01 = QHBoxLayout()
@@ -68,6 +71,7 @@ class MainWindow(QMainWindow):
         layout_linha_01.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
         layout_linha_01.addWidget(self.engenharia_button)
         layout_linha_01.addWidget(self.comercial_button )
+        layout_linha_01.addWidget(self.pcp_button)
         layout_linha_01.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
         layout.addLayout(layout_linha_01)
