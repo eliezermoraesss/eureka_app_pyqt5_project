@@ -1,8 +1,8 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QToolButton, QStyle, QAction
+from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
+    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel
 from PyQt5.QtGui import QFont, QColor, QIcon
-from PyQt5.QtCore import Qt, QCoreApplication, QSize
+from PyQt5.QtCore import Qt, QCoreApplication, QDate
 import pyodbc
 import pyperclip
 import pandas as pd
@@ -11,11 +11,6 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
 from sqlalchemy import create_engine
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Image
-from reportlab.lib.units import inch, mm
-from reportlab.lib import colors
 import os
 
 
@@ -70,7 +65,7 @@ class PcpApp(QWidget):
 
             QPushButton:hover {
                 background-color: #0a79f8;
-                color: #0a79f8
+                color: #fff
             }
 
             QPushButton:pressed {
@@ -126,6 +121,26 @@ class PcpApp(QWidget):
         self.campo_OP.setPlaceholderText("Digite o número da OP...")
         self.add_clear_button(self.campo_OP)
 
+        self.campo_data_inicio = QDateEdit(self)
+        self.campo_data_inicio.setFont(QFont("Segoe UI", 10))
+        self.campo_data_inicio.setFixedWidth(150)
+        self.campo_data_inicio.setCalendarPopup(True)
+        self.campo_data_inicio.setDisplayFormat("dd/MM/yyyy")
+        self.campo_data_inicio.setDate(QDate())
+        self.campo_data_inicio.setSpecialValueText('')
+        self.campo_data_inicio.clear()  # Limpar valor inicial
+        self.add_today_button(self.campo_data_inicio)
+
+        self.campo_data_fim = QDateEdit(self)
+        self.campo_data_fim.setFont(QFont("Segoe UI", 10))
+        self.campo_data_fim.setFixedWidth(150)
+        self.campo_data_fim.setCalendarPopup(True)
+        self.campo_data_fim.setDisplayFormat("dd/MM/yyyy")
+        self.campo_data_fim.setDate(QDate())
+        self.campo_data_fim.setSpecialValueText('')
+        self.campo_data_fim.clear()
+        self.add_today_button(self.campo_data_fim)
+
         self.btn_consultar = QPushButton("Pesquisar", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setMinimumWidth(100)
@@ -151,6 +166,10 @@ class PcpApp(QWidget):
         layout_linha_02.addWidget(self.campo_codigo)
         layout_linha_02.addWidget(self.campo_qp)
         layout_linha_02.addWidget(self.campo_OP)
+        layout_linha_02.addWidget(QLabel("Data Início:"))
+        layout_linha_02.addWidget(self.campo_data_inicio)
+        layout_linha_02.addWidget(QLabel("Data Fim:"))
+        layout_linha_02.addWidget(self.campo_data_fim)
         layout_linha_02.addStretch()
 
         layout_linha_03.addWidget(self.btn_consultar)
@@ -163,6 +182,12 @@ class PcpApp(QWidget):
         layout.addLayout(layout_linha_03)
         layout.addWidget(self.tree)
         self.setLayout(layout)
+
+    def add_today_button(self, date_edit):
+        calendar = date_edit.calendarWidget()
+        btn_today = QPushButton("Hoje", calendar)
+        btn_today.setGeometry(10,10,50,25)
+        btn_today.clicked.connect(lambda: date_edit.setDate(QDate.currentDate()))
 
     def add_clear_button(self, line_edit):
         clear_icon = self.style().standardIcon(QStyle.SP_LineEditClearButton)
@@ -196,7 +221,7 @@ class PcpApp(QWidget):
 
     def exportar_excel(self):
         file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
-                                                   f'{self.campo_codigo.text().upper().strip()}_MP.xlsx',
+                                                   f'{self.campo_codigo}_MP.xlsx',
                                                    'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
 
         if file_path:
@@ -292,6 +317,30 @@ class PcpApp(QWidget):
         root.destroy()
 
     def selecionar_query_conforme_filtro(self):
+
+        data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
+        data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
+
+        filtro_data = f"AND C2_EMISSAO >= '{data_inicio_formatada}' AND C2_DATRF <= '{data_fim_formatada}'" if data_fim_formatada != '' and data_fim_formatada != '' else ''
+
+        query = f"""
+            SELECT C2_ZZNUMQP AS "NUM. QP", C2_NUM AS "NUM. OP", C2_PRODUTO AS "CÓDIGO",
+            B1_DESC AS "DESCRIÇÃO", C2_QUANT AS "QUANT.", C2_UM AS "UNID. MED.", 
+            C2_REVISAO AS "REV.", C2_SEQUEN AS "SEQ.", 
+            C2_EMISSAO AS "DT. EMISSÃO OP", C2_DATPRF AS "DT. PREV. ENTREGA", C2_DATRF AS "DT. FECHAMENTO", C2_OBS AS "OBSERVAÇÃO",
+            C2_QUJE AS "QTD. PRODUZIDA", C2_APRATU1 AS "VALOR APROP. ESTOQUE (R$)", C2_AGLUT AS "OP AGLUTINADA", C2_XMAQUIN AS "ABERTO POR:"
+            FROM PROTHEUS12_R27.dbo.SC2010 op
+            INNER JOIN SB1010 prod ON C2_PRODUTO = B1_COD
+            WHERE C2_ZZNUMQP LIKE '%{self.campo_qp.text().upper().strip()}'
+            AND C2_PRODUTO LIKE '{self.campo_codigo.text().upper().strip()}%'
+            AND C2_NUM LIKE '{self.campo_OP.text().upper().strip()}%' {filtro_data}
+            AND op.D_E_L_E_T_ <> '*'
+            ORDER BY op.R_E_C_N_O_ DESC;
+        """
+        return query
+
+    def validar_campos(self):
+
         codigo_produto = self.campo_codigo.text().upper().strip()
         numero_QP = self.campo_qp.text().upper().strip()
         numero_OP = self.campo_OP.text().upper().strip()
@@ -304,29 +353,39 @@ class PcpApp(QWidget):
                                  "info")
             return True
 
-        query = f"""
-            SELECT C2_ZZNUMQP AS "NUM. QP", C2_NUM AS "NUM. OP", C2_PRODUTO AS "CÓDIGO",
-            B1_DESC AS "DESCRIÇÃO", C2_QUANT AS "QUANT.", C2_UM AS "UNID. MED.", 
-            C2_REVISAO AS "REV.", C2_SEQUEN AS "SEQ.", C2_DATPRI AS "DT. PREV. INÍCIO", C2_DATPRF AS "DT. PREV. ENTREGA", 
-            C2_EMISSAO AS "DT. EMISSÃO OP", C2_DATRF AS "DT. REAL. FIM", C2_OBS AS "OBSERVAÇÃO",
-            C2_QUJE AS "QTD. PRODUZIDA", C2_APRATU1 AS "VALOR APROP. ESTOQUE", C2_AGLUT AS "OP AGLUTINADA", C2_XMAQUIN AS "ABERTO POR:"
-            FROM PROTHEUS12_R27.dbo.SC2010 op
-            INNER JOIN SB1010 prod ON C2_PRODUTO = B1_COD
-            WHERE C2_ZZNUMQP LIKE '%{numero_QP}'
-            AND C2_PRODUTO LIKE '{codigo_produto}%'
-            AND C2_NUM LIKE '{numero_OP}%'
-            AND op.D_E_L_E_T_ <> '*'
-            ORDER BY op.R_E_C_N_O_ DESC;
-        """
-        return query
+        if len(codigo_produto) != 13 and not codigo_produto == '':
+            self.exibir_mensagem("ATENÇÃO!",
+                                 "Digite um código válido!\n\nCorrija e tente "
+                                 f"novamente.\n\nツ\n\nSMARTPLIC®",
+                                 "info")
+            return True
+
+        if len(numero_OP) != 6 and not numero_OP == '':
+            self.exibir_mensagem("ATENÇÃO!",
+                                 "Digite um número de OP válido!\n\nCorrija e tente "
+                                 f"novamente.\n\nツ\n\nSMARTPLIC®",
+                                 "info")
+            return True
+
+        if len(numero_QP) != 6 and not numero_QP == '':
+            self.exibir_mensagem("ATENÇÃO!",
+                                 "Digite um número de QP válido!\n\nCorrija e tente "
+                                 f"novamente.\n\nツ\n\nSMARTPLIC®",
+                                 "info")
+            return True
 
     def executar_consulta(self):
+
+        if self.validar_campos():
+            self.btn_consultar.setEnabled(True)
+            return
+
         select_query = self.selecionar_query_conforme_filtro()
-        
+
         if isinstance(select_query, bool) and select_query:
             self.btn_consultar.setEnabled(True)
             return
-        
+
         self.bloquear_campos_pesquisa()
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
@@ -346,7 +405,7 @@ class PcpApp(QWidget):
                 self.tree.setSortingEnabled(False)
                 self.tree.insertRow(i)
                 for j, value in enumerate(row):
-                    if j >= 8 and j <= 11 and not value.isspace():
+                    if 8 <= j <= 10 and not value.isspace():
                         data_obj = datetime.strptime(value, "%Y%m%d")
                         value = data_obj.strftime("%d/%m/%Y")
 
@@ -354,6 +413,8 @@ class PcpApp(QWidget):
 
                     if j != 2 and j != 3:
                         item.setTextAlignment(Qt.AlignCenter)
+                    elif j == 10:
+                        item.setBackground(QColor("#97BE5A"))
 
                     self.tree.setItem(i, j, item)
 
