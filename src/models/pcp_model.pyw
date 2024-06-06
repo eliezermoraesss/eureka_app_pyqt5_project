@@ -22,6 +22,8 @@ class PcpApp(QWidget):
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
 
+        self.nova_janela = None
+
         self.setWindowTitle("EUREKA® PCP - v0.1")
 
         self.setAutoFillBackground(True)
@@ -35,7 +37,7 @@ class PcpApp(QWidget):
             }
 
             QLabel {
-                color: #262626;
+                color: #EEEEEE;
                 font-size: 12px;
                 padding: 5px;
                 font-weight: bold;
@@ -145,6 +147,10 @@ class PcpApp(QWidget):
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setMinimumWidth(100)
 
+        self.btn_nova_janela = QPushButton("Nova Janela", self)
+        self.btn_nova_janela.clicked.connect(self.abrir_nova_janela)
+        self.btn_nova_janela.setMinimumWidth(100)
+
         self.btn_exportar_excel = QPushButton("Exportar Excel", self)
         self.btn_exportar_excel.clicked.connect(self.exportar_excel)
         self.btn_exportar_excel.setMinimumWidth(100)
@@ -173,6 +179,7 @@ class PcpApp(QWidget):
         layout_linha_02.addStretch()
 
         layout_linha_03.addWidget(self.btn_consultar)
+        layout_linha_03.addWidget(self.btn_nova_janela)
         layout_linha_03.addWidget(self.btn_exportar_excel)
         layout_linha_03.addWidget(self.btn_fechar)
         layout_linha_03.addStretch()
@@ -182,6 +189,12 @@ class PcpApp(QWidget):
         layout.addLayout(layout_linha_03)
         layout.addWidget(self.tree)
         self.setLayout(layout)
+
+    def abrir_nova_janela(self):
+        if not self.nova_janela or not self.nova_janela.isVisible():
+            self.nova_janela = PcpApp()
+            self.nova_janela.setGeometry(self.x() + 50, self.y() + 50, self.width(), self.height())
+            self.nova_janela.show()
 
     def add_today_button(self, date_edit):
         calendar = date_edit.calendarWidget()
@@ -441,5 +454,16 @@ if __name__ == "__main__":
     username, password, database, server = PcpApp().setup_mssql()
     driver = '{SQL Server}'
 
-    window.showMaximized()
+    largura_janela = 1400  # Substitua pelo valor desejado
+    altura_janela = 700  # Substitua pelo valor desejado
+
+    largura_tela = app.primaryScreen().size().width()
+    altura_tela = app.primaryScreen().size().height()
+
+    pos_x = (largura_tela - largura_janela) // 2
+    pos_y = (altura_tela - altura_janela) // 2
+
+    window.setGeometry(pos_x, pos_y, largura_janela, altura_janela)
+    window.show()
+
     sys.exit(app.exec_())
