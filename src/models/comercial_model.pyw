@@ -31,7 +31,7 @@ class ComercialApp(QWidget):
 
         self.setAutoFillBackground(True)
         palette = self.palette()
-        palette.setColor(self.backgroundRole(), QColor('#363636'))
+        palette.setColor(self.backgroundRole(), QColor('#C9C9C9'))
         self.setPalette(palette)
 
         self.setStyleSheet("""
@@ -110,7 +110,7 @@ class ComercialApp(QWidget):
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont("Segoe UI", 10))
-        self.campo_codigo.setFixedWidth(600)
+        self.campo_codigo.setFixedWidth(500)
         self.campo_codigo.setPlaceholderText("Digite o código da máquina ou equipamento...")
 
         self.btn_consultar = QPushButton("Consultar MP", self)
@@ -538,5 +538,16 @@ if __name__ == "__main__":
     username, password, database, server = ComercialApp().setup_mssql()
     driver = '{SQL Server}'
 
-    window.showMaximized()
+    largura_janela = 1400  # Substitua pelo valor desejado
+    altura_janela = 700  # Substitua pelo valor desejado
+
+    largura_tela = app.primaryScreen().size().width()
+    altura_tela = app.primaryScreen().size().height()
+
+    pos_x = (largura_tela - largura_janela) // 2
+    pos_y = (altura_tela - altura_janela) // 2
+
+    window.setGeometry(pos_x, pos_y, largura_janela, altura_janela)
+    window.show()
+
     sys.exit(app.exec_())
