@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt, QCoreApplication, QDate
 import pyperclip
 import pandas as pd
 import ctypes
-from datetime import datetime
+from datetime import date, datetime
 import tkinter as tk
 from tkinter import messagebox
 from sqlalchemy import create_engine
@@ -271,7 +271,7 @@ class PcpApp(QWidget):
 
     def exportar_excel(self):
         file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
-                                                   f'{self.campo_codigo}_MP.xlsx',
+                                                   f'report_{date.today().strftime('%Y-%m-%d')}',
                                                    'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
 
         if file_path:
@@ -445,7 +445,7 @@ class PcpApp(QWidget):
             self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
             self.tree.setRowCount(0)
 
-            layout_button = self.layout_linha_03.addWidget(self.btn_parar_consulta)
+            self.layout_linha_03.addWidget(self.btn_parar_consulta)
 
             for i, row in dataframe.iterrows():
                 if self.interromper_consulta_sql:
