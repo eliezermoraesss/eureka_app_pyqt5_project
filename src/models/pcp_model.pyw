@@ -385,14 +385,6 @@ class PcpApp(QWidget):
 
     def validar_campos(self, codigo_produto, numero_qp, numero_op):
 
-        if codigo_produto == '' and numero_qp == '' and numero_op == '':
-            self.btn_consultar.setEnabled(False)
-            self.exibir_mensagem("ATENÇÃO!",
-                                 "Os campos de pesquisa estão vazios.\nPreencha algum campo e tente "
-                                 "novamente.\n\nツ\n\nSMARTPLIC®",
-                                 "info")
-            return True
-
         if len(codigo_produto) != 13 and not codigo_produto == '':
             self.exibir_mensagem("ATENÇÃO!",
                                  "Produto não encontrado!\n\nCorrija e tente "
@@ -424,7 +416,9 @@ class PcpApp(QWidget):
             self.btn_consultar.setEnabled(True)
             return
 
-        select_query = self.selecionar_query_conforme_filtro(codigo_produto, numero_qp.zfill(6), numero_op)
+        numero_qp = numero_qp.zfill(6) if numero_qp != '' else numero_qp
+
+        select_query = self.selecionar_query_conforme_filtro(codigo_produto, numero_qp, numero_op)
 
         if isinstance(select_query, bool) and select_query:
             self.btn_consultar.setEnabled(True)
