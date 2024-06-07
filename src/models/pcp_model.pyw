@@ -37,8 +37,36 @@ class PcpApp(QWidget):
                 padding: 5px;
                 font-weight: bold;
             }
+            
+            QDateEdit {
+                background-color: #FFFFFF;
+                border: 1px solid #262626;
+                margin-top: 20px;
+                margin-bottom: 20px;
+                padding: 5px 10px;
+                border-radius: 10px;
+                height: 24px;
+                font-size: 16px;
+            }
+            
+            QDateEdit::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 30px;
+                border-left-width: 1px;
+                border-left-color: darkgray;
+                border-left-style: solid;
+                border-top-right-radius: 3px;
+                border-bottom-right-radius: 3px;
+            }
+            
+            QDateEdit::down-arrow {
+                image: url(../resources/images/arrow.png);
+                width: 10px;
+                height: 10px;
+            }
 
-            QLineEdit, QDateEdit {
+            QLineEdit {
                 background-color: #FFFFFF;
                 border: 1px solid #262626;
                 margin-top: 20px;
@@ -126,9 +154,11 @@ class PcpApp(QWidget):
         self.campo_data_inicio.setFixedWidth(150)
         self.campo_data_inicio.setCalendarPopup(True)
         self.campo_data_inicio.setDisplayFormat("dd/MM/yyyy")
-        self.campo_data_inicio.setDate(QDate())
-        self.campo_data_inicio.setSpecialValueText('')
-        self.campo_data_inicio.clear()  # Limpar valor inicial
+        
+        data_atual = QDate.currentDate()
+        meses_a_remover = 3
+        data_inicio = data_atual.addMonths(-meses_a_remover)
+        self.campo_data_inicio.setDate(data_inicio)
         self.add_today_button(self.campo_data_inicio)
 
         self.campo_data_fim = QDateEdit(self)
@@ -136,9 +166,7 @@ class PcpApp(QWidget):
         self.campo_data_fim.setFixedWidth(150)
         self.campo_data_fim.setCalendarPopup(True)
         self.campo_data_fim.setDisplayFormat("dd/MM/yyyy")
-        self.campo_data_fim.setDate(QDate())
-        self.campo_data_fim.setSpecialValueText('')
-        self.campo_data_fim.clear()
+        self.campo_data_fim.setDate(QDate().currentDate())
         self.add_today_button(self.campo_data_fim)
 
         self.btn_consultar = QPushButton("Pesquisar", self)
@@ -170,9 +198,9 @@ class PcpApp(QWidget):
         layout_linha_02.addWidget(self.campo_codigo)
         layout_linha_02.addWidget(self.campo_qp)
         layout_linha_02.addWidget(self.campo_OP)
-        layout_linha_02.addWidget(QLabel("Data Início:"))
+        layout_linha_02.addWidget(QLabel("Data Emissão:"))
         layout_linha_02.addWidget(self.campo_data_inicio)
-        layout_linha_02.addWidget(QLabel("Data Fim:"))
+        layout_linha_02.addWidget(QLabel("Data Fechamento:"))
         layout_linha_02.addWidget(self.campo_data_fim)
         layout_linha_02.addStretch()
 
@@ -196,8 +224,13 @@ class PcpApp(QWidget):
 
     def add_today_button(self, date_edit):
         calendar = date_edit.calendarWidget()
+        calendar.setGeometry(10, 10, 600, 400)
         btn_today = QPushButton("Hoje", calendar)
-        btn_today.setGeometry(10, 10, 50, 25)
+        pos_x = 20
+        pos_y = 5
+        largura = 50
+        altura = 20
+        btn_today.setGeometry(pos_x, pos_y, largura, altura)
         btn_today.clicked.connect(lambda: date_edit.setDate(QDate.currentDate()))
 
     def add_clear_button(self, line_edit):

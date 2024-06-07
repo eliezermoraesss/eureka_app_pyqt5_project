@@ -518,9 +518,6 @@ class ConsultaApp(QWidget):
             # Limpar a tabela
             self.tree.setRowCount(0)
 
-            # Definir cores alternadas
-            cores = [QColor("#FFFFFF"), QColor("#FFFFFF")]
-
             time.sleep(0.1)
 
             # Preencher a tabela com os resultados
