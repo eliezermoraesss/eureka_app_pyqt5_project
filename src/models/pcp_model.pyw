@@ -26,11 +26,6 @@ class PcpApp(QWidget):
 
         self.setWindowTitle("EUREKA® PCP - v0.1")
 
-        self.setAutoFillBackground(True)
-        palette = self.palette()
-        palette.setColor(self.backgroundRole(), QColor('#363636'))
-        self.setPalette(palette)
-
         self.setStyleSheet("""
             * {
                 background-color: #373A40;
@@ -43,7 +38,7 @@ class PcpApp(QWidget):
                 font-weight: bold;
             }
 
-            QLineEdit {
+            QLineEdit, QDateEdit {
                 background-color: #FFFFFF;
                 border: 1px solid #262626;
                 margin-top: 20px;
@@ -63,6 +58,7 @@ class PcpApp(QWidget):
                 font-size: 12px;
                 height: 20px;
                 font-weight: bold;
+                margin-bottom: 8px;
             }
 
             QPushButton:hover {
@@ -96,6 +92,8 @@ class PcpApp(QWidget):
                 background-color: #363636;
                 color: #fff;
                 font-weight: bold;
+                padding-right: 8px;
+                padding-left: 8px;
             }
 
             QTableWidget::item:selected {
@@ -199,7 +197,7 @@ class PcpApp(QWidget):
     def add_today_button(self, date_edit):
         calendar = date_edit.calendarWidget()
         btn_today = QPushButton("Hoje", calendar)
-        btn_today.setGeometry(10,10,50,25)
+        btn_today.setGeometry(10, 10, 50, 25)
         btn_today.clicked.connect(lambda: date_edit.setDate(QDate.currentDate()))
 
     def add_clear_button(self, line_edit):
@@ -280,7 +278,7 @@ class PcpApp(QWidget):
         self.tree.itemDoubleClicked.connect(self.copiar_linha)
         fonte_tabela = QFont("Segoe UI", 10)
         self.tree.setFont(fonte_tabela)
-        altura_linha = 40
+        altura_linha = 60
         self.tree.verticalHeader().setDefaultSectionSize(altura_linha)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
         self.tree.horizontalHeader().setStretchLastSection(True)
@@ -329,7 +327,7 @@ class PcpApp(QWidget):
 
         root.destroy()
 
-    def selecionar_query_conforme_filtro(self):
+    def selecionar_query_conforme_filtro(self, codigo_produto, numero_qp, numero_op):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -337,26 +335,22 @@ class PcpApp(QWidget):
         filtro_data = f"AND C2_EMISSAO >= '{data_inicio_formatada}' AND C2_DATRF <= '{data_fim_formatada}'" if data_fim_formatada != '' and data_fim_formatada != '' else ''
 
         query = f"""
-            SELECT C2_ZZNUMQP AS "NUM. QP", C2_NUM AS "NUM. OP", C2_PRODUTO AS "CÓDIGO",
-            B1_DESC AS "DESCRIÇÃO", C2_QUANT AS "QUANT.", C2_UM AS "UNID. MED.", 
-            C2_REVISAO AS "REV.", C2_SEQUEN AS "SEQ.", 
-            C2_EMISSAO AS "DT. EMISSÃO OP", C2_DATPRF AS "DT. PREV. ENTREGA", C2_DATRF AS "DT. FECHAMENTO", C2_OBS AS "OBSERVAÇÃO",
-            C2_QUJE AS "QTD. PRODUZIDA", C2_APRATU1 AS "VALOR APROP. ESTOQUE (R$)", C2_AGLUT AS "OP AGLUTINADA", C2_XMAQUIN AS "ABERTO POR:"
+            SELECT C2_ZZNUMQP AS "NUM. QP", C2_NUM AS "NUM. OP", C2_PRODUTO AS "CÓDIGO", C2_ITEM AS "ITEM", C2_SEQUEN AS "SEQ.",
+            B1_DESC AS "DESCRIÇÃO", C2_QUANT AS "QUANT.", C2_UM AS "UM", 
+            C2_EMISSAO AS "EMISSÃO", C2_DATPRF AS "PREV. ENTREGA",
+            C2_DATRF AS "FECHAMENTO", C2_OBS AS "OBSERVAÇÃO",
+            C2_QUJE AS "QTD. PRODUZIDA", C2_AGLUT AS "OP AGLUTINADA", C2_XMAQUIN AS "ABERTO POR:"
             FROM PROTHEUS12_R27.dbo.SC2010 op
             INNER JOIN SB1010 prod ON C2_PRODUTO = B1_COD
-            WHERE C2_ZZNUMQP LIKE '%{self.campo_qp.text().upper().strip()}'
-            AND C2_PRODUTO LIKE '{self.campo_codigo.text().upper().strip()}%'
-            AND C2_NUM LIKE '{self.campo_OP.text().upper().strip()}%' {filtro_data}
+            WHERE C2_ZZNUMQP LIKE '%{numero_qp}'
+            AND C2_PRODUTO LIKE '{codigo_produto}%'
+            AND C2_NUM LIKE '{numero_op}%' {filtro_data}
             AND op.D_E_L_E_T_ <> '*'
             ORDER BY op.R_E_C_N_O_ DESC;
         """
         return query
 
-    def validar_campos(self):
-
-        codigo_produto = self.campo_codigo.text().upper().strip()
-        numero_QP = self.campo_qp.text().upper().strip()
-        numero_OP = self.campo_OP.text().upper().strip()
+    def validar_campos(self, codigo_produto, numero_QP, numero_OP):
 
         if codigo_produto == '' and numero_QP == '' and numero_OP == '':
             self.btn_consultar.setEnabled(False)
@@ -368,32 +362,36 @@ class PcpApp(QWidget):
 
         if len(codigo_produto) != 13 and not codigo_produto == '':
             self.exibir_mensagem("ATENÇÃO!",
-                                 "Digite um código válido!\n\nCorrija e tente "
+                                 "Produto não encontrado!\n\nCorrija e tente "
                                  f"novamente.\n\nツ\n\nSMARTPLIC®",
                                  "info")
             return True
 
         if len(numero_OP) != 6 and not numero_OP == '':
             self.exibir_mensagem("ATENÇÃO!",
-                                 "Digite um número de OP válido!\n\nCorrija e tente "
+                                 "Ordem de Produção não encontrada!\n\nCorrija e tente "
                                  f"novamente.\n\nツ\n\nSMARTPLIC®",
                                  "info")
             return True
 
         if len(numero_QP) != 6 and not numero_QP == '':
             self.exibir_mensagem("ATENÇÃO!",
-                                 "Digite um número de QP válido!\n\nCorrija e tente "
+                                 "QP não encontrada!\n\nCorrija e tente "
                                  f"novamente.\n\nツ\n\nSMARTPLIC®",
                                  "info")
             return True
 
     def executar_consulta(self):
 
-        if self.validar_campos():
+        numero_qp = self.campo_qp.text().upper().strip().zfill(6)
+        numero_op = self.campo_OP.text().upper().strip()
+        codigo_produto = self.campo_codigo.text().upper().strip()
+
+        if self.validar_campos(codigo_produto, numero_qp, numero_op):
             self.btn_consultar.setEnabled(True)
             return
 
-        select_query = self.selecionar_query_conforme_filtro()
+        select_query = self.selecionar_query_conforme_filtro(codigo_produto, numero_qp, numero_op)
 
         if isinstance(select_query, bool) and select_query:
             self.btn_consultar.setEnabled(True)
@@ -424,7 +422,7 @@ class PcpApp(QWidget):
 
                     item = QTableWidgetItem(str(value).strip())
 
-                    if j != 2 and j != 3:
+                    if j != 5 and j != 11:
                         item.setTextAlignment(Qt.AlignCenter)
                     elif j == 10:
                         item.setBackground(QColor("#97BE5A"))
