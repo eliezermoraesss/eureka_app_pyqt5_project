@@ -373,7 +373,7 @@ class PcpApp(QWidget):
             C2_EMISSAO AS "EMISSÃO", C2_DATPRF AS "PREV. ENTREGA",
             C2_DATRF AS "FECHAMENTO", C2_OBS AS "OBSERVAÇÃO",
             C2_QUJE AS "QTD. PRODUZIDA", C2_AGLUT AS "OP AGLUTINADA", C2_XMAQUIN AS "ABERTO POR:"
-            FROM PROTHEUS12_R27.dbo.SC2010 op
+            FROM {database}.dbo.SC2010 op
             INNER JOIN SB1010 prod ON C2_PRODUTO = B1_COD
             WHERE C2_ZZNUMQP LIKE '%{numero_qp}'
             AND C2_PRODUTO LIKE '{codigo_produto}%'
@@ -383,9 +383,9 @@ class PcpApp(QWidget):
         """
         return query
 
-    def validar_campos(self, codigo_produto, numero_QP, numero_OP):
+    def validar_campos(self, codigo_produto, numero_qp, numero_op):
 
-        if codigo_produto == '' and numero_QP == '' and numero_OP == '':
+        if codigo_produto == '' and numero_qp == '' and numero_op == '':
             self.btn_consultar.setEnabled(False)
             self.exibir_mensagem("ATENÇÃO!",
                                  "Os campos de pesquisa estão vazios.\nPreencha algum campo e tente "
@@ -400,14 +400,14 @@ class PcpApp(QWidget):
                                  "info")
             return True
 
-        if len(numero_OP) != 6 and not numero_OP == '':
+        if len(numero_op) != 6 and not numero_op == '':
             self.exibir_mensagem("ATENÇÃO!",
                                  "Ordem de Produção não encontrada!\n\nCorrija e tente "
                                  f"novamente.\n\nツ\n\nSMARTPLIC®",
                                  "info")
             return True
 
-        if len(numero_QP) != 6 and not numero_QP == '':
+        if len(numero_qp.zfill(6)) != 6 and not numero_qp == '':
             self.exibir_mensagem("ATENÇÃO!",
                                  "QP não encontrada!\n\nCorrija e tente "
                                  f"novamente.\n\nツ\n\nSMARTPLIC®",
@@ -416,7 +416,7 @@ class PcpApp(QWidget):
 
     def executar_consulta(self):
 
-        numero_qp = self.campo_qp.text().upper().strip().zfill(6)
+        numero_qp = self.campo_qp.text().upper().strip()
         numero_op = self.campo_OP.text().upper().strip()
         codigo_produto = self.campo_codigo.text().upper().strip()
 
@@ -424,7 +424,7 @@ class PcpApp(QWidget):
             self.btn_consultar.setEnabled(True)
             return
 
-        select_query = self.selecionar_query_conforme_filtro(codigo_produto, numero_qp, numero_op)
+        select_query = self.selecionar_query_conforme_filtro(codigo_produto, numero_qp.zfill(6), numero_op)
 
         if isinstance(select_query, bool) and select_query:
             self.btn_consultar.setEnabled(True)
