@@ -3,7 +3,6 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBox
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel
 from PyQt5.QtGui import QFont, QColor, QIcon
 from PyQt5.QtCore import Qt, QCoreApplication, QDate
-import pyodbc
 import pyperclip
 import pandas as pd
 import ctypes
@@ -11,6 +10,7 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
 from sqlalchemy import create_engine
+import pyodbc
 import os
 
 
@@ -18,6 +18,8 @@ class PcpApp(QWidget):
     def __init__(self):
         super().__init__()
 
+        self.engine = None
+        self.interromper_consulta_sql = False
         self.tree = QTableWidget(self)
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
@@ -173,6 +175,10 @@ class PcpApp(QWidget):
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setMinimumWidth(100)
 
+        self.btn_parar_consulta = QPushButton("Parar consulta")
+        self.btn_parar_consulta.clicked.connect(self.parar_consulta)
+        self.btn_parar_consulta.setMinimumWidth(100)
+
         self.btn_nova_janela = QPushButton("Nova Janela", self)
         self.btn_nova_janela.clicked.connect(self.abrir_nova_janela)
         self.btn_nova_janela.setMinimumWidth(100)
@@ -193,7 +199,7 @@ class PcpApp(QWidget):
         layout = QVBoxLayout()
         #layout_linha_01 = QHBoxLayout()
         layout_linha_02 = QHBoxLayout()
-        layout_linha_03 = QHBoxLayout()
+        self.layout_linha_03 = QHBoxLayout()
 
         layout_linha_02.addWidget(self.campo_codigo)
         layout_linha_02.addWidget(self.campo_qp)
@@ -204,15 +210,15 @@ class PcpApp(QWidget):
         layout_linha_02.addWidget(self.campo_data_fim)
         layout_linha_02.addStretch()
 
-        layout_linha_03.addWidget(self.btn_consultar)
-        layout_linha_03.addWidget(self.btn_nova_janela)
-        layout_linha_03.addWidget(self.btn_exportar_excel)
-        layout_linha_03.addWidget(self.btn_fechar)
-        layout_linha_03.addStretch()
+        self.layout_linha_03.addWidget(self.btn_consultar)
+        self.layout_linha_03.addWidget(self.btn_nova_janela)
+        self.layout_linha_03.addWidget(self.btn_exportar_excel)
+        self.layout_linha_03.addWidget(self.btn_fechar)
+        self.layout_linha_03.addStretch()
 
         #layout.addLayout(layout_linha_01)
         layout.addLayout(layout_linha_02)
-        layout.addLayout(layout_linha_03)
+        layout.addLayout(self.layout_linha_03)
         layout.addWidget(self.tree)
         self.setLayout(layout)
 
@@ -334,12 +340,12 @@ class PcpApp(QWidget):
     def limpar_campos(self):
         self.campo_codigo.clear()
 
-    def bloquear_campos_pesquisa(self):
+    def bloquear_campos(self):
         self.campo_codigo.setEnabled(False)
         self.btn_consultar.setEnabled(False)
         self.btn_exportar_excel.setEnabled(False)
 
-    def desbloquear_campos_pesquisa(self):
+    def desbloquear_campos(self):
         self.campo_codigo.setEnabled(True)
         self.btn_consultar.setEnabled(True)
         self.btn_exportar_excel.setEnabled(True)
@@ -424,13 +430,13 @@ class PcpApp(QWidget):
             self.btn_consultar.setEnabled(True)
             return
 
-        self.bloquear_campos_pesquisa()
+        self.bloquear_campos()
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
-        engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
+        self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
 
         try:
-            dataframe = pd.read_sql(select_query, engine)
+            dataframe = pd.read_sql(select_query, self.engine)
 
             dataframe[''] = ''
 
@@ -439,7 +445,12 @@ class PcpApp(QWidget):
             self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
             self.tree.setRowCount(0)
 
+            layout_button = self.layout_linha_03.addWidget(self.btn_parar_consulta)
+
             for i, row in dataframe.iterrows():
+                if self.interromper_consulta_sql:
+                    break
+
                 self.tree.setSortingEnabled(False)
                 self.tree.insertRow(i)
                 for j, value in enumerate(row):
@@ -458,19 +469,29 @@ class PcpApp(QWidget):
 
                 QCoreApplication.processEvents()
 
+            self.layout_linha_03.removeWidget(self.btn_parar_consulta)
+            self.btn_parar_consulta.setParent(None)
             self.tree.setSortingEnabled(True)
-            self.desbloquear_campos_pesquisa()
+            self.desbloquear_campos()
 
-        except pyodbc.Error as ex:
+        except ValueError as ex:
             self.exibir_mensagem('Erro ao consultar tabela', f'Erro: {str(ex)}', 'error')
 
         finally:
             # Fecha a conexão com o banco de dados se estiver aberta
-            if 'engine' in locals():
-                engine.dispose()
+            if hasattr(self, 'engine'):
+                self.engine.dispose()
+                self.engine = None
+            self.interromper_consulta_sql = False
 
     def fechar_janela(self):
         self.close()
+
+    def parar_consulta(self):
+        self.interromper_consulta_sql = True
+        if hasattr(self, 'engine') and self.engine is not None:
+            self.engine.dispose()
+        self.desbloquear_campos()
 
 
 if __name__ == "__main__":
