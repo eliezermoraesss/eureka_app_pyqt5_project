@@ -82,11 +82,11 @@ class PcpApp(QWidget):
             QPushButton {
                 background-color: #DC5F00;
                 color: #fff;
-                padding: 15px;
+                padding: 10px;
                 border: 2px;
                 border-radius: 8px;
                 font-size: 12px;
-                height: 20px;
+                height: 15px;
                 font-weight: bold;
                 margin-bottom: 8px;
             }
@@ -158,7 +158,7 @@ class PcpApp(QWidget):
         self.campo_data_inicio.setDisplayFormat("dd/MM/yyyy")
         
         data_atual = QDate.currentDate()
-        meses_a_remover = 3
+        meses_a_remover = 2
         data_inicio = data_atual.addMonths(-meses_a_remover)
         self.campo_data_inicio.setDate(data_inicio)
         self.add_today_button(self.campo_data_inicio)
@@ -249,7 +249,7 @@ class PcpApp(QWidget):
 
     def setup_mssql(self):
         caminho_do_arquivo = (r"\\192.175.175.4\f\INTEGRANTES\ELIEZER\PROJETO SOLIDWORKS "
-                              r"TOTVS\libs-python\user-password-mssql\USER_PASSWORD_MSSQL_PROD.txt")
+            r"TOTVS\libs-python\user-password-mssql\USER_PASSWORD_MSSQL_PROD.txt")
         try:
             with open(caminho_do_arquivo, 'r') as arquivo:
                 string_lida = arquivo.read()
@@ -258,21 +258,21 @@ class PcpApp(QWidget):
 
         except FileNotFoundError:
             ctypes.windll.user32.MessageBoxW(0,
-                                             "Erro ao ler credenciais de acesso ao banco de dados MSSQL.\n\nBase de "
-                                             "dados ERP TOTVS PROTHEUS.\n\nPor favor, informe ao desenvolvedor/TI "
-                                             "sobre o erro exibido.\n\nTenha um bom dia! ツ",
-                                             "CADASTRO DE ESTRUTURA - TOTVS®", 16 | 0)
+                "Erro ao ler credenciais de acesso ao banco de dados MSSQL.\n\nBase de "
+                "dados ERP TOTVS PROTHEUS.\n\nPor favor, informe ao desenvolvedor/TI "
+                "sobre o erro exibido.\n\nTenha um bom dia! ツ",
+                "CADASTRO DE ESTRUTURA - TOTVS®", 16 | 0)
             sys.exit()
 
         except Exception as e:
             ctypes.windll.user32.MessageBoxW(0, "Ocorreu um erro ao ler o arquivo:", "CADASTRO DE ESTRUTURA - TOTVS®",
-                                             16 | 0)
+                16 | 0)
             sys.exit()
 
     def exportar_excel(self):
         file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
-                                                   f'report_{date.today().strftime('%Y-%m-%d')}',
-                                                   'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
+            f'report_{date.today().strftime('%Y-%m-%d')}',
+            'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
 
         if file_path:
             data = self.obter_dados_tabela()
@@ -317,7 +317,7 @@ class PcpApp(QWidget):
         self.tree.itemDoubleClicked.connect(self.copiar_linha)
         fonte_tabela = QFont("Segoe UI", 10)
         self.tree.setFont(fonte_tabela)
-        altura_linha = 60
+        altura_linha = 40
         self.tree.verticalHeader().setDefaultSectionSize(altura_linha)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
         self.tree.horizontalHeader().setStretchLastSection(True)
@@ -374,8 +374,8 @@ class PcpApp(QWidget):
         filtro_data = f"AND C2_EMISSAO >= '{data_inicio_formatada}' AND C2_DATRF <= '{data_fim_formatada}'" if data_fim_formatada != '' and data_fim_formatada != '' else ''
 
         query = f"""
-            SELECT C2_ZZNUMQP AS "NUM. QP", C2_NUM AS "NUM. OP", C2_PRODUTO AS "CÓDIGO", C2_ITEM AS "ITEM", C2_SEQUEN AS "SEQ.",
-            B1_DESC AS "DESCRIÇÃO", C2_QUANT AS "QUANT.", C2_UM AS "UM", 
+            SELECT C2_ZZNUMQP AS "NUM. QP", C2_NUM AS "NUM. OP", C2_ITEM AS "ITEM", C2_SEQUEN AS "SEQ.",
+            C2_PRODUTO AS "CÓDIGO", B1_DESC AS "DESCRIÇÃO", C2_QUANT AS "QUANT.", C2_UM AS "UM", 
             C2_EMISSAO AS "EMISSÃO", C2_DATPRF AS "PREV. ENTREGA",
             C2_DATRF AS "FECHAMENTO", C2_OBS AS "OBSERVAÇÃO",
             C2_QUJE AS "QTD. PRODUZIDA", C2_AGLUT AS "OP AGLUTINADA", C2_XMAQUIN AS "ABERTO POR:"
@@ -438,6 +438,7 @@ class PcpApp(QWidget):
         try:
             dataframe = pd.read_sql(select_query, self.engine)
 
+            dataframe.insert(0, 'Status', '')
             dataframe[''] = ''
 
             self.configurar_tabela(dataframe)
@@ -446,6 +447,14 @@ class PcpApp(QWidget):
             self.tree.setRowCount(0)
 
             self.layout_linha_03.addWidget(self.btn_parar_consulta)
+            
+            # Construir caminhos relativos
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            open_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'open_status_panel.png')
+            closed_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'close_status_panel.png')
+        
+            open_icon = QIcon(open_icon_path)
+            closed_icon = QIcon(closed_icon_path)
 
             for i, row in dataframe.iterrows():
                 if self.interromper_consulta_sql:
@@ -454,16 +463,24 @@ class PcpApp(QWidget):
                 self.tree.setSortingEnabled(False)
                 self.tree.insertRow(i)
                 for j, value in enumerate(row):
-                    if 8 <= j <= 10 and not value.isspace():
-                        data_obj = datetime.strptime(value, "%Y%m%d")
-                        value = data_obj.strftime("%d/%m/%Y")
-
-                    item = QTableWidgetItem(str(value).strip())
-
-                    if j != 5 and j != 11:
+                    if j == 0:
+                        item = QTableWidgetItem()
+                        if row['FECHAMENTO'].strip() == '':
+                            item.setIcon(open_icon)                            
+                        else:
+                            item.setIcon(closed_icon)
                         item.setTextAlignment(Qt.AlignCenter)
-                    elif j == 10:
-                        item.setBackground(QColor("#97BE5A"))
+                    else:
+                        if 9 <= j <= 11 and not value.isspace():
+                            data_obj = datetime.strptime(value, "%Y%m%d")
+                            value = data_obj.strftime("%d/%m/%Y")
+
+                        item = QTableWidgetItem(str(value).strip())
+
+                        if j not in (6, 13):
+                            item.setTextAlignment(Qt.AlignCenter)
+                        elif j == 12:
+                            item.setBackground(QColor("#97BE5A"))
 
                     self.tree.setItem(i, j, item)
 
