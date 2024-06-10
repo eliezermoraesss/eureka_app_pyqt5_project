@@ -10,7 +10,6 @@ from datetime import date, datetime
 import tkinter as tk
 from tkinter import messagebox
 from sqlalchemy import create_engine
-import pyodbc
 import os
 
 
@@ -82,11 +81,11 @@ class PcpApp(QWidget):
             QPushButton {
                 background-color: #DC5F00;
                 color: #fff;
-                padding: 15px;
+                padding: 10px;
                 border: 2px;
                 border-radius: 8px;
                 font-size: 12px;
-                height: 20px;
+                height: 15px;
                 font-weight: bold;
                 margin-bottom: 8px;
             }
@@ -156,9 +155,9 @@ class PcpApp(QWidget):
         self.campo_data_inicio.setFixedWidth(150)
         self.campo_data_inicio.setCalendarPopup(True)
         self.campo_data_inicio.setDisplayFormat("dd/MM/yyyy")
-        
+
         data_atual = QDate.currentDate()
-        meses_a_remover = 3
+        meses_a_remover = 2
         data_inicio = data_atual.addMonths(-meses_a_remover)
         self.campo_data_inicio.setDate(data_inicio)
         self.add_today_button(self.campo_data_inicio)
@@ -317,7 +316,7 @@ class PcpApp(QWidget):
         self.tree.itemDoubleClicked.connect(self.copiar_linha)
         fonte_tabela = QFont("Segoe UI", 10)
         self.tree.setFont(fonte_tabela)
-        altura_linha = 60
+        altura_linha = 40
         self.tree.verticalHeader().setDefaultSectionSize(altura_linha)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
         self.tree.horizontalHeader().setStretchLastSection(True)
@@ -374,11 +373,11 @@ class PcpApp(QWidget):
         filtro_data = f"AND C2_EMISSAO >= '{data_inicio_formatada}' AND C2_DATRF <= '{data_fim_formatada}'" if data_fim_formatada != '' and data_fim_formatada != '' else ''
 
         query = f"""
-            SELECT C2_ZZNUMQP AS "NUM. QP", C2_NUM AS "NUM. OP", C2_PRODUTO AS "CÓDIGO", C2_ITEM AS "ITEM", C2_SEQUEN AS "SEQ.",
-            B1_DESC AS "DESCRIÇÃO", C2_QUANT AS "QUANT.", C2_UM AS "UM", 
-            C2_EMISSAO AS "EMISSÃO", C2_DATPRF AS "PREV. ENTREGA",
-            C2_DATRF AS "FECHAMENTO", C2_OBS AS "OBSERVAÇÃO",
-            C2_QUJE AS "QTD. PRODUZIDA", C2_AGLUT AS "OP AGLUTINADA", C2_XMAQUIN AS "ABERTO POR:"
+            SELECT C2_ZZNUMQP AS "QP", C2_NUM AS "OP", C2_ITEM AS "Item", C2_SEQUEN AS "Seq.",
+            C2_PRODUTO AS "Código", B1_DESC AS "Descrição", C2_QUANT AS "Quant.", C2_UM AS "UM", 
+            C2_EMISSAO AS "Emissão", C2_DATPRF AS "Prev. Entrega",
+            C2_DATRF AS "Fechamento", C2_OBS AS "Observação",
+            C2_QUJE AS "Quant. Produzida", C2_AGLUT AS "Aglutinada?", C2_XMAQUIN AS "Aberto por:"
             FROM {database}.dbo.SC2010 op
             INNER JOIN SB1010 prod ON C2_PRODUTO = B1_COD
             WHERE C2_ZZNUMQP LIKE '%{numero_qp}'
@@ -438,14 +437,26 @@ class PcpApp(QWidget):
         try:
             dataframe = pd.read_sql(select_query, self.engine)
 
-            dataframe[''] = ''
+            if not dataframe.empty:
+                self.layout_linha_03.addWidget(self.btn_parar_consulta)
+                dataframe.insert(0, 'Status', '')
+                dataframe[''] = ''
 
-            self.configurar_tabela(dataframe)
+                self.configurar_tabela(dataframe)
 
-            self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
-            self.tree.setRowCount(0)
+                self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
+                self.tree.setRowCount(0)
+            else:
+                self.exibir_mensagem("EUREKA® PCP", 'Nada encontrado!', "info")
+                return
 
-            self.layout_linha_03.addWidget(self.btn_parar_consulta)
+            # Construir caminhos relativos
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            open_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'open_status_panel.png')
+            closed_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'close_status_panel.png')
+
+            open_icon = QIcon(open_icon_path)
+            closed_icon = QIcon(closed_icon_path)
 
             for i, row in dataframe.iterrows():
                 if self.interromper_consulta_sql:
@@ -454,16 +465,24 @@ class PcpApp(QWidget):
                 self.tree.setSortingEnabled(False)
                 self.tree.insertRow(i)
                 for j, value in enumerate(row):
-                    if 8 <= j <= 10 and not value.isspace():
-                        data_obj = datetime.strptime(value, "%Y%m%d")
-                        value = data_obj.strftime("%d/%m/%Y")
-
-                    item = QTableWidgetItem(str(value).strip())
-
-                    if j != 5 and j != 11:
+                    if j == 0:
+                        item = QTableWidgetItem()
+                        if row['Fechamento'].strip() == '':
+                            item.setIcon(open_icon)
+                        else:
+                            item.setIcon(closed_icon)
                         item.setTextAlignment(Qt.AlignCenter)
-                    elif j == 10:
-                        item.setBackground(QColor("#97BE5A"))
+                    else:
+                        if 9 <= j <= 11 and not value.isspace():
+                            data_obj = datetime.strptime(value, "%Y%m%d")
+                            value = data_obj.strftime("%d/%m/%Y")
+
+                        item = QTableWidgetItem(str(value).strip())
+
+                        if j not in (6, 13):
+                            item.setTextAlignment(Qt.AlignCenter)
+                        elif j == 12:
+                            item.setBackground(QColor("#97BE5A"))
 
                     self.tree.setItem(i, j, item)
 
@@ -474,7 +493,7 @@ class PcpApp(QWidget):
             self.tree.setSortingEnabled(True)
             self.desbloquear_campos()
 
-        except ValueError as ex:
+        except Exception as ex:
             self.exibir_mensagem('Erro ao consultar tabela', f'Erro: {str(ex)}', 'error')
 
         finally:
