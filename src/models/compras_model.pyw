@@ -11,10 +11,9 @@ import tkinter as tk
 from tkinter import messagebox
 from sqlalchemy import create_engine
 import os
-import subprocess
 
 
-class PcpApp(QWidget):
+class ComprasApp(QWidget):
     def __init__(self):
         super().__init__()
 
@@ -26,7 +25,7 @@ class PcpApp(QWidget):
 
         self.nova_janela = None
 
-        self.setWindowTitle("EUREKA® PCP - v0.1")
+        self.setWindowTitle("EUREKA® Compras - v0.1")
 
         self.setStyleSheet("""
             * {
@@ -80,7 +79,7 @@ class PcpApp(QWidget):
             }
 
             QPushButton {
-                background-color: #DC5F00;
+                background-color: #52D3D8;
                 color: #EEEEEE;
                 padding: 10px;
                 border: 2px;
@@ -175,10 +174,6 @@ class PcpApp(QWidget):
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setMinimumWidth(100)
 
-        self.btn_abrir_compras = QPushButton("Solic. Compras", self)
-        self.btn_abrir_compras.clicked.connect(self.abrir_modulo_compras)
-        self.btn_abrir_compras.setMinimumWidth(100)
-
         self.btn_parar_consulta = QPushButton("Parar consulta")
         self.btn_parar_consulta.clicked.connect(self.parar_consulta)
         self.btn_parar_consulta.setMinimumWidth(100)
@@ -208,14 +203,13 @@ class PcpApp(QWidget):
         layout_linha_02.addWidget(self.campo_codigo)
         layout_linha_02.addWidget(self.campo_qp)
         layout_linha_02.addWidget(self.campo_OP)
-        layout_linha_02.addWidget(QLabel("Data Emissão:"))
+        layout_linha_02.addWidget(QLabel("Dt. Emissão Inicial:"))
         layout_linha_02.addWidget(self.campo_data_inicio)
-        layout_linha_02.addWidget(QLabel("Data Fechamento:"))
+        layout_linha_02.addWidget(QLabel("Dt. Emissão Final:"))
         layout_linha_02.addWidget(self.campo_data_fim)
         layout_linha_02.addStretch()
 
         self.layout_linha_03.addWidget(self.btn_consultar)
-        self.layout_linha_03.addWidget(self.btn_abrir_compras)
         self.layout_linha_03.addWidget(self.btn_nova_janela)
         self.layout_linha_03.addWidget(self.btn_exportar_excel)
         self.layout_linha_03.addWidget(self.btn_fechar)
@@ -227,14 +221,9 @@ class PcpApp(QWidget):
         layout.addWidget(self.tree)
         self.setLayout(layout)
 
-    def abrir_modulo_compras(self):
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        script_path = os.path.join(script_dir, 'compras_model.pyw')
-        subprocess.run(["python", script_path])
-
     def abrir_nova_janela(self):
         if not self.nova_janela or not self.nova_janela.isVisible():
-            self.nova_janela = PcpApp()
+            self.nova_janela = ComprasApp()
             self.nova_janela.setGeometry(self.x() + 50, self.y() + 50, self.width(), self.height())
             self.nova_janela.show()
 
@@ -381,21 +370,20 @@ class PcpApp(QWidget):
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
 
-        filtro_data = f"AND C2_EMISSAO >= '{data_inicio_formatada}' AND C2_DATRF <= '{data_fim_formatada}'" if data_fim_formatada != '' and data_fim_formatada != '' else ''
+        filtro_data = f"AND C1_EMISSAO >= '{data_inicio_formatada}' AND C1_EMISSAO <= '{data_fim_formatada}'" if data_fim_formatada != '' and data_fim_formatada != '' else ''
 
         query = f"""
-            SELECT C2_ZZNUMQP AS "QP", C2_NUM AS "OP", C2_ITEM AS "Item", C2_SEQUEN AS "Seq.",
-            C2_PRODUTO AS "Código", B1_DESC AS "Descrição", C2_QUANT AS "Quant.", C2_UM AS "UM", 
-            C2_EMISSAO AS "Emissão", C2_DATPRF AS "Prev. Entrega",
-            C2_DATRF AS "Fechamento", C2_OBS AS "Observação",
-            C2_QUJE AS "Quant. Produzida", C2_AGLUT AS "Aglutinada?", C2_XMAQUIN AS "Aberto por:"
-            FROM {database}.dbo.SC2010 op
-            INNER JOIN SB1010 prod ON C2_PRODUTO = B1_COD
-            WHERE C2_ZZNUMQP LIKE '%{numero_qp}'
-            AND C2_PRODUTO LIKE '{codigo_produto}%'
-            AND C2_NUM LIKE '{numero_op}%' {filtro_data}
-            AND op.D_E_L_E_T_ <> '*'
-            ORDER BY op.R_E_C_N_O_ DESC;
+            SELECT C1_ZZNUMQP AS "QP", C1_OP AS "OP", C1_NUM "N°. SC", C1_ITEM AS "Item", C1_CODORCA AS "Orçamento",
+                C1_PEDIDO AS "N°. Pedido", C1_ITEMPED AS "Item Pedido", C1_PRODUTO AS "Código", 
+                C1_DESCRI AS "Descrição", C1_UM AS "UM", C1_QUANT AS "Quant.", C1_QUJE AS "Quant. Pedido",
+                C1_EMISSAO AS "Emissão", C1_DATPRF AS "Necessidade", C1_ORIGEM AS "Origem", C1_OBS AS "OBS.",
+                C1_LOCAL AS "Armazém", C1_IMPORT AS "Importado?", C1_COTACAO AS "Tem cotação?", C1_FORNECE AS "Fornecedor",
+                C1_SOLICIT AS "Solicitante", C1_XSOL AS "Requisitante", C1_TIPOEMP AS "Tipo Empenho"
+            FROM PROTHEUS12_R27.dbo.SC1010
+                WHERE C1_ZZNUMQP LIKE '%{numero_qp}'
+                AND C1_PRODUTO LIKE '{codigo_produto}%'
+                AND C1_OP LIKE '%{numero_op}%' {filtro_data}
+            ORDER BY R_E_C_N_O_ DESC;
         """
         return query
 
@@ -458,7 +446,7 @@ class PcpApp(QWidget):
                 self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
                 self.tree.setRowCount(0)
             else:
-                self.exibir_mensagem("EUREKA® PCP", 'Nada encontrado!', "info")
+                self.exibir_mensagem("EUREKA® Compras", 'Nada encontrado!', "info")
                 self.desbloquear_campos()
                 return
 
@@ -467,8 +455,8 @@ class PcpApp(QWidget):
             open_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'open_status_panel.png')
             closed_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'close_status_panel.png')
 
-            open_icon = QIcon(open_icon_path)
-            closed_icon = QIcon(closed_icon_path)
+            open_solic = QIcon(open_icon_path)
+            closed_solic = QIcon(closed_icon_path)
 
             for i, row in dataframe.iterrows():
                 if self.interromper_consulta_sql:
@@ -479,22 +467,32 @@ class PcpApp(QWidget):
                 for j, value in enumerate(row):
                     if j == 0:
                         item = QTableWidgetItem()
-                        if row['Fechamento'].strip() == '':
-                            item.setIcon(open_icon)
-                        else:
-                            item.setIcon(closed_icon)
+                        if row['N°. Pedido'].strip() == '' and row['Origem'].strip() == '':
+                            item.setIcon(open_solic)
+                        elif row['N°. Pedido'].strip() != '' and row['Origem'].strip() == '':
+                            item.setIcon(closed_solic)
+                        elif row['Origem'].strip() == 'MATA650':
+                            item.setIcon(closed_solic)
                         item.setTextAlignment(Qt.AlignCenter)
                     else:
-                        if 9 <= j <= 11 and not value.isspace():
+                        if j == 15 and value.strip() == 'MATA650':
+                            value = 'OP INTERNA'
+                        elif j == 15 and value.strip() == '':
+                            value = 'COMERCIAL'
+
+                        if j == 18 and value.strip() == 'N':
+                            value = 'Não'
+                        elif j == 18 and value.strip() == '':
+                            value = 'Sim'
+
+                        if j in (13, 14) and not value.isspace():
                             data_obj = datetime.strptime(value, "%Y%m%d")
                             value = data_obj.strftime("%d/%m/%Y")
 
                         item = QTableWidgetItem(str(value).strip())
 
-                        if j not in (6, 13):
+                        if j not in (8, 9):
                             item.setTextAlignment(Qt.AlignCenter)
-                        elif j == 12:
-                            item.setBackground(QColor("#97BE5A"))
 
                     self.tree.setItem(i, j, item)
 
@@ -527,8 +525,8 @@ class PcpApp(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = PcpApp()
-    username, password, database, server = PcpApp().setup_mssql()
+    window = ComprasApp()
+    username, password, database, server = ComprasApp().setup_mssql()
     driver = '{SQL Server}'
 
     largura_janela = 1400  # Substitua pelo valor desejado
