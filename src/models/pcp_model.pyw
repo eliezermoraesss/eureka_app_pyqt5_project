@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel
-from PyQt5.QtGui import QFont, QColor, QIcon, QPixmap
+from PyQt5.QtGui import QFont, QColor, QIcon
 from PyQt5.QtCore import Qt, QCoreApplication, QDate
 import pyperclip
 import pandas as pd
@@ -10,7 +10,6 @@ from datetime import date, datetime
 import tkinter as tk
 from tkinter import messagebox
 from sqlalchemy import create_engine
-import pyodbc
 import os
 
 
@@ -438,26 +437,26 @@ class PcpApp(QWidget):
         try:
             dataframe = pd.read_sql(select_query, self.engine)
 
-            dataframe.insert(0, 'Status', '')
-            dataframe[''] = ''
+            if not dataframe.empty:
+                self.layout_linha_03.addWidget(self.btn_parar_consulta)
+                dataframe.insert(0, 'Status', '')
+                dataframe[''] = ''
 
-            self.configurar_tabela(dataframe)
+                self.configurar_tabela(dataframe)
 
-            self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
-            self.tree.setRowCount(0)
-
-            self.layout_linha_03.addWidget(self.btn_parar_consulta)
+                self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
+                self.tree.setRowCount(0)
+            else:
+                self.exibir_mensagem("EUREKA® PCP", 'Nada encontrado!', "info")
+                return
 
             # Construir caminhos relativos
             script_dir = os.path.dirname(os.path.abspath(__file__))
             open_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'open_status_panel.png')
             closed_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'close_status_panel.png')
 
-            open_icon_pixmap = QPixmap(open_icon_path).scaled(48, 48, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            closed_icon_pixmap = QPixmap(closed_icon_path).scaled(48, 48, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-
-            open_icon = QIcon(open_icon_pixmap)
-            closed_icon = QIcon(closed_icon_pixmap)
+            open_icon = QIcon(open_icon_path)
+            closed_icon = QIcon(closed_icon_path)
 
             for i, row in dataframe.iterrows():
                 if self.interromper_consulta_sql:
@@ -494,7 +493,7 @@ class PcpApp(QWidget):
             self.tree.setSortingEnabled(True)
             self.desbloquear_campos()
 
-        except ValueError as ex:
+        except Exception as ex:
             self.exibir_mensagem('Erro ao consultar tabela', f'Erro: {str(ex)}', 'error')
 
         finally:
