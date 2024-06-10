@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel
-from PyQt5.QtGui import QFont, QColor, QIcon
+from PyQt5.QtGui import QFont, QColor, QIcon, QPixmap
 from PyQt5.QtCore import Qt, QCoreApplication, QDate
 import pyperclip
 import pandas as pd
@@ -156,7 +156,7 @@ class PcpApp(QWidget):
         self.campo_data_inicio.setFixedWidth(150)
         self.campo_data_inicio.setCalendarPopup(True)
         self.campo_data_inicio.setDisplayFormat("dd/MM/yyyy")
-        
+
         data_atual = QDate.currentDate()
         meses_a_remover = 2
         data_inicio = data_atual.addMonths(-meses_a_remover)
@@ -249,7 +249,7 @@ class PcpApp(QWidget):
 
     def setup_mssql(self):
         caminho_do_arquivo = (r"\\192.175.175.4\f\INTEGRANTES\ELIEZER\PROJETO SOLIDWORKS "
-            r"TOTVS\libs-python\user-password-mssql\USER_PASSWORD_MSSQL_PROD.txt")
+                              r"TOTVS\libs-python\user-password-mssql\USER_PASSWORD_MSSQL_PROD.txt")
         try:
             with open(caminho_do_arquivo, 'r') as arquivo:
                 string_lida = arquivo.read()
@@ -258,21 +258,21 @@ class PcpApp(QWidget):
 
         except FileNotFoundError:
             ctypes.windll.user32.MessageBoxW(0,
-                "Erro ao ler credenciais de acesso ao banco de dados MSSQL.\n\nBase de "
-                "dados ERP TOTVS PROTHEUS.\n\nPor favor, informe ao desenvolvedor/TI "
-                "sobre o erro exibido.\n\nTenha um bom dia! ツ",
-                "CADASTRO DE ESTRUTURA - TOTVS®", 16 | 0)
+                                             "Erro ao ler credenciais de acesso ao banco de dados MSSQL.\n\nBase de "
+                                             "dados ERP TOTVS PROTHEUS.\n\nPor favor, informe ao desenvolvedor/TI "
+                                             "sobre o erro exibido.\n\nTenha um bom dia! ツ",
+                                             "CADASTRO DE ESTRUTURA - TOTVS®", 16 | 0)
             sys.exit()
 
         except Exception as e:
             ctypes.windll.user32.MessageBoxW(0, "Ocorreu um erro ao ler o arquivo:", "CADASTRO DE ESTRUTURA - TOTVS®",
-                16 | 0)
+                                             16 | 0)
             sys.exit()
 
     def exportar_excel(self):
         file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
-            f'report_{date.today().strftime('%Y-%m-%d')}',
-            'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
+                                                   f'report_{date.today().strftime('%Y-%m-%d')}',
+                                                   'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
 
         if file_path:
             data = self.obter_dados_tabela()
@@ -374,11 +374,11 @@ class PcpApp(QWidget):
         filtro_data = f"AND C2_EMISSAO >= '{data_inicio_formatada}' AND C2_DATRF <= '{data_fim_formatada}'" if data_fim_formatada != '' and data_fim_formatada != '' else ''
 
         query = f"""
-            SELECT C2_ZZNUMQP AS "NUM. QP", C2_NUM AS "NUM. OP", C2_ITEM AS "ITEM", C2_SEQUEN AS "SEQ.",
-            C2_PRODUTO AS "CÓDIGO", B1_DESC AS "DESCRIÇÃO", C2_QUANT AS "QUANT.", C2_UM AS "UM", 
-            C2_EMISSAO AS "EMISSÃO", C2_DATPRF AS "PREV. ENTREGA",
-            C2_DATRF AS "FECHAMENTO", C2_OBS AS "OBSERVAÇÃO",
-            C2_QUJE AS "QTD. PRODUZIDA", C2_AGLUT AS "OP AGLUTINADA", C2_XMAQUIN AS "ABERTO POR:"
+            SELECT C2_ZZNUMQP AS "QP", C2_NUM AS "OP", C2_ITEM AS "Item", C2_SEQUEN AS "Seq.",
+            C2_PRODUTO AS "Código", B1_DESC AS "Descrição", C2_QUANT AS "Quant.", C2_UM AS "UM", 
+            C2_EMISSAO AS "Emissão", C2_DATPRF AS "Prev. Entrega",
+            C2_DATRF AS "Fechamento", C2_OBS AS "Observação",
+            C2_QUJE AS "Quant. Produzida", C2_AGLUT AS "Aglutinada?", C2_XMAQUIN AS "Aberto por:"
             FROM {database}.dbo.SC2010 op
             INNER JOIN SB1010 prod ON C2_PRODUTO = B1_COD
             WHERE C2_ZZNUMQP LIKE '%{numero_qp}'
@@ -447,14 +447,17 @@ class PcpApp(QWidget):
             self.tree.setRowCount(0)
 
             self.layout_linha_03.addWidget(self.btn_parar_consulta)
-            
+
             # Construir caminhos relativos
             script_dir = os.path.dirname(os.path.abspath(__file__))
             open_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'open_status_panel.png')
             closed_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'close_status_panel.png')
-        
-            open_icon = QIcon(open_icon_path)
-            closed_icon = QIcon(closed_icon_path)
+
+            open_icon_pixmap = QPixmap(open_icon_path).scaled(48, 48, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            closed_icon_pixmap = QPixmap(closed_icon_path).scaled(48, 48, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+
+            open_icon = QIcon(open_icon_pixmap)
+            closed_icon = QIcon(closed_icon_pixmap)
 
             for i, row in dataframe.iterrows():
                 if self.interromper_consulta_sql:
@@ -465,8 +468,8 @@ class PcpApp(QWidget):
                 for j, value in enumerate(row):
                     if j == 0:
                         item = QTableWidgetItem()
-                        if row['FECHAMENTO'].strip() == '':
-                            item.setIcon(open_icon)                            
+                        if row['Fechamento'].strip() == '':
+                            item.setIcon(open_icon)
                         else:
                             item.setIcon(closed_icon)
                         item.setTextAlignment(Qt.AlignCenter)
