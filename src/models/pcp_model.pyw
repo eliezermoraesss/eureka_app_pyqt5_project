@@ -448,6 +448,7 @@ class PcpApp(QWidget):
                 self.tree.setRowCount(0)
             else:
                 self.exibir_mensagem("EUREKA® PCP", 'Nada encontrado!', "info")
+                self.desbloquear_campos()
                 return
 
             # Construir caminhos relativos
