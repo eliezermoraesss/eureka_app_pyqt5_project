@@ -158,7 +158,7 @@ class PcpApp(QWidget):
         self.campo_data_inicio.setDisplayFormat("dd/MM/yyyy")
 
         data_atual = QDate.currentDate()
-        meses_a_remover = 2
+        meses_a_remover = 4
         data_inicio = data_atual.addMonths(-meses_a_remover)
         self.campo_data_inicio.setDate(data_inicio)
         self.add_today_button(self.campo_data_inicio)
@@ -175,7 +175,7 @@ class PcpApp(QWidget):
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setMinimumWidth(100)
 
-        self.btn_abrir_compras = QPushButton("Solic. Compras", self)
+        self.btn_abrir_compras = QPushButton("Follow-up Compras", self)
         self.btn_abrir_compras.clicked.connect(self.abrir_modulo_compras)
         self.btn_abrir_compras.setMinimumWidth(100)
 

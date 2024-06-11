@@ -157,7 +157,7 @@ class ComprasApp(QWidget):
         self.campo_data_inicio.setDisplayFormat("dd/MM/yyyy")
 
         data_atual = QDate.currentDate()
-        meses_a_remover = 2
+        meses_a_remover = 4
         data_inicio = data_atual.addMonths(-meses_a_remover)
         self.campo_data_inicio.setDate(data_inicio)
         self.add_today_button(self.campo_data_inicio)
@@ -373,7 +373,7 @@ class ComprasApp(QWidget):
         filtro_data = f"AND C1_EMISSAO >= '{data_inicio_formatada}' AND C1_EMISSAO <= '{data_fim_formatada}'" if data_fim_formatada != '' and data_fim_formatada != '' else ''
 
         query = f"""
-            SELECT C1_ZZNUMQP AS "QP", C1_OP AS "OP", C1_NUM "N°. SC", C1_ITEM AS "Item", C1_CODORCA AS "Orçamento",
+            SELECT C1_ZZNUMQP AS "QP", C1_OP AS "OP", C1_NUM "N°. SC", C1_ITEM AS "Item",
                 C1_PEDIDO AS "N°. Pedido", C1_ITEMPED AS "Item Pedido", C1_PRODUTO AS "Código", 
                 C1_DESCRI AS "Descrição", C1_UM AS "UM", C1_QUANT AS "Quant.", C1_QUJE AS "Quant. Pedido",
                 C1_EMISSAO AS "Emissão", C1_DATPRF AS "Necessidade", C1_ORIGEM AS "Origem", C1_OBS AS "OBS.",
@@ -475,23 +475,23 @@ class ComprasApp(QWidget):
                             item.setIcon(closed_solic)
                         item.setTextAlignment(Qt.AlignCenter)
                     else:
-                        if j == 15 and value.strip() == 'MATA650':
+                        if j == 14 and value.strip() == 'MATA650':
                             value = 'OP INTERNA'
-                        elif j == 15 and value.strip() == '':
+                        elif j == 14 and value.strip() == '':
                             value = 'COMERCIAL'
 
-                        if j == 18 and value.strip() == 'N':
+                        if j == 17 and value.strip() == 'N':
                             value = 'Não'
-                        elif j == 18 and value.strip() == '':
+                        elif j == 17 and value.strip() == '':
                             value = 'Sim'
 
-                        if j in (13, 14) and not value.isspace():
+                        if j in (12, 13) and not value.isspace():
                             data_obj = datetime.strptime(value, "%Y%m%d")
                             value = data_obj.strftime("%d/%m/%Y")
 
                         item = QTableWidgetItem(str(value).strip())
 
-                        if j not in (8, 9):
+                        if j not in (7, 8):
                             item.setTextAlignment(Qt.AlignCenter)
 
                     self.tree.setItem(i, j, item)
