@@ -132,26 +132,40 @@ class ComprasApp(QWidget):
             }
         """)
 
+        fonte_campos = "Segoe UI"
+        tamanho_fonte_campos = 10
+
+        self.campo_solicitacao_compra = QLineEdit(self)
+        self.campo_solicitacao_compra.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_solicitacao_compra.setMaxLength(6)
+        self.campo_solicitacao_compra.setFocus()
+        self.campo_solicitacao_compra.setFixedWidth(200)
+        self.campo_solicitacao_compra.setPlaceholderText("Número SC...")
+        self.add_clear_button(self.campo_solicitacao_compra)
+
         self.campo_codigo = QLineEdit(self)
-        self.campo_codigo.setFont(QFont("Segoe UI", 10))
+        self.campo_codigo.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_codigo.setMaxLength(13)
         self.campo_codigo.setFixedWidth(200)
         self.campo_codigo.setPlaceholderText("Código produto...")
         self.add_clear_button(self.campo_codigo)
 
         self.campo_qp = QLineEdit(self)
-        self.campo_qp.setFont(QFont("Segoe UI", 10))
+        self.campo_qp.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_qp.setMaxLength(6)
         self.campo_qp.setFixedWidth(200)
         self.campo_qp.setPlaceholderText("Número QP...")
         self.add_clear_button(self.campo_qp)
 
         self.campo_OP = QLineEdit(self)
-        self.campo_OP.setFont(QFont("Segoe UI", 10))
+        self.campo_OP.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_OP.setMaxLength(6)
         self.campo_OP.setFixedWidth(200)
         self.campo_OP.setPlaceholderText("Número OP...")
         self.add_clear_button(self.campo_OP)
 
         self.campo_data_inicio = QDateEdit(self)
-        self.campo_data_inicio.setFont(QFont("Segoe UI", 10))
+        self.campo_data_inicio.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_data_inicio.setFixedWidth(150)
         self.campo_data_inicio.setCalendarPopup(True)
         self.campo_data_inicio.setDisplayFormat("dd/MM/yyyy")
@@ -200,6 +214,7 @@ class ComprasApp(QWidget):
         layout_linha_02 = QHBoxLayout()
         self.layout_linha_03 = QHBoxLayout()
 
+        layout_linha_02.addWidget(self.campo_solicitacao_compra)
         layout_linha_02.addWidget(self.campo_codigo)
         layout_linha_02.addWidget(self.campo_qp)
         layout_linha_02.addWidget(self.campo_OP)
