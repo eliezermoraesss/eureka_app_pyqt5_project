@@ -476,9 +476,9 @@ class ComprasApp(QWidget):
                         item.setTextAlignment(Qt.AlignCenter)
                     else:
                         if j == 14 and value.strip() == 'MATA650':
-                            value = 'OP INTERNA'
+                            value = 'Empenho'
                         elif j == 14 and value.strip() == '':
-                            value = 'COMERCIAL'
+                            value = 'Compras'
 
                         if j == 17 and value.strip() == 'N':
                             value = 'Não'
