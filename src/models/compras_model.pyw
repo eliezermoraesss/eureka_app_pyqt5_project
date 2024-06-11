@@ -299,11 +299,8 @@ class ComprasApp(QWidget):
         calendar = date_edit.calendarWidget()
         calendar.setGeometry(10, 10, 600, 400)
         btn_today = QPushButton("Hoje", calendar)
-        pos_x = 20
-        pos_y = 5
-        largura = 50
-        altura = 20
-        btn_today.setGeometry(pos_x, pos_y, largura, altura)
+        largura, altura = 50, 20
+        btn_today.setGeometry(20, 5, largura, altura)
         btn_today.clicked.connect(lambda: date_edit.setDate(QDate.currentDate()))
 
     def add_clear_button(self, line_edit):
@@ -448,8 +445,8 @@ class ComprasApp(QWidget):
                 C1_PEDIDO AS "N°. Pedido", C1_ITEMPED AS "Item Pedido", C1_PRODUTO AS "Código", 
                 C1_DESCRI AS "Descrição", C1_UM AS "UM", C1_QUANT AS "Quant.", C1_QUJE AS "Quant. Pedido",
                 C1_EMISSAO AS "Emissão", C1_DATPRF AS "Necessidade", C1_ORIGEM AS "Origem", C1_OBS AS "OBS.",
-                C1_LOCAL AS "Armazém", C1_IMPORT AS "Importado?", C1_COTACAO AS "Tem cotação?", C1_FORNECE AS "Fornecedor",
-                C1_SOLICIT AS "Solicitante", C1_XSOL AS "Requisitante", C1_TIPOEMP AS "Tipo Empenho"
+                C1_LOCAL AS "Armazém", C1_IMPORT AS "Importado?", C1_FORNECE AS "Fornecedor",
+                C1_SOLICIT AS "Solicitante", C1_XSOL AS "Requisitante"
             FROM PROTHEUS12_R27.dbo.SC1010
                 WHERE C1_PEDIDO LIKE '{numero_pedido}%'
                 AND C1_NUM LIKE '%{numero_sc}'
