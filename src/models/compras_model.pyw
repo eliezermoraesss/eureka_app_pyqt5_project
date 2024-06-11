@@ -136,6 +136,9 @@ class ComprasApp(QWidget):
         self.label_sc = QLabel("N°. SC:", self)
         self.label_sc.setFont(QFont(fonte_campos, tamanho_fonte_campos))
 
+        self.label_pedido = QLabel("N°. Pedido:", self)
+        self.label_pedido.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+
         self.label_codigo = QLabel("Código:", self)
         self.label_codigo.setFont(QFont(fonte_campos, tamanho_fonte_campos))
 
@@ -151,13 +154,21 @@ class ComprasApp(QWidget):
         self.label_data_fim = QLabel("Dt. Emissão Final:", self)
         self.label_data_fim.setFont(QFont(fonte_campos, tamanho_fonte_campos))
 
-        self.campo_solicitacao_compra = QLineEdit(self)
-        self.campo_solicitacao_compra.setFont(QFont(fonte_campos, tamanho_fonte_campos))
-        self.campo_solicitacao_compra.setMaxLength(6)
-        self.campo_solicitacao_compra.setFocus()
-        self.campo_solicitacao_compra.setFixedWidth(200)
-        self.campo_solicitacao_compra.setPlaceholderText("Número SC...")
-        self.add_clear_button(self.campo_solicitacao_compra)
+        self.campo_sc = QLineEdit(self)
+        self.campo_sc.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_sc.setMaxLength(6)
+        self.campo_sc.setFocus()
+        self.campo_sc.setFixedWidth(200)
+        self.campo_sc.setPlaceholderText("Número SC...")
+        self.add_clear_button(self.campo_sc)
+
+        self.campo_pedido = QLineEdit(self)
+        self.campo_pedido.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_pedido.setMaxLength(6)
+        self.campo_pedido.setFocus()
+        self.campo_pedido.setFixedWidth(200)
+        self.campo_pedido.setPlaceholderText("Número Pedido...")
+        self.add_clear_button(self.campo_pedido)
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont(fonte_campos, tamanho_fonte_campos))
@@ -221,7 +232,7 @@ class ComprasApp(QWidget):
         self.btn_fechar.clicked.connect(self.fechar_janela)
         self.btn_fechar.setMinimumWidth(100)
 
-        self.campo_solicitacao_compra.returnPressed.connect(self.executar_consulta)
+        self.campo_sc.returnPressed.connect(self.executar_consulta)
         self.campo_codigo.returnPressed.connect(self.executar_consulta)
         self.campo_qp.returnPressed.connect(self.executar_consulta)
         self.campo_OP.returnPressed.connect(self.executar_consulta)
@@ -230,36 +241,41 @@ class ComprasApp(QWidget):
         layout_linha_01 = QHBoxLayout()
         self.layout_linha_02 = QHBoxLayout()
 
-        campo_layout_01 = QVBoxLayout()
-        campo_layout_01.addWidget(self.label_sc)
-        campo_layout_01.addWidget(self.campo_solicitacao_compra)
+        container_sc = QVBoxLayout()
+        container_sc.addWidget(self.label_sc)
+        container_sc.addWidget(self.campo_sc)
 
-        campo_layout_02 = QVBoxLayout()
-        campo_layout_02.addWidget(self.label_codigo)
-        campo_layout_02.addWidget(self.campo_codigo)
+        container_pedido = QVBoxLayout()
+        container_pedido.addWidget(self.label_pedido)
+        container_pedido.addWidget(self.campo_pedido)
 
-        campo_layout_03 = QVBoxLayout()
-        campo_layout_03.addWidget(self.label_qp)
-        campo_layout_03.addWidget(self.campo_qp)
+        container_codigo = QVBoxLayout()
+        container_codigo.addWidget(self.label_codigo)
+        container_codigo.addWidget(self.campo_codigo)
 
-        campo_layout_04 = QVBoxLayout()
-        campo_layout_04.addWidget(self.label_OP)
-        campo_layout_04.addWidget(self.campo_OP)
+        container_qp = QVBoxLayout()
+        container_qp.addWidget(self.label_qp)
+        container_qp.addWidget(self.campo_qp)
 
-        campo_layout_05 = QVBoxLayout()
-        campo_layout_05.addWidget(self.label_data_inicio)
-        campo_layout_05.addWidget(self.campo_data_inicio)
+        container_op = QVBoxLayout()
+        container_op.addWidget(self.label_OP)
+        container_op.addWidget(self.campo_OP)
 
-        campo_layout_06 = QVBoxLayout()
-        campo_layout_06.addWidget(self.label_data_fim)
-        campo_layout_06.addWidget(self.campo_data_fim)
+        container_data_ini = QVBoxLayout()
+        container_data_ini.addWidget(self.label_data_inicio)
+        container_data_ini.addWidget(self.campo_data_inicio)
 
-        layout_linha_01.addLayout(campo_layout_01)
-        layout_linha_01.addLayout(campo_layout_02)
-        layout_linha_01.addLayout(campo_layout_03)
-        layout_linha_01.addLayout(campo_layout_04)
-        layout_linha_01.addLayout(campo_layout_05)
-        layout_linha_01.addLayout(campo_layout_06)
+        container_data_fim = QVBoxLayout()
+        container_data_fim.addWidget(self.label_data_fim)
+        container_data_fim.addWidget(self.campo_data_fim)
+
+        layout_linha_01.addLayout(container_sc)
+        layout_linha_01.addLayout(container_pedido)
+        layout_linha_01.addLayout(container_codigo)
+        layout_linha_01.addLayout(container_qp)
+        layout_linha_01.addLayout(container_op)
+        layout_linha_01.addLayout(container_data_ini)
+        layout_linha_01.addLayout(container_data_fim)
         layout_linha_01.addStretch()
 
         self.layout_linha_02.addWidget(self.btn_consultar)
@@ -392,7 +408,7 @@ class ComprasApp(QWidget):
         self.campo_codigo.clear()
 
     def controle_campos_formulario(self, status):
-        self.campo_solicitacao_compra.setEnabled(status)
+        self.campo_sc.setEnabled(status)
         self.campo_codigo.setEnabled(status)
         self.campo_qp.setEnabled(status)
         self.campo_OP.setEnabled(status)
@@ -468,7 +484,7 @@ class ComprasApp(QWidget):
 
     def executar_consulta(self):
 
-        numero_sc = self.campo_solicitacao_compra.text().upper().strip()
+        numero_sc = self.campo_sc.text().upper().strip()
         numero_qp = self.campo_qp.text().upper().strip()
         numero_op = self.campo_OP.text().upper().strip()
         codigo_produto = self.campo_codigo.text().upper().strip()
