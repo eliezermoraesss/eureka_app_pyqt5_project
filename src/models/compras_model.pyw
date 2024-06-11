@@ -380,7 +380,7 @@ class ComprasApp(QWidget):
 
         root.destroy()
 
-    def selecionar_query_conforme_filtro(self, codigo_produto, numero_qp, numero_op):
+    def selecionar_query_conforme_filtro(self, numero_sc, codigo_produto, numero_qp, numero_op):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -395,7 +395,8 @@ class ComprasApp(QWidget):
                 C1_LOCAL AS "Armazém", C1_IMPORT AS "Importado?", C1_COTACAO AS "Tem cotação?", C1_FORNECE AS "Fornecedor",
                 C1_SOLICIT AS "Solicitante", C1_XSOL AS "Requisitante", C1_TIPOEMP AS "Tipo Empenho"
             FROM PROTHEUS12_R27.dbo.SC1010
-                WHERE C1_ZZNUMQP LIKE '%{numero_qp}'
+                WHERE C1_NUM LIKE '%{numero_sc}'
+                AND C1_ZZNUMQP LIKE '%{numero_qp}'
                 AND C1_PRODUTO LIKE '{codigo_produto}%'
                 AND C1_OP LIKE '%{numero_op}%' {filtro_data}
             ORDER BY R_E_C_N_O_ DESC;
@@ -427,6 +428,7 @@ class ComprasApp(QWidget):
 
     def executar_consulta(self):
 
+        numero_sc = self.campo_solicitacao_compra.text().upper().strip()
         numero_qp = self.campo_qp.text().upper().strip()
         numero_op = self.campo_OP.text().upper().strip()
         codigo_produto = self.campo_codigo.text().upper().strip()
@@ -437,7 +439,7 @@ class ComprasApp(QWidget):
 
         numero_qp = numero_qp.zfill(6) if numero_qp != '' else numero_qp
 
-        select_query = self.selecionar_query_conforme_filtro(codigo_produto, numero_qp, numero_op)
+        select_query = self.selecionar_query_conforme_filtro(numero_sc, codigo_produto, numero_qp, numero_op)
 
         if isinstance(select_query, bool) and select_query:
             self.btn_consultar.setEnabled(True)

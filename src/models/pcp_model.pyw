@@ -337,7 +337,7 @@ class PcpApp(QWidget):
             valor_campo = item.text()
             pyperclip.copy(str(valor_campo))
 
-    def ordenar_tabela(self, logicalIndex):
+    def ordenar_tabela(self, logical_index):
         # Obter o índice real da coluna (considerando a ordem de classificação)
         index = self.tree.horizontalHeader().sortIndicatorOrder()
 
@@ -345,20 +345,16 @@ class PcpApp(QWidget):
         order = Qt.AscendingOrder if index == 0 else Qt.DescendingOrder
 
         # Ordenar a tabela pela coluna clicada
-        self.tree.sortItems(logicalIndex, order)
+        self.tree.sortItems(logical_index, order)
 
-    def limpar_campos(self):
-        self.campo_codigo.clear()
-
-    def bloquear_campos(self):
-        self.campo_codigo.setEnabled(False)
-        self.btn_consultar.setEnabled(False)
-        self.btn_exportar_excel.setEnabled(False)
-
-    def desbloquear_campos(self):
-        self.campo_codigo.setEnabled(True)
-        self.btn_consultar.setEnabled(True)
-        self.btn_exportar_excel.setEnabled(True)
+    def controle_campos_formulario(self, status):
+        self.campo_codigo.setEnabled(status)
+        self.campo_qp.setEnabled(status)
+        self.campo_OP.setEnabled(status)
+        self.campo_data_inicio.setEnabled(status)
+        self.campo_data_fim.setEnabled(status)
+        self.btn_consultar.setEnabled(status)
+        self.btn_exportar_excel.setEnabled(status)
 
     def exibir_mensagem(self, title, message, icon_type):
         root = tk.Tk()
@@ -440,7 +436,7 @@ class PcpApp(QWidget):
             self.btn_consultar.setEnabled(True)
             return
 
-        self.bloquear_campos()
+        self.controle_campos_formulario(False)
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
         self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
@@ -459,7 +455,7 @@ class PcpApp(QWidget):
                 self.tree.setRowCount(0)
             else:
                 self.exibir_mensagem("EUREKA® PCP", 'Nada encontrado!', "info")
-                self.desbloquear_campos()
+                self.controle_campos_formulario(True)
                 return
 
             # Construir caminhos relativos
@@ -503,7 +499,7 @@ class PcpApp(QWidget):
             self.layout_linha_03.removeWidget(self.btn_parar_consulta)
             self.btn_parar_consulta.setParent(None)
             self.tree.setSortingEnabled(True)
-            self.desbloquear_campos()
+            self.controle_campos_formulario(True)
 
         except Exception as ex:
             self.exibir_mensagem('Erro ao consultar tabela', f'Erro: {str(ex)}', 'error')
@@ -522,7 +518,7 @@ class PcpApp(QWidget):
         self.interromper_consulta_sql = True
         if hasattr(self, 'engine') and self.engine is not None:
             self.engine.dispose()
-        self.desbloquear_campos()
+        self.controle_campos_formulario(True)
 
 
 if __name__ == "__main__":
