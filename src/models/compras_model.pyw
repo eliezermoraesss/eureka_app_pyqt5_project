@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel
-from PyQt5.QtGui import QFont, QColor, QIcon
+from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtCore import Qt, QCoreApplication, QDate
 import pyperclip
 import pandas as pd
@@ -42,7 +42,6 @@ class ComprasApp(QWidget):
             QDateEdit {
                 background-color: #FFFFFF;
                 border: 1px solid #262626;
-                margin-top: 20px;
                 margin-bottom: 20px;
                 padding: 5px 10px;
                 border-radius: 10px;
@@ -70,7 +69,6 @@ class ComprasApp(QWidget):
             QLineEdit {
                 background-color: #FFFFFF;
                 border: 1px solid #262626;
-                margin-top: 20px;
                 margin-bottom: 20px;
                 padding: 5px 10px;
                 border-radius: 10px;
@@ -79,7 +77,7 @@ class ComprasApp(QWidget):
             }
 
             QPushButton {
-                background-color: #52D3D8;
+                background-color: #00ADB5;
                 color: #EEEEEE;
                 padding: 10px;
                 border: 2px;
@@ -134,6 +132,24 @@ class ComprasApp(QWidget):
 
         fonte_campos = "Segoe UI"
         tamanho_fonte_campos = 10
+
+        self.label_sc = QLabel("N°. SC:", self)
+        self.label_sc.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+
+        self.label_codigo = QLabel("Código:", self)
+        self.label_codigo.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+
+        self.label_qp = QLabel("N°. QP:", self)
+        self.label_qp.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+
+        self.label_OP = QLabel("N°. OP:", self)
+        self.label_OP.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+
+        self.label_data_inicio = QLabel("Dt. Emissão Inicial:", self)
+        self.label_data_inicio.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+
+        self.label_data_fim = QLabel("Dt. Emissão Final:", self)
+        self.label_data_fim.setFont(QFont(fonte_campos, tamanho_fonte_campos))
 
         self.campo_solicitacao_compra = QLineEdit(self)
         self.campo_solicitacao_compra.setFont(QFont(fonte_campos, tamanho_fonte_campos))
@@ -205,34 +221,55 @@ class ComprasApp(QWidget):
         self.btn_fechar.clicked.connect(self.fechar_janela)
         self.btn_fechar.setMinimumWidth(100)
 
+        self.campo_solicitacao_compra.returnPressed.connect(self.executar_consulta)
         self.campo_codigo.returnPressed.connect(self.executar_consulta)
         self.campo_qp.returnPressed.connect(self.executar_consulta)
         self.campo_OP.returnPressed.connect(self.executar_consulta)
 
         layout = QVBoxLayout()
-        #layout_linha_01 = QHBoxLayout()
-        layout_linha_02 = QHBoxLayout()
-        self.layout_linha_03 = QHBoxLayout()
+        layout_linha_01 = QHBoxLayout()
+        self.layout_linha_02 = QHBoxLayout()
 
-        layout_linha_02.addWidget(self.campo_solicitacao_compra)
-        layout_linha_02.addWidget(self.campo_codigo)
-        layout_linha_02.addWidget(self.campo_qp)
-        layout_linha_02.addWidget(self.campo_OP)
-        layout_linha_02.addWidget(QLabel("Dt. Emissão Inicial:"))
-        layout_linha_02.addWidget(self.campo_data_inicio)
-        layout_linha_02.addWidget(QLabel("Dt. Emissão Final:"))
-        layout_linha_02.addWidget(self.campo_data_fim)
-        layout_linha_02.addStretch()
+        campo_layout_01 = QVBoxLayout()
+        campo_layout_01.addWidget(self.label_sc)
+        campo_layout_01.addWidget(self.campo_solicitacao_compra)
 
-        self.layout_linha_03.addWidget(self.btn_consultar)
-        self.layout_linha_03.addWidget(self.btn_nova_janela)
-        self.layout_linha_03.addWidget(self.btn_exportar_excel)
-        self.layout_linha_03.addWidget(self.btn_fechar)
-        self.layout_linha_03.addStretch()
+        campo_layout_02 = QVBoxLayout()
+        campo_layout_02.addWidget(self.label_codigo)
+        campo_layout_02.addWidget(self.campo_codigo)
 
-        #layout.addLayout(layout_linha_01)
-        layout.addLayout(layout_linha_02)
-        layout.addLayout(self.layout_linha_03)
+        campo_layout_03 = QVBoxLayout()
+        campo_layout_03.addWidget(self.label_qp)
+        campo_layout_03.addWidget(self.campo_qp)
+
+        campo_layout_04 = QVBoxLayout()
+        campo_layout_04.addWidget(self.label_OP)
+        campo_layout_04.addWidget(self.campo_OP)
+
+        campo_layout_05 = QVBoxLayout()
+        campo_layout_05.addWidget(self.label_data_inicio)
+        campo_layout_05.addWidget(self.campo_data_inicio)
+
+        campo_layout_06 = QVBoxLayout()
+        campo_layout_06.addWidget(self.label_data_fim)
+        campo_layout_06.addWidget(self.campo_data_fim)
+
+        layout_linha_01.addLayout(campo_layout_01)
+        layout_linha_01.addLayout(campo_layout_02)
+        layout_linha_01.addLayout(campo_layout_03)
+        layout_linha_01.addLayout(campo_layout_04)
+        layout_linha_01.addLayout(campo_layout_05)
+        layout_linha_01.addLayout(campo_layout_06)
+        layout_linha_01.addStretch()
+
+        self.layout_linha_02.addWidget(self.btn_consultar)
+        self.layout_linha_02.addWidget(self.btn_nova_janela)
+        self.layout_linha_02.addWidget(self.btn_exportar_excel)
+        self.layout_linha_02.addWidget(self.btn_fechar)
+        self.layout_linha_02.addStretch()
+
+        layout.addLayout(layout_linha_01)
+        layout.addLayout(self.layout_linha_02)
         layout.addWidget(self.tree)
         self.setLayout(layout)
 
@@ -354,15 +391,15 @@ class ComprasApp(QWidget):
     def limpar_campos(self):
         self.campo_codigo.clear()
 
-    def bloquear_campos(self):
-        self.campo_codigo.setEnabled(False)
-        self.btn_consultar.setEnabled(False)
-        self.btn_exportar_excel.setEnabled(False)
-
-    def desbloquear_campos(self):
-        self.campo_codigo.setEnabled(True)
-        self.btn_consultar.setEnabled(True)
-        self.btn_exportar_excel.setEnabled(True)
+    def controle_campos_formulario(self, status):
+        self.campo_solicitacao_compra.setEnabled(status)
+        self.campo_codigo.setEnabled(status)
+        self.campo_qp.setEnabled(status)
+        self.campo_OP.setEnabled(status)
+        self.campo_data_inicio.setEnabled(status)
+        self.campo_data_fim.setEnabled(status)
+        self.btn_consultar.setEnabled(status)
+        self.btn_exportar_excel.setEnabled(status)
 
     def exibir_mensagem(self, title, message, icon_type):
         root = tk.Tk()
@@ -385,7 +422,10 @@ class ComprasApp(QWidget):
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
 
-        filtro_data = f"AND C1_EMISSAO >= '{data_inicio_formatada}' AND C1_EMISSAO <= '{data_fim_formatada}'" if data_fim_formatada != '' and data_fim_formatada != '' else ''
+        if data_fim_formatada != '' and data_fim_formatada != '':
+            filtro_data = f"AND C1_EMISSAO >= '{data_inicio_formatada}' AND C1_EMISSAO <= '{data_fim_formatada}'"
+        else:
+            filtro_data = ''
 
         query = f"""
             SELECT C1_ZZNUMQP AS "QP", C1_OP AS "OP", C1_NUM "N°. SC", C1_ITEM AS "Item",
@@ -441,11 +481,7 @@ class ComprasApp(QWidget):
 
         select_query = self.selecionar_query_conforme_filtro(numero_sc, codigo_produto, numero_qp, numero_op)
 
-        if isinstance(select_query, bool) and select_query:
-            self.btn_consultar.setEnabled(True)
-            return
-
-        self.bloquear_campos()
+        self.controle_campos_formulario(False)
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
         self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
@@ -454,7 +490,7 @@ class ComprasApp(QWidget):
             dataframe = pd.read_sql(select_query, self.engine)
 
             if not dataframe.empty:
-                self.layout_linha_03.addWidget(self.btn_parar_consulta)
+                self.layout_linha_02.addWidget(self.btn_parar_consulta)
                 dataframe.insert(0, 'Status', '')
                 dataframe[''] = ''
 
@@ -464,7 +500,7 @@ class ComprasApp(QWidget):
                 self.tree.setRowCount(0)
             else:
                 self.exibir_mensagem("EUREKA® Compras", 'Nada encontrado!', "info")
-                self.desbloquear_campos()
+                self.controle_campos_formulario(True)
                 return
 
             # Construir caminhos relativos
@@ -515,10 +551,10 @@ class ComprasApp(QWidget):
 
                 QCoreApplication.processEvents()
 
-            self.layout_linha_03.removeWidget(self.btn_parar_consulta)
+            self.layout_linha_02.removeWidget(self.btn_parar_consulta)
             self.btn_parar_consulta.setParent(None)
             self.tree.setSortingEnabled(True)
-            self.desbloquear_campos()
+            self.controle_campos_formulario(True)
 
         except Exception as ex:
             self.exibir_mensagem('Erro ao consultar tabela', f'Erro: {str(ex)}', 'error')
@@ -537,7 +573,7 @@ class ComprasApp(QWidget):
         self.interromper_consulta_sql = True
         if hasattr(self, 'engine') and self.engine is not None:
             self.engine.dispose()
-        self.desbloquear_campos()
+        self.controle_campos_formulario(True)
 
 
 if __name__ == "__main__":

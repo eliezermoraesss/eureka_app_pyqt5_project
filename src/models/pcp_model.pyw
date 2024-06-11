@@ -432,10 +432,6 @@ class PcpApp(QWidget):
 
         select_query = self.selecionar_query_conforme_filtro(codigo_produto, numero_qp, numero_op)
 
-        if isinstance(select_query, bool) and select_query:
-            self.btn_consultar.setEnabled(True)
-            return
-
         self.controle_campos_formulario(False)
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
