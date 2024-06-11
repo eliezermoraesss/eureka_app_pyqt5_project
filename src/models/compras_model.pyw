@@ -133,19 +133,19 @@ class ComprasApp(QWidget):
         fonte_campos = "Segoe UI"
         tamanho_fonte_campos = 10
 
-        self.label_sc = QLabel("N°. SC:", self)
+        self.label_sc = QLabel("Solicitação:", self)
         self.label_sc.setFont(QFont(fonte_campos, tamanho_fonte_campos))
 
-        self.label_pedido = QLabel("N°. Pedido:", self)
+        self.label_pedido = QLabel("Pedido:", self)
         self.label_pedido.setFont(QFont(fonte_campos, tamanho_fonte_campos))
 
         self.label_codigo = QLabel("Código:", self)
         self.label_codigo.setFont(QFont(fonte_campos, tamanho_fonte_campos))
 
-        self.label_qp = QLabel("N°. QP:", self)
+        self.label_qp = QLabel("QP:", self)
         self.label_qp.setFont(QFont(fonte_campos, tamanho_fonte_campos))
 
-        self.label_OP = QLabel("N°. OP:", self)
+        self.label_OP = QLabel("OP:", self)
         self.label_OP.setFont(QFont(fonte_campos, tamanho_fonte_campos))
 
         self.label_data_inicio = QLabel("Dt. Emissão Inicial:", self)
@@ -433,7 +433,7 @@ class ComprasApp(QWidget):
 
         root.destroy()
 
-    def selecionar_query_conforme_filtro(self, numero_sc, codigo_produto, numero_qp, numero_op):
+    def selecionar_query_conforme_filtro(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -451,7 +451,8 @@ class ComprasApp(QWidget):
                 C1_LOCAL AS "Armazém", C1_IMPORT AS "Importado?", C1_COTACAO AS "Tem cotação?", C1_FORNECE AS "Fornecedor",
                 C1_SOLICIT AS "Solicitante", C1_XSOL AS "Requisitante", C1_TIPOEMP AS "Tipo Empenho"
             FROM PROTHEUS12_R27.dbo.SC1010
-                WHERE C1_NUM LIKE '%{numero_sc}'
+                WHERE C1_PEDIDO LIKE '{numero_pedido}%'
+                AND C1_NUM LIKE '%{numero_sc}'
                 AND C1_ZZNUMQP LIKE '%{numero_qp}'
                 AND C1_PRODUTO LIKE '{codigo_produto}%'
                 AND C1_OP LIKE '%{numero_op}%' {filtro_data}
@@ -485,6 +486,7 @@ class ComprasApp(QWidget):
     def executar_consulta(self):
 
         numero_sc = self.campo_sc.text().upper().strip()
+        numero_pedido = self.campo_pedido.text().upper().strip()
         numero_qp = self.campo_qp.text().upper().strip()
         numero_op = self.campo_OP.text().upper().strip()
         codigo_produto = self.campo_codigo.text().upper().strip()
@@ -495,7 +497,7 @@ class ComprasApp(QWidget):
 
         numero_qp = numero_qp.zfill(6) if numero_qp != '' else numero_qp
 
-        select_query = self.selecionar_query_conforme_filtro(numero_sc, codigo_produto, numero_qp, numero_op)
+        select_query = self.selecionar_query_conforme_filtro(numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op)
 
         self.controle_campos_formulario(False)
 
