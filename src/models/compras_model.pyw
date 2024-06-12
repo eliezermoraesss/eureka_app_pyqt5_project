@@ -34,9 +34,8 @@ class ComprasApp(QWidget):
 
             QLabel {
                 color: #EEEEEE;
-                font-size: 12px;
+                font-size: 14px;
                 padding: 5px;
-                font-weight: bold;
             }
             
             QDateEdit {
@@ -131,64 +130,44 @@ class ComprasApp(QWidget):
         """)
 
         fonte_campos = "Segoe UI"
-        tamanho_fonte_campos = 10
+        tamanho_fonte_campos = 16
 
-        self.label_sc = QLabel("Solicitação:", self)
-        self.label_sc.setFont(QFont(fonte_campos, tamanho_fonte_campos))
-
-        self.label_pedido = QLabel("Pedido:", self)
-        self.label_pedido.setFont(QFont(fonte_campos, tamanho_fonte_campos))
-
-        self.label_codigo = QLabel("Código:", self)
-        self.label_codigo.setFont(QFont(fonte_campos, tamanho_fonte_campos))
-
-        self.label_qp = QLabel("QP:", self)
-        self.label_qp.setFont(QFont(fonte_campos, tamanho_fonte_campos))
-
-        self.label_OP = QLabel("OP:", self)
-        self.label_OP.setFont(QFont(fonte_campos, tamanho_fonte_campos))
-
+        self.label_sc = QLabel("Solicitação de Compra:", self)
+        self.label_pedido = QLabel("Pedido de Compra:", self)
+        self.label_codigo = QLabel("Código produto:", self)
+        self.label_qp = QLabel("Número QP:", self)
+        self.label_OP = QLabel("Número OP:", self)
         self.label_data_inicio = QLabel("Dt. Emissão Inicial:", self)
-        self.label_data_inicio.setFont(QFont(fonte_campos, tamanho_fonte_campos))
-
         self.label_data_fim = QLabel("Dt. Emissão Final:", self)
-        self.label_data_fim.setFont(QFont(fonte_campos, tamanho_fonte_campos))
 
         self.campo_sc = QLineEdit(self)
         self.campo_sc.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_sc.setMaxLength(6)
-        self.campo_sc.setFocus()
         self.campo_sc.setFixedWidth(200)
-        self.campo_sc.setPlaceholderText("Número SC...")
         self.add_clear_button(self.campo_sc)
 
         self.campo_pedido = QLineEdit(self)
         self.campo_pedido.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_pedido.setMaxLength(6)
-        self.campo_pedido.setFocus()
         self.campo_pedido.setFixedWidth(200)
-        self.campo_pedido.setPlaceholderText("Número Pedido...")
         self.add_clear_button(self.campo_pedido)
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_codigo.setMaxLength(13)
         self.campo_codigo.setFixedWidth(200)
-        self.campo_codigo.setPlaceholderText("Código produto...")
         self.add_clear_button(self.campo_codigo)
 
         self.campo_qp = QLineEdit(self)
         self.campo_qp.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_qp.setMaxLength(6)
         self.campo_qp.setFixedWidth(200)
-        self.campo_qp.setPlaceholderText("Número QP...")
         self.add_clear_button(self.campo_qp)
 
         self.campo_OP = QLineEdit(self)
         self.campo_OP.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_OP.setMaxLength(6)
         self.campo_OP.setFixedWidth(200)
-        self.campo_OP.setPlaceholderText("Número OP...")
         self.add_clear_button(self.campo_OP)
 
         self.campo_data_inicio = QDateEdit(self)
@@ -391,7 +370,7 @@ class ComprasApp(QWidget):
             valor_campo = item.text()
             pyperclip.copy(str(valor_campo))
 
-    def ordenar_tabela(self, logicalIndex):
+    def ordenar_tabela(self, logical_index):
         # Obter o índice real da coluna (considerando a ordem de classificação)
         index = self.tree.horizontalHeader().sortIndicatorOrder()
 
@@ -399,7 +378,7 @@ class ComprasApp(QWidget):
         order = Qt.AscendingOrder if index == 0 else Qt.DescendingOrder
 
         # Ordenar a tabela pela coluna clicada
-        self.tree.sortItems(logicalIndex, order)
+        self.tree.sortItems(logical_index, order)
 
     def limpar_campos(self):
         self.campo_codigo.clear()
@@ -441,13 +420,47 @@ class ComprasApp(QWidget):
             filtro_data = ''
 
         query = f"""
-            SELECT C1_ZZNUMQP AS "QP", C1_OP AS "OP", C1_NUM "N°. SC", C1_ITEM AS "Item",
-                C1_PEDIDO AS "N°. Pedido", C1_ITEMPED AS "Item Pedido", C1_PRODUTO AS "Código", 
-                C1_DESCRI AS "Descrição", C1_UM AS "UM", C1_QUANT AS "Quant.", C1_QUJE AS "Quant. Pedido",
-                C1_EMISSAO AS "Emissão", C1_DATPRF AS "Necessidade", C1_ORIGEM AS "Origem", C1_OBS AS "OBS.",
-                C1_LOCAL AS "Armazém", C1_IMPORT AS "Importado?", C1_FORNECE AS "Fornecedor",
-                C1_SOLICIT AS "Solicitante", C1_XSOL AS "Requisitante"
-            FROM PROTHEUS12_R27.dbo.SC1010
+            SELECT 
+                SC.C1_ZZNUMQP AS "QP",
+                SC.C1_OP AS "OP",
+                SC.C1_NUM AS "SC",
+                SC.C1_ITEM AS "Item SC",
+                SC.C1_QUANT AS "Quant. SC",
+                SC.C1_PEDIDO AS "Ped. Compra",
+                SC.C1_ITEMPED AS "Item Ped.",
+                SC.C1_QUJE AS "Quant. Ped.",
+                ITEM_NF.D1_DOC AS "Nota Fiscal",
+                ITEM_NF.D1_QUANT AS "Quant. Entregue",
+                CAB_NF.F1_RECBMTO AS "Data Entrega",
+                PC.C7_ENCER AS "Status Ped. Compra",
+                SC.C1_PRODUTO AS "Código",
+                SC.C1_DESCRI AS "Descrição",
+                SC.C1_UM AS "UM",
+                SC.C1_EMISSAO AS "Emissão SC",
+                PC.C7_EMISSAO AS "Emissão PC",
+                CAB_NF.F1_EMISSAO AS "Emissão NF",
+                SC.C1_ORIGEM AS "Origem",
+                SC.C1_OBS AS "Observação",
+                SC.C1_LOCAL AS "Armazém",
+                SC.C1_IMPORT AS "Importado?",
+                SC.C1_FORNECE AS "Fornecedor",
+                SC.C1_SOLICIT AS "Solicitante"
+            FROM 
+                PROTHEUS12_R27.dbo.SC1010 SC
+            LEFT JOIN 
+                PROTHEUS12_R27.dbo.SD1010 ITEM_NF
+            ON 
+                SC.C1_PEDIDO = ITEM_NF.D1_PEDIDO AND SC.C1_ITEMPED = ITEM_NF.D1_ITEMPC
+            LEFT JOIN
+                PROTHEUS12_R27.dbo.SC7010 PC
+            ON 
+                SC.C1_PEDIDO = PC.C7_NUM AND SC.C1_ITEMPED = PC.C7_ITEM
+            LEFT JOIN 
+                PROTHEUS12_R27.dbo.SF1010 CAB_NF
+            ON
+                CAB_NF.F1_DOC = ITEM_NF.D1_DOC 
+            WHERE 
+                SC.C1_PEDIDO LIKE '012120'
                 WHERE C1_PEDIDO LIKE '{numero_pedido}%'
                 AND C1_NUM LIKE '%{numero_sc}'
                 AND C1_ZZNUMQP LIKE '%{numero_qp}'
@@ -535,9 +548,9 @@ class ComprasApp(QWidget):
                 for j, value in enumerate(row):
                     if j == 0:
                         item = QTableWidgetItem()
-                        if row['N°. Pedido'].strip() == '' and row['Origem'].strip() == '':
+                        if row['Pedido Compra'].strip() == '' and row['Origem'].strip() == '':
                             item.setIcon(open_solic)
-                        elif row['N°. Pedido'].strip() != '' and row['Origem'].strip() == '':
+                        elif row['Pedido Compra'].strip() != '' and row['Origem'].strip() == '':
                             item.setIcon(closed_solic)
                         elif row['Origem'].strip() == 'MATA650':
                             item.setIcon(closed_solic)
@@ -597,16 +610,6 @@ if __name__ == "__main__":
     username, password, database, server = ComprasApp().setup_mssql()
     driver = '{SQL Server}'
 
-    largura_janela = 1400  # Substitua pelo valor desejado
-    altura_janela = 700  # Substitua pelo valor desejado
-
-    largura_tela = app.primaryScreen().size().width()
-    altura_tela = app.primaryScreen().size().height()
-
-    pos_x = (largura_tela - largura_janela) // 2
-    pos_y = (altura_tela - altura_janela) // 2
-
-    window.setGeometry(pos_x, pos_y, largura_janela, altura_janela)
-    window.show()
+    window.showMaximized()
 
     sys.exit(app.exec_())
