@@ -194,6 +194,10 @@ class ComprasApp(QWidget):
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setMinimumWidth(100)
 
+        self.btn_limpar = QPushButton("Limpar", self)
+        self.btn_limpar.clicked.connect(self.limpar_campos)
+        self.btn_limpar.setMinimumWidth(100)
+
         self.btn_parar_consulta = QPushButton("Parar consulta")
         self.btn_parar_consulta.clicked.connect(self.parar_consulta)
         self.btn_parar_consulta.setMinimumWidth(100)
@@ -212,6 +216,7 @@ class ComprasApp(QWidget):
         self.btn_fechar.setMinimumWidth(100)
 
         self.campo_sc.returnPressed.connect(self.executar_consulta)
+        self.campo_pedido.returnPressed.connect(self.executar_consulta)
         self.campo_codigo.returnPressed.connect(self.executar_consulta)
         self.campo_qp.returnPressed.connect(self.executar_consulta)
         self.campo_OP.returnPressed.connect(self.executar_consulta)
@@ -259,6 +264,7 @@ class ComprasApp(QWidget):
 
         self.layout_linha_02.addWidget(self.btn_consultar)
         self.layout_linha_02.addWidget(self.btn_nova_janela)
+        self.layout_linha_02.addWidget(self.btn_limpar)
         self.layout_linha_02.addWidget(self.btn_exportar_excel)
         self.layout_linha_02.addWidget(self.btn_fechar)
         self.layout_linha_02.addStretch()
@@ -381,7 +387,11 @@ class ComprasApp(QWidget):
         self.tree.sortItems(logical_index, order)
 
     def limpar_campos(self):
+        self.campo_sc.clear()
+        self.campo_pedido.clear()
         self.campo_codigo.clear()
+        self.campo_qp.clear()
+        self.campo_OP.clear()
 
     def controle_campos_formulario(self, status):
         self.campo_sc.setEnabled(status)
@@ -446,13 +456,13 @@ class ComprasApp(QWidget):
                 SC.C1_FORNECE AS "Fornecedor",
                 SC.C1_SOLICIT AS "Solicitante"
             FROM 
-                PROTHEUS12_R27.dbo.SC1010 SC
+                {database}.dbo.SC1010 SC
             LEFT JOIN 
-                PROTHEUS12_R27.dbo.SD1010 ITEM_NF
+                {database}.dbo.SD1010 ITEM_NF
             ON 
                 SC.C1_PEDIDO = ITEM_NF.D1_PEDIDO AND SC.C1_ITEMPED = ITEM_NF.D1_ITEMPC
             LEFT JOIN
-                PROTHEUS12_R27.dbo.SC7010 PC
+                {database}.dbo.SC7010 PC
             ON 
                 SC.C1_PEDIDO = PC.C7_NUM AND SC.C1_ITEMPED = PC.C7_ITEM AND SC.C1_ZZNUMQP = PC.C7_ZZNUMQP
             WHERE 
