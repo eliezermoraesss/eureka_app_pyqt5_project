@@ -116,7 +116,7 @@ class ComprasApp(QWidget):
 
             QTableWidget::item {
                 background-color: #363636;
-                color: #fff;
+                color: #EEEEEE;
                 font-weight: bold;
                 padding-right: 8px;
                 padding-left: 8px;
@@ -360,7 +360,7 @@ class ComprasApp(QWidget):
         self.tree.itemDoubleClicked.connect(self.copiar_linha)
         fonte_tabela = QFont("Segoe UI", 10)
         self.tree.setFont(fonte_tabela)
-        altura_linha = 40
+        altura_linha = 30
         self.tree.verticalHeader().setDefaultSectionSize(altura_linha)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
         self.tree.horizontalHeader().setStretchLastSection(True)
@@ -431,14 +431,14 @@ class ComprasApp(QWidget):
                 SC.C1_QUJE AS "Quant. Ped.",
                 ITEM_NF.D1_DOC AS "Nota Fiscal",
                 ITEM_NF.D1_QUANT AS "Quant. Entregue",
-                CAB_NF.F1_RECBMTO AS "Data Entrega",
+                ITEM_NF.D1_DTDIGIT AS "Data Entrega",
                 PC.C7_ENCER AS "Status Ped. Compra",
                 SC.C1_PRODUTO AS "Código",
                 SC.C1_DESCRI AS "Descrição",
                 SC.C1_UM AS "UM",
                 SC.C1_EMISSAO AS "Emissão SC",
                 PC.C7_EMISSAO AS "Emissão PC",
-                CAB_NF.F1_EMISSAO AS "Emissão NF",
+                ITEM_NF.D1_EMISSAO AS "Emissão NF",
                 SC.C1_ORIGEM AS "Origem",
                 SC.C1_OBS AS "Observação",
                 SC.C1_LOCAL AS "Armazém",
@@ -454,44 +454,17 @@ class ComprasApp(QWidget):
             LEFT JOIN
                 PROTHEUS12_R27.dbo.SC7010 PC
             ON 
-                SC.C1_PEDIDO = PC.C7_NUM AND SC.C1_ITEMPED = PC.C7_ITEM
-            LEFT JOIN 
-                PROTHEUS12_R27.dbo.SF1010 CAB_NF
-            ON
-                CAB_NF.F1_DOC = ITEM_NF.D1_DOC 
+                SC.C1_PEDIDO = PC.C7_NUM AND SC.C1_ITEMPED = PC.C7_ITEM AND SC.C1_ZZNUMQP = PC.C7_ZZNUMQP
             WHERE 
-                SC.C1_PEDIDO LIKE '012120'
-                WHERE C1_PEDIDO LIKE '{numero_pedido}%'
-                AND C1_NUM LIKE '%{numero_sc}'
-                AND C1_ZZNUMQP LIKE '%{numero_qp}'
-                AND C1_PRODUTO LIKE '{codigo_produto}%'
-                AND C1_OP LIKE '%{numero_op}%' {filtro_data}
-            ORDER BY R_E_C_N_O_ DESC;
+                SC.C1_PEDIDO LIKE '{numero_pedido}%'
+                AND SC.C1_NUM LIKE '%{numero_sc}'
+                AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
+                AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
+                AND SC.C1_OP LIKE '{numero_op}%' {filtro_data}
+            ORDER BY 
+                SC.R_E_C_N_O_ DESC;
         """
         return query
-
-    def validar_campos(self, codigo_produto, numero_qp, numero_op):
-
-        if len(codigo_produto) != 13 and not codigo_produto == '':
-            self.exibir_mensagem("ATENÇÃO!",
-                                 "Produto não encontrado!\n\nCorrija e tente "
-                                 f"novamente.\n\nツ\n\nSMARTPLIC®",
-                                 "info")
-            return True
-
-        if len(numero_op) != 6 and not numero_op == '':
-            self.exibir_mensagem("ATENÇÃO!",
-                                 "Ordem de Produção não encontrada!\n\nCorrija e tente "
-                                 f"novamente.\n\nツ\n\nSMARTPLIC®",
-                                 "info")
-            return True
-
-        if len(numero_qp.zfill(6)) != 6 and not numero_qp == '':
-            self.exibir_mensagem("ATENÇÃO!",
-                                 "QP não encontrada!\n\nCorrija e tente "
-                                 f"novamente.\n\nツ\n\nSMARTPLIC®",
-                                 "info")
-            return True
 
     def executar_consulta(self):
 
@@ -501,13 +474,8 @@ class ComprasApp(QWidget):
         numero_op = self.campo_OP.text().upper().strip()
         codigo_produto = self.campo_codigo.text().upper().strip()
 
-        if self.validar_campos(codigo_produto, numero_qp, numero_op):
-            self.btn_consultar.setEnabled(True)
-            return
-
-        numero_qp = numero_qp.zfill(6) if numero_qp != '' else numero_qp
-
-        select_query = self.selecionar_query_conforme_filtro(numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op)
+        select_query = self.selecionar_query_conforme_filtro(numero_sc, numero_pedido, codigo_produto, numero_qp,
+                                                             numero_op)
 
         self.controle_campos_formulario(False)
 
@@ -546,34 +514,37 @@ class ComprasApp(QWidget):
                 self.tree.setSortingEnabled(False)
                 self.tree.insertRow(i)
                 for j, value in enumerate(row):
-                    if j == 0:
-                        item = QTableWidgetItem()
-                        if row['Pedido Compra'].strip() == '' and row['Origem'].strip() == '':
-                            item.setIcon(open_solic)
-                        elif row['Pedido Compra'].strip() != '' and row['Origem'].strip() == '':
-                            item.setIcon(closed_solic)
-                        elif row['Origem'].strip() == 'MATA650':
-                            item.setIcon(closed_solic)
-                        item.setTextAlignment(Qt.AlignCenter)
-                    else:
-                        if j == 14 and value.strip() == 'MATA650':
-                            value = 'Empenho'
-                        elif j == 14 and value.strip() == '':
-                            value = 'Compras'
-
-                        if j == 17 and value.strip() == 'N':
-                            value = 'Não'
-                        elif j == 17 and value.strip() == '':
-                            value = 'Sim'
-
-                        if j in (12, 13) and not value.isspace():
-                            data_obj = datetime.strptime(value, "%Y%m%d")
-                            value = data_obj.strftime("%d/%m/%Y")
-
-                        item = QTableWidgetItem(str(value).strip())
-
-                        if j not in (7, 8):
+                    if value is not None:
+                        if j == 0:
+                            item = QTableWidgetItem()
+                            if row['Status Ped. Compra'].strip() == '' and row['Origem'].strip() == '':
+                                item.setIcon(open_solic)
+                            elif row['Status Ped. Compra'].strip() != '' and row['Origem'].strip() == '':
+                                item.setIcon(closed_solic)
+                            elif row['Origem'].strip() == 'MATA650':
+                                item.setIcon(closed_solic)
                             item.setTextAlignment(Qt.AlignCenter)
+                        else:
+                            if j == 19 and value.strip() == 'MATA650':  # Indica na coluna 'Origem' se o item foi
+                                # empenhado ou será comprado
+                                value = 'Empenho'
+                            elif j == 19 and value.strip() == '':
+                                value = 'Compras'
+
+                            if j == 22 and value.strip() == 'N':  # Escreve sim ou não na coluna 'Importado?'
+                                value = 'Não'
+                            elif j == 22 and value.strip() == '':
+                                value = 'Sim'
+
+                            if j in (11, 16, 17, 18) and not value.isspace():  # Formatação das datas no formato
+                                # dd/mm/YYYY
+                                data_obj = datetime.strptime(value, "%Y%m%d")
+                                value = data_obj.strftime("%d/%m/%Y")
+
+                            item = QTableWidgetItem(str(value).strip())
+
+                            if j not in (13, 14, 20):  # Alinhamento a esquerda de colunas
+                                item.setTextAlignment(Qt.AlignCenter)
 
                     self.tree.setItem(i, j, item)
 
@@ -585,7 +556,7 @@ class ComprasApp(QWidget):
             self.controle_campos_formulario(True)
 
         except Exception as ex:
-            self.exibir_mensagem('Erro ao consultar tabela', f'Erro: {str(ex)}', 'error')
+            self.exibir_mensagem('Erro ao consultar TOTVS', f'Erro: {str(ex)}', 'error')
 
         finally:
             # Fecha a conexão com o banco de dados se estiver aberta
