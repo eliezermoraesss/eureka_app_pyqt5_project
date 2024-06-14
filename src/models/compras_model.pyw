@@ -319,7 +319,8 @@ class ComprasApp(QWidget):
         self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
 
         # Definir a query
-        query = select([self.nnr_table.c.NNR_CODIGO, self.nnr_table.c.NNR_DESCRI]).where(self.nnr_table.c.D_E_L_E_T_ != '*').order_by(
+        query = select([self.nnr_table.c.NNR_CODIGO, self.nnr_table.c.NNR_DESCRI]).where(
+            self.nnr_table.c.D_E_L_E_T_ != '*').order_by(
             self.nnr_table.c.NNR_CODIGO.asc())
 
         # Executar a query e obter os resultados
@@ -528,6 +529,7 @@ class ComprasApp(QWidget):
                 SC.C1_QUJE AS "Quant. Ped.",
                 ITEM_NF.D1_DOC AS "Nota Fiscal",
                 ITEM_NF.D1_QUANT AS "Quant. Entregue",
+                CASE WHEN ITEM_NF.D1_QUANT IS NULL THEN SC.C1_QUJE ELSE SC.C1_QUJE - ITEM_NF.D1_QUANT END AS "Quant. Pendente",
                 ITEM_NF.D1_DTDIGIT AS "Data Entrega",
                 PC.C7_ENCER AS "Status Ped. Compra",
                 SC.C1_PRODUTO AS "Código",
@@ -538,10 +540,13 @@ class ComprasApp(QWidget):
                 ITEM_NF.D1_EMISSAO AS "Emissão NF",
                 SC.C1_ORIGEM AS "Origem",
                 SC.C1_OBS AS "Observação",
-                SC.C1_LOCAL AS "Armazém",
+                SC.C1_LOCAL AS "Cod. Armazém",
+                ARM.NNR_DESCRI AS "Desc. Armazém",
                 SC.C1_IMPORT AS "Importado?",
-                SC.C1_FORNECE AS "Fornecedor",
-                SC.C1_SOLICIT AS "Solicitante"
+                PC.C7_OBS AS "Observações",
+                PC.C7_OBSM AS "Observações item",
+                FORN.A2_NOME AS "Fornecedor",
+                US.USR_NOME AS "Solicitante"
             FROM 
                 {database}.dbo.SC1010 SC
             LEFT JOIN 
@@ -552,6 +557,18 @@ class ComprasApp(QWidget):
                 {database}.dbo.SC7010 PC
             ON 
                 SC.C1_PEDIDO = PC.C7_NUM AND SC.C1_ITEMPED = PC.C7_ITEM AND SC.C1_ZZNUMQP = PC.C7_ZZNUMQP
+            LEFT JOIN
+            {database}.dbo.SA2010 FORN
+            ON
+            FORN.A2_COD = SC.C1_FORNECE
+            LEFT JOIN
+            {database}.dbo.NNR010 ARM
+            ON
+            SC.C1_LOCAL = ARM.NNR_CODIGO
+            LEFT JOIN 
+            {database}.dbo.SYS_USR US
+            ON
+            SC.C1_SOLICIT = US.USR_CODIGO 
             WHERE 
                 SC.C1_PEDIDO LIKE '{numero_pedido}%'
                 AND SC.C1_NUM LIKE '%{numero_sc}'
@@ -575,7 +592,7 @@ class ComprasApp(QWidget):
                                                              numero_op)
 
         numero_linhas = self.numero_linhas_consulta(numero_sc, numero_pedido, codigo_produto, numero_qp,
-                                                             numero_op)
+                                                    numero_op)
 
         self.controle_campos_formulario(False)
 
@@ -613,7 +630,7 @@ class ComprasApp(QWidget):
 
                 self.tree.setSortingEnabled(False)
                 self.tree.insertRow(i)
-                self.tree.setColumnHidden(12, True)
+                self.tree.setColumnHidden(13, True)
                 for j, value in enumerate(row):
                     if value is not None:
                         if j == 0:
@@ -626,25 +643,27 @@ class ComprasApp(QWidget):
                                 item.setIcon(closed_solic)
                             item.setTextAlignment(Qt.AlignCenter)
                         else:
-                            if j == 19 and value.strip() == 'MATA650':  # Indica na coluna 'Origem' se o item foi
+                            if j == 11:
+                                value = round(value, 2)
+                            if j == 20 and value.strip() == 'MATA650':  # Indica na coluna 'Origem' se o item foi
                                 # empenhado ou será comprado
                                 value = 'Empenho'
-                            elif j == 19 and value.strip() == '':
+                            elif j == 20 and value.strip() == '':
                                 value = 'Compras'
 
-                            if j == 22 and value.strip() == 'N':  # Escreve sim ou não na coluna 'Importado?'
+                            if j == 24 and value.strip() == 'N':  # Escreve sim ou não na coluna 'Importado?'
                                 value = 'Não'
-                            elif j == 22 and value.strip() == '':
+                            elif j == 24 and value.strip() == '':
                                 value = 'Sim'
 
-                            if j in (11, 16, 17, 18) and not value.isspace():  # Formatação das datas no formato
+                            if j in (12, 17, 18, 19) and not value.isspace():  # Formatação das datas no formato
                                 # dd/mm/YYYY
                                 data_obj = datetime.strptime(value, "%Y%m%d")
                                 value = data_obj.strftime("%d/%m/%Y")
 
                             item = QTableWidgetItem(str(value).strip())
 
-                            if j not in (13, 14, 20):  # Alinhamento a esquerda de colunas
+                            if j not in (14, 15, 21):  # Alinhamento a esquerda de colunas
                                 item.setTextAlignment(Qt.AlignCenter)
 
                     self.tree.setItem(i, j, item)
