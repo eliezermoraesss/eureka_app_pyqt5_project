@@ -1,8 +1,8 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel
-from PyQt5.QtGui import QFont, QColor, QIcon
-from PyQt5.QtCore import Qt, QCoreApplication, QDate
+    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, QMessageBox
+from PyQt5.QtGui import QFont, QColor, QIcon, QDesktopServices
+from PyQt5.QtCore import Qt, QCoreApplication, QDate, QUrl
 import pyperclip
 import pandas as pd
 import ctypes
@@ -158,8 +158,8 @@ class PcpApp(QWidget):
         self.campo_data_inicio.setDisplayFormat("dd/MM/yyyy")
 
         data_atual = QDate.currentDate()
-        meses_a_remover = 4
-        data_inicio = data_atual.addMonths(-meses_a_remover)
+        intervalo_meses = 6
+        data_inicio = data_atual.addMonths(-intervalo_meses)
         self.campo_data_inicio.setDate(data_inicio)
         self.add_today_button(self.campo_data_inicio)
 
@@ -178,6 +178,10 @@ class PcpApp(QWidget):
         self.btn_abrir_compras = QPushButton("Follow-up Compras", self)
         self.btn_abrir_compras.clicked.connect(self.abrir_modulo_compras)
         self.btn_abrir_compras.setMinimumWidth(100)
+        
+        self.btn_limpar = QPushButton("Limpar", self)
+        self.btn_limpar.clicked.connect(self.limpar_campos)
+        self.btn_limpar.setMinimumWidth(100)
 
         self.btn_parar_consulta = QPushButton("Parar consulta")
         self.btn_parar_consulta.clicked.connect(self.parar_consulta)
@@ -186,6 +190,10 @@ class PcpApp(QWidget):
         self.btn_nova_janela = QPushButton("Nova Janela", self)
         self.btn_nova_janela.clicked.connect(self.abrir_nova_janela)
         self.btn_nova_janela.setMinimumWidth(100)
+        
+        self.btn_abrir_desenho = QPushButton("Abrir Desenho", self)
+        self.btn_abrir_desenho.clicked.connect(self.abrir_desenho)
+        self.btn_abrir_desenho.setMinimumWidth(100)
 
         self.btn_exportar_excel = QPushButton("Exportar Excel", self)
         self.btn_exportar_excel.clicked.connect(self.exportar_excel)
@@ -208,15 +216,17 @@ class PcpApp(QWidget):
         layout_linha_02.addWidget(self.campo_codigo)
         layout_linha_02.addWidget(self.campo_qp)
         layout_linha_02.addWidget(self.campo_OP)
-        layout_linha_02.addWidget(QLabel("Data Emissão:"))
+        layout_linha_02.addWidget(QLabel("Data Emissão OP:"))
         layout_linha_02.addWidget(self.campo_data_inicio)
-        layout_linha_02.addWidget(QLabel("Data Fechamento:"))
+        layout_linha_02.addWidget(QLabel("Data Fechamento OP:"))
         layout_linha_02.addWidget(self.campo_data_fim)
         layout_linha_02.addStretch()
 
         self.layout_linha_03.addWidget(self.btn_consultar)
         self.layout_linha_03.addWidget(self.btn_abrir_compras)
         self.layout_linha_03.addWidget(self.btn_nova_janela)
+        self.layout_linha_03.addWidget(self.btn_limpar)
+        self.layout_linha_03.addWidget(self.btn_abrir_desenho)
         self.layout_linha_03.addWidget(self.btn_exportar_excel)
         self.layout_linha_03.addWidget(self.btn_fechar)
         self.layout_linha_03.addStretch()
@@ -226,6 +236,26 @@ class PcpApp(QWidget):
         layout.addLayout(self.layout_linha_03)
         layout.addWidget(self.tree)
         self.setLayout(layout)
+        
+    def limpar_campos(self):
+        self.campo_codigo.clear()
+        self.campo_qp.clear()
+        self.campo_OP.clear()
+        
+    def abrir_desenho(self):
+        item_selecionado = self.tree.currentItem()
+
+        if item_selecionado:
+            codigo = self.tree.item(item_selecionado.row(), 5).text()
+            pdf_path = os.path.join(r"\\192.175.175.4\dados\EMPRESA\PROJETOS\PDF-OFICIAL", f"{codigo}.PDF")
+            pdf_path = os.path.normpath(pdf_path)
+
+            if os.path.exists(pdf_path):
+                QCoreApplication.processEvents()
+                QDesktopServices.openUrl(QUrl.fromLocalFile(pdf_path))
+            else:
+                mensagem = f"Desenho não encontrado!\n\n:-("
+                QMessageBox.information(self, f"{codigo}", mensagem)
 
     def abrir_modulo_compras(self):
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -523,16 +553,6 @@ if __name__ == "__main__":
     username, password, database, server = PcpApp().setup_mssql()
     driver = '{SQL Server}'
 
-    largura_janela = 1400  # Substitua pelo valor desejado
-    altura_janela = 700  # Substitua pelo valor desejado
-
-    largura_tela = app.primaryScreen().size().width()
-    altura_tela = app.primaryScreen().size().height()
-
-    pos_x = (largura_tela - largura_janela) // 2
-    pos_y = (altura_tela - altura_janela) // 2
-
-    window.setGeometry(pos_x, pos_y, largura_janela, altura_janela)
-    window.show()
+    window.showMaximized()
 
     sys.exit(app.exec_())

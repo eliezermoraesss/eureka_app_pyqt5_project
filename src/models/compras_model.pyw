@@ -1,15 +1,15 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel
-from PyQt5.QtGui import QFont, QIcon
-from PyQt5.QtCore import Qt, QCoreApplication, QDate
+    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, QMessageBox, QComboBox
+from PyQt5.QtGui import QFont, QIcon, QDesktopServices
+from PyQt5.QtCore import Qt, QCoreApplication, QDate, QUrl
 import pyperclip
 import pandas as pd
 import ctypes
 from datetime import date, datetime
 import tkinter as tk
 from tkinter import messagebox
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select, MetaData, Table
 import os
 
 
@@ -18,6 +18,12 @@ class ComprasApp(QWidget):
         super().__init__()
 
         self.engine = None
+
+        self.metadata = MetaData()
+        self.nnr_table = Table('NNR010', self.metadata, autoload_with=self.engine, schema='dbo')
+        self.combobox = QComboBox(self)
+        #self.populate_combobox()
+
         self.interromper_consulta_sql = False
         self.tree = QTableWidget(self)
         self.tree.setColumnCount(0)
@@ -35,10 +41,10 @@ class ComprasApp(QWidget):
             QLabel {
                 color: #EEEEEE;
                 font-size: 14px;
-                padding: 5px;
+                margin-top: 20px;
             }
             
-            QDateEdit {
+            QDateEdit, QComboBox {
                 background-color: #FFFFFF;
                 border: 1px solid #262626;
                 margin-bottom: 20px;
@@ -48,7 +54,7 @@ class ComprasApp(QWidget):
                 font-size: 16px;
             }
             
-            QDateEdit::drop-down {
+            QDateEdit::drop-down, QComboBox::drop-down {
                 subcontrol-origin: padding;
                 subcontrol-position: top right;
                 width: 30px;
@@ -59,7 +65,7 @@ class ComprasApp(QWidget):
                 border-bottom-right-radius: 3px;
             }
             
-            QDateEdit::down-arrow {
+            QDateEdit::down-arrow, QComboBox::down-arrow {
                 image: url(../resources/images/arrow.png);
                 width: 10px;
                 height: 10px;
@@ -76,7 +82,7 @@ class ComprasApp(QWidget):
             }
 
             QPushButton {
-                background-color: #00ADB5;
+                background-color: #6A2C70;
                 color: #EEEEEE;
                 padding: 10px;
                 border: 2px;
@@ -137,8 +143,9 @@ class ComprasApp(QWidget):
         self.label_codigo = QLabel("Código produto:", self)
         self.label_qp = QLabel("Número QP:", self)
         self.label_OP = QLabel("Número OP:", self)
-        self.label_data_inicio = QLabel("Dt. Emissão Inicial:", self)
-        self.label_data_fim = QLabel("Dt. Emissão Final:", self)
+        self.label_data_inicio = QLabel("Data inicial SC:", self)
+        self.label_data_fim = QLabel("Data final SC:", self)
+        self.label_armazem = QLabel("Armazéns:", self)
 
         self.campo_sc = QLineEdit(self)
         self.campo_sc.setFont(QFont(fonte_campos, tamanho_fonte_campos))
@@ -177,8 +184,8 @@ class ComprasApp(QWidget):
         self.campo_data_inicio.setDisplayFormat("dd/MM/yyyy")
 
         data_atual = QDate.currentDate()
-        meses_a_remover = 4
-        data_inicio = data_atual.addMonths(-meses_a_remover)
+        intervalo_meses = 6
+        data_inicio = data_atual.addMonths(-intervalo_meses)
         self.campo_data_inicio.setDate(data_inicio)
         self.add_today_button(self.campo_data_inicio)
 
@@ -205,6 +212,10 @@ class ComprasApp(QWidget):
         self.btn_nova_janela = QPushButton("Nova Janela", self)
         self.btn_nova_janela.clicked.connect(self.abrir_nova_janela)
         self.btn_nova_janela.setMinimumWidth(100)
+
+        self.btn_abrir_desenho = QPushButton("Abrir Desenho", self)
+        self.btn_abrir_desenho.clicked.connect(self.abrir_desenho)
+        self.btn_abrir_desenho.setMinimumWidth(100)
 
         self.btn_exportar_excel = QPushButton("Exportar Excel", self)
         self.btn_exportar_excel.clicked.connect(self.exportar_excel)
@@ -253,6 +264,10 @@ class ComprasApp(QWidget):
         container_data_fim.addWidget(self.label_data_fim)
         container_data_fim.addWidget(self.campo_data_fim)
 
+        container_combobox = QVBoxLayout()
+        container_combobox.addWidget(self.label_armazem)
+        container_combobox.addWidget(self.combobox)
+
         layout_linha_01.addLayout(container_sc)
         layout_linha_01.addLayout(container_pedido)
         layout_linha_01.addLayout(container_codigo)
@@ -260,11 +275,13 @@ class ComprasApp(QWidget):
         layout_linha_01.addLayout(container_op)
         layout_linha_01.addLayout(container_data_ini)
         layout_linha_01.addLayout(container_data_fim)
+        layout_linha_01.addLayout(container_combobox)
         layout_linha_01.addStretch()
 
         self.layout_linha_02.addWidget(self.btn_consultar)
         self.layout_linha_02.addWidget(self.btn_nova_janela)
         self.layout_linha_02.addWidget(self.btn_limpar)
+        self.layout_linha_02.addWidget(self.btn_abrir_desenho)
         self.layout_linha_02.addWidget(self.btn_exportar_excel)
         self.layout_linha_02.addWidget(self.btn_fechar)
         self.layout_linha_02.addStretch()
@@ -273,28 +290,6 @@ class ComprasApp(QWidget):
         layout.addLayout(self.layout_linha_02)
         layout.addWidget(self.tree)
         self.setLayout(layout)
-
-    def abrir_nova_janela(self):
-        if not self.nova_janela or not self.nova_janela.isVisible():
-            self.nova_janela = ComprasApp()
-            self.nova_janela.setGeometry(self.x() + 50, self.y() + 50, self.width(), self.height())
-            self.nova_janela.show()
-
-    def add_today_button(self, date_edit):
-        calendar = date_edit.calendarWidget()
-        calendar.setGeometry(10, 10, 600, 400)
-        btn_today = QPushButton("Hoje", calendar)
-        largura, altura = 50, 20
-        btn_today.setGeometry(20, 5, largura, altura)
-        btn_today.clicked.connect(lambda: date_edit.setDate(QDate.currentDate()))
-
-    def add_clear_button(self, line_edit):
-        clear_icon = self.style().standardIcon(QStyle.SP_LineEditClearButton)
-        pixmap = clear_icon.pixmap(40, 40)  # Redimensionar o ícone para 20x20 pixels
-        larger_clear_icon = QIcon(pixmap)
-        clear_action = QAction(larger_clear_icon, "Clear", line_edit)
-        clear_action.triggered.connect(line_edit.clear)
-        line_edit.addAction(clear_action, QLineEdit.TrailingPosition)
 
     def setup_mssql(self):
         caminho_do_arquivo = (r"\\192.175.175.4\f\INTEGRANTES\ELIEZER\PROJETO SOLIDWORKS "
@@ -317,6 +312,63 @@ class ComprasApp(QWidget):
             ctypes.windll.user32.MessageBoxW(0, "Ocorreu um erro ao ler o arquivo:", "CADASTRO DE ESTRUTURA - TOTVS®",
                                              16 | 0)
             sys.exit()
+
+    def populate_combobox(self):
+
+        conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
+        self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
+
+        # Definir a query
+        query = select([self.nnr_table.c.NNR_CODIGO, self.nnr_table.c.NNR_DESCRI]).where(self.nnr_table.c.D_E_L_E_T_ != '*').order_by(
+            self.nnr_table.c.NNR_CODIGO.asc())
+
+        # Executar a query e obter os resultados
+        with self.engine.connect() as connection:
+            result = connection.execute(query)
+            descriptions = [row[1] for row in result]
+
+        # Adicionar descrições ao combobox
+        self.comboBox.addItems(descriptions)
+
+    def abrir_nova_janela(self):
+        if not self.nova_janela or not self.nova_janela.isVisible():
+            self.nova_janela = ComprasApp()
+            self.nova_janela.setGeometry(self.x() + 50, self.y() + 50, self.width(), self.height())
+            self.nova_janela.show()
+
+    def abrir_desenho(self):
+        item_selecionado = self.tree.currentItem()
+
+        if item_selecionado:
+            codigo = self.tree.item(item_selecionado.row(), 13).text()
+            pdf_path = os.path.join(r"\\192.175.175.4\dados\EMPRESA\PROJETOS\PDF-OFICIAL", f"{codigo}.PDF")
+            pdf_path = os.path.normpath(pdf_path)
+
+            if os.path.exists(pdf_path):
+                QCoreApplication.processEvents()
+                QDesktopServices.openUrl(QUrl.fromLocalFile(pdf_path))
+            else:
+                mensagem = f"Desenho não encontrado!\n\n:-("
+                QMessageBox.information(self, f"{codigo}", mensagem)
+
+    def add_today_button(self, date_edit):
+        calendar = date_edit.calendarWidget()
+        calendar.setGeometry(10, 10, 600, 400)
+        btn_today = QPushButton("Hoje", calendar)
+        largura, altura = 50, 20
+        btn_today.setGeometry(20, 5, largura, altura)
+        btn_today.clicked.connect(lambda: date_edit.setDate(QDate.currentDate()))
+
+    def add_clear_button(self, line_edit):
+        clear_icon = self.style().standardIcon(QStyle.SP_LineEditClearButton)
+
+        line_edit_height = line_edit.height()
+        pixmap = clear_icon.pixmap(line_edit_height - 4, line_edit_height - 4)
+        larger_clear_icon = QIcon(pixmap)
+
+        clear_action = QAction(larger_clear_icon, "Limpar", line_edit)
+        clear_action.triggered.connect(line_edit.clear)
+        line_edit.addAction(clear_action, QLineEdit.TrailingPosition)
 
     def exportar_excel(self):
         file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
@@ -402,6 +454,7 @@ class ComprasApp(QWidget):
         self.campo_data_fim.setEnabled(status)
         self.btn_consultar.setEnabled(status)
         self.btn_exportar_excel.setEnabled(status)
+        self.btn_abrir_desenho.setEnabled(status)
 
     def exibir_mensagem(self, title, message, icon_type):
         root = tk.Tk()
@@ -418,6 +471,40 @@ class ComprasApp(QWidget):
             messagebox.showerror(title, message)
 
         root.destroy()
+
+    def numero_linhas_consulta(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op):
+
+        data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
+        data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
+
+        if data_fim_formatada != '' and data_fim_formatada != '':
+            filtro_data = f"AND C1_EMISSAO >= '{data_inicio_formatada}' AND C1_EMISSAO <= '{data_fim_formatada}'"
+        else:
+            filtro_data = ''
+
+        query = f"""
+            SELECT 
+                COUNT(*)
+            FROM 
+                {database}.dbo.SC1010 SC
+            LEFT JOIN 
+                {database}.dbo.SD1010 ITEM_NF
+            ON 
+                SC.C1_PEDIDO = ITEM_NF.D1_PEDIDO AND SC.C1_ITEMPED = ITEM_NF.D1_ITEMPC
+            LEFT JOIN
+                {database}.dbo.SC7010 PC
+            ON 
+                SC.C1_PEDIDO = PC.C7_NUM AND SC.C1_ITEMPED = PC.C7_ITEM AND SC.C1_ZZNUMQP = PC.C7_ZZNUMQP
+            WHERE 
+                SC.C1_PEDIDO LIKE '{numero_pedido}%'
+                AND SC.C1_NUM LIKE '%{numero_sc}'
+                AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
+                AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
+                AND SC.C1_OP LIKE '{numero_op}%' {filtro_data}
+            ORDER BY 
+                SC.R_E_C_N_O_ DESC;
+        """
+        return query
 
     def selecionar_query_conforme_filtro(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op):
 
@@ -487,6 +574,9 @@ class ComprasApp(QWidget):
         select_query = self.selecionar_query_conforme_filtro(numero_sc, numero_pedido, codigo_produto, numero_qp,
                                                              numero_op)
 
+        numero_linhas = self.numero_linhas_consulta(numero_sc, numero_pedido, codigo_produto, numero_qp,
+                                                             numero_op)
+
         self.controle_campos_formulario(False)
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
@@ -497,7 +587,7 @@ class ComprasApp(QWidget):
 
             if not dataframe.empty:
                 self.layout_linha_02.addWidget(self.btn_parar_consulta)
-                dataframe.insert(0, 'Status', '')
+                dataframe.insert(0, 'Status PC', '')
                 dataframe[''] = ''
 
                 self.configurar_tabela(dataframe)
@@ -523,6 +613,7 @@ class ComprasApp(QWidget):
 
                 self.tree.setSortingEnabled(False)
                 self.tree.insertRow(i)
+                self.tree.setColumnHidden(12, True)
                 for j, value in enumerate(row):
                     if value is not None:
                         if j == 0:
@@ -590,7 +681,5 @@ if __name__ == "__main__":
     window = ComprasApp()
     username, password, database, server = ComprasApp().setup_mssql()
     driver = '{SQL Server}'
-
     window.showMaximized()
-
     sys.exit(app.exec_())
