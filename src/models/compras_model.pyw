@@ -18,12 +18,13 @@ class ComprasApp(QWidget):
         super().__init__()
 
         self.engine = None
-
         self.metadata = MetaData()
         self.nnr_table = Table('NNR010', self.metadata, autoload_with=self.engine, schema='dbo')
         self.combobox = QComboBox(self)
         #self.populate_combobox()
-
+        self.altura_linha = 30
+        self.tamanho_fonte_tabela = 10
+        self.fonte_tabela = 'Segoe UI'
         self.interromper_consulta_sql = False
         self.tree = QTableWidget(self)
         self.tree.setColumnCount(0)
@@ -146,6 +147,7 @@ class ComprasApp(QWidget):
         self.label_data_inicio = QLabel("Data inicial SC:", self)
         self.label_data_fim = QLabel("Data final SC:", self)
         self.label_armazem = QLabel("Armazéns:", self)
+        self.label_fornecedor = QLabel("Fornecedor:", self)
 
         self.campo_sc = QLineEdit(self)
         self.campo_sc.setFont(QFont(fonte_campos, tamanho_fonte_campos))
@@ -176,6 +178,12 @@ class ComprasApp(QWidget):
         self.campo_OP.setMaxLength(6)
         self.campo_OP.setFixedWidth(200)
         self.add_clear_button(self.campo_OP)
+
+        self.campo_fornecedor = QLineEdit(self)
+        self.campo_fornecedor.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_fornecedor.setMaxLength(30)
+        self.campo_fornecedor.setFixedWidth(300)
+        self.add_clear_button(self.campo_fornecedor)
 
         self.campo_data_inicio = QDateEdit(self)
         self.campo_data_inicio.setFont(QFont(fonte_campos, tamanho_fonte_campos))
@@ -227,6 +235,7 @@ class ComprasApp(QWidget):
         self.campo_codigo.returnPressed.connect(self.executar_consulta)
         self.campo_qp.returnPressed.connect(self.executar_consulta)
         self.campo_OP.returnPressed.connect(self.executar_consulta)
+        self.campo_fornecedor.returnPressed.connect(self.executar_consulta)
 
         layout = QVBoxLayout()
         layout_linha_01 = QHBoxLayout()
@@ -264,6 +273,10 @@ class ComprasApp(QWidget):
         container_combobox.addWidget(self.label_armazem)
         container_combobox.addWidget(self.combobox)
 
+        container_fornecedor = QVBoxLayout()
+        container_fornecedor.addWidget(self.label_fornecedor)
+        container_fornecedor.addWidget(self.campo_fornecedor)
+
         layout_linha_01.addLayout(container_sc)
         layout_linha_01.addLayout(container_pedido)
         layout_linha_01.addLayout(container_codigo)
@@ -272,6 +285,7 @@ class ComprasApp(QWidget):
         layout_linha_01.addLayout(container_data_ini)
         layout_linha_01.addLayout(container_data_fim)
         layout_linha_01.addLayout(container_combobox)
+        layout_linha_01.addLayout(container_fornecedor)
         layout_linha_01.addStretch()
 
         self.layout_linha_02.addWidget(self.btn_consultar)
@@ -397,10 +411,8 @@ class ComprasApp(QWidget):
         self.tree.setSelectionBehavior(QTableWidget.SelectRows)
         self.tree.setSelectionMode(QTableWidget.SingleSelection)
         self.tree.itemDoubleClicked.connect(self.copiar_linha)
-        fonte_tabela = QFont("Segoe UI", 10)
-        self.tree.setFont(fonte_tabela)
-        altura_linha = 34
-        self.tree.verticalHeader().setDefaultSectionSize(altura_linha)
+        self.tree.setFont(QFont(self.fonte_tabela, self.tamanho_fonte_tabela))
+        self.tree.verticalHeader().setDefaultSectionSize(self.altura_linha)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
         self.tree.horizontalHeader().setStretchLastSection(True)
 
@@ -452,7 +464,7 @@ class ComprasApp(QWidget):
 
         root.destroy()
 
-    def numero_linhas_consulta(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op):
+    def numero_linhas_consulta(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op, fornecedor):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -480,13 +492,14 @@ class ComprasApp(QWidget):
                 AND SC.C1_NUM LIKE '%{numero_sc}'
                 AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
                 AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
-                AND SC.C1_OP LIKE '{numero_op}%' {filtro_data}
+                AND SC.C1_OP LIKE '{numero_op}%'
+                AND FORN.A2_NOME LIKE '%{fornecedor}%' {filtro_data}
             ORDER BY 
                 SC.R_E_C_N_O_ DESC;
         """
         return query
 
-    def selecionar_query_conforme_filtro(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op):
+    def selecionar_query_conforme_filtro(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op, fornecedor):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -553,7 +566,8 @@ class ComprasApp(QWidget):
                 AND SC.C1_NUM LIKE '%{numero_sc}'
                 AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
                 AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
-                AND SC.C1_OP LIKE '{numero_op}%' {filtro_data}
+                AND SC.C1_OP LIKE '{numero_op}%' 
+                AND FORN.A2_NOME LIKE '%{fornecedor}%' {filtro_data}
             ORDER BY 
                 SC.R_E_C_N_O_ DESC;
         """
@@ -566,12 +580,13 @@ class ComprasApp(QWidget):
         numero_qp = self.campo_qp.text().upper().strip()
         numero_op = self.campo_OP.text().upper().strip()
         codigo_produto = self.campo_codigo.text().upper().strip()
+        fornecedor = self.campo_fornecedor.text().upper().strip()
 
         select_query = self.selecionar_query_conforme_filtro(numero_sc, numero_pedido, codigo_produto, numero_qp,
-                                                             numero_op)
+                                                             numero_op, fornecedor)
 
         numero_linhas = self.numero_linhas_consulta(numero_sc, numero_pedido, codigo_produto, numero_qp,
-                                                    numero_op)
+                                                    numero_op, fornecedor)
 
         self.controle_campos_formulario(False)
 
@@ -624,7 +639,9 @@ class ComprasApp(QWidget):
                             elif row['Status Ped. Compra'] == 'E':
                                 item.setIcon(end_order)
                         else:
-                            if j == 11:
+                            if j == 10 and pd.isna(value):
+                                value = '-'
+                            if j == 11 and value:
                                 value = round(value, 2)
                             if j == 20 and value.strip() == 'MATA650':  # Indica na coluna 'Origem' se o item foi
                                 # empenhado ou será comprado

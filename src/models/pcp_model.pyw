@@ -485,8 +485,8 @@ class PcpApp(QWidget):
 
             # Construir caminhos relativos
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            open_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'open_status_panel.png')
-            closed_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'close_status_panel.png')
+            open_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'red.png')
+            closed_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'green.png')
 
             open_icon = QIcon(open_icon_path)
             closed_icon = QIcon(closed_icon_path)
