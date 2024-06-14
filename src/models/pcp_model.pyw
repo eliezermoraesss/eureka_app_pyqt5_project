@@ -2,7 +2,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, QMessageBox
 from PyQt5.QtGui import QFont, QColor, QIcon, QDesktopServices
-from PyQt5.QtCore import Qt, QCoreApplication, QDate, QUrl
+from PyQt5.QtCore import Qt, QCoreApplication, QDate, QUrl, QProcess
 import pyperclip
 import pandas as pd
 import ctypes
@@ -11,7 +11,6 @@ import tkinter as tk
 from tkinter import messagebox
 from sqlalchemy import create_engine
 import os
-import subprocess
 
 
 class PcpApp(QWidget):
@@ -23,7 +22,7 @@ class PcpApp(QWidget):
         self.tree = QTableWidget(self)
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
-
+        self.process = QProcess(self)
         self.nova_janela = None
 
         self.setWindowTitle("EUREKA® PCP - v0.1")
@@ -260,7 +259,7 @@ class PcpApp(QWidget):
     def abrir_modulo_compras(self):
         script_dir = os.path.dirname(os.path.abspath(__file__))
         script_path = os.path.join(script_dir, 'compras_model.pyw')
-        subprocess.run(["python", script_path])
+        self.process.start("python", [script_path])
 
     def abrir_nova_janela(self):
         if not self.nova_janela or not self.nova_janela.isVisible():

@@ -74,6 +74,7 @@ class ComprasApp(QWidget):
             QLineEdit {
                 background-color: #FFFFFF;
                 border: 1px solid #262626;
+                margin-top: 20px;
                 margin-bottom: 20px;
                 padding: 5px 10px;
                 border-radius: 10px;
@@ -82,10 +83,9 @@ class ComprasApp(QWidget):
             }
 
             QPushButton {
-                background-color: #6A2C70;
+                background-color: #836FFF;
                 color: #EEEEEE;
                 padding: 10px;
-                border: 2px;
                 border-radius: 8px;
                 font-size: 12px;
                 height: 15px;
@@ -94,7 +94,7 @@ class ComprasApp(QWidget):
             }
 
             QPushButton:hover {
-                background-color: #0a79f8;
+                background-color: #E84545;
                 color: #fff
             }
 
@@ -213,10 +213,6 @@ class ComprasApp(QWidget):
         self.btn_nova_janela.clicked.connect(self.abrir_nova_janela)
         self.btn_nova_janela.setMinimumWidth(100)
 
-        self.btn_abrir_desenho = QPushButton("Abrir Desenho", self)
-        self.btn_abrir_desenho.clicked.connect(self.abrir_desenho)
-        self.btn_abrir_desenho.setMinimumWidth(100)
-
         self.btn_exportar_excel = QPushButton("Exportar Excel", self)
         self.btn_exportar_excel.clicked.connect(self.exportar_excel)
         self.btn_exportar_excel.setMinimumWidth(100)
@@ -281,7 +277,6 @@ class ComprasApp(QWidget):
         self.layout_linha_02.addWidget(self.btn_consultar)
         self.layout_linha_02.addWidget(self.btn_nova_janela)
         self.layout_linha_02.addWidget(self.btn_limpar)
-        self.layout_linha_02.addWidget(self.btn_abrir_desenho)
         self.layout_linha_02.addWidget(self.btn_exportar_excel)
         self.layout_linha_02.addWidget(self.btn_fechar)
         self.layout_linha_02.addStretch()
@@ -336,21 +331,6 @@ class ComprasApp(QWidget):
             self.nova_janela = ComprasApp()
             self.nova_janela.setGeometry(self.x() + 50, self.y() + 50, self.width(), self.height())
             self.nova_janela.show()
-
-    def abrir_desenho(self):
-        item_selecionado = self.tree.currentItem()
-
-        if item_selecionado:
-            codigo = self.tree.item(item_selecionado.row(), 13).text()
-            pdf_path = os.path.join(r"\\192.175.175.4\dados\EMPRESA\PROJETOS\PDF-OFICIAL", f"{codigo}.PDF")
-            pdf_path = os.path.normpath(pdf_path)
-
-            if os.path.exists(pdf_path):
-                QCoreApplication.processEvents()
-                QDesktopServices.openUrl(QUrl.fromLocalFile(pdf_path))
-            else:
-                mensagem = f"Desenho não encontrado!\n\n:-("
-                QMessageBox.information(self, f"{codigo}", mensagem)
 
     def add_today_button(self, date_edit):
         calendar = date_edit.calendarWidget()
@@ -419,7 +399,7 @@ class ComprasApp(QWidget):
         self.tree.itemDoubleClicked.connect(self.copiar_linha)
         fonte_tabela = QFont("Segoe UI", 10)
         self.tree.setFont(fonte_tabela)
-        altura_linha = 30
+        altura_linha = 34
         self.tree.verticalHeader().setDefaultSectionSize(altura_linha)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
         self.tree.horizontalHeader().setStretchLastSection(True)
@@ -455,7 +435,6 @@ class ComprasApp(QWidget):
         self.campo_data_fim.setEnabled(status)
         self.btn_consultar.setEnabled(status)
         self.btn_exportar_excel.setEnabled(status)
-        self.btn_abrir_desenho.setEnabled(status)
 
     def exibir_mensagem(self, title, message, icon_type):
         root = tk.Tk()
@@ -618,11 +597,13 @@ class ComprasApp(QWidget):
 
             # Construir caminhos relativos
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            open_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'open_status_panel.png')
-            closed_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'close_status_panel.png')
+            no_order_path = os.path.join(script_dir, '..', 'resources', 'images', 'red.png')
+            wait_order_path = os.path.join(script_dir, '..', 'resources', 'images', 'wait.png')
+            end_order_path = os.path.join(script_dir, '..', 'resources', 'images', 'green.png')
 
-            open_solic = QIcon(open_icon_path)
-            closed_solic = QIcon(closed_icon_path)
+            no_order = QIcon(no_order_path)
+            wait_delivery = QIcon(wait_order_path)
+            end_order = QIcon(end_order_path)
 
             for i, row in dataframe.iterrows():
                 if self.interromper_consulta_sql:
@@ -631,17 +612,17 @@ class ComprasApp(QWidget):
                 self.tree.setSortingEnabled(False)
                 self.tree.insertRow(i)
                 self.tree.setColumnHidden(13, True)
+
                 for j, value in enumerate(row):
                     if value is not None:
                         if j == 0:
                             item = QTableWidgetItem()
-                            if row['Status Ped. Compra'].strip() == '' and row['Origem'].strip() == '':
-                                item.setIcon(open_solic)
-                            elif row['Status Ped. Compra'].strip() != '' and row['Origem'].strip() == '':
-                                item.setIcon(closed_solic)
-                            elif row['Origem'].strip() == 'MATA650':
-                                item.setIcon(closed_solic)
-                            item.setTextAlignment(Qt.AlignCenter)
+                            if row['Status Ped. Compra'].strip() == '' and row['Nota Fiscal'] is None:
+                                item.setIcon(no_order)
+                            elif row['Status Ped. Compra'].strip() == '' and row['Nota Fiscal'] is not None:
+                                item.setIcon(wait_delivery)
+                            elif row['Status Ped. Compra'] == 'E':
+                                item.setIcon(end_order)
                         else:
                             if j == 11:
                                 value = round(value, 2)
@@ -663,7 +644,7 @@ class ComprasApp(QWidget):
 
                             item = QTableWidgetItem(str(value).strip())
 
-                            if j not in (14, 15, 21):  # Alinhamento a esquerda de colunas
+                            if j not in (14, 15, 21, 25, 26, 27, 28):  # Alinhamento a esquerda de colunas
                                 item.setTextAlignment(Qt.AlignCenter)
 
                     self.tree.setItem(i, j, item)
