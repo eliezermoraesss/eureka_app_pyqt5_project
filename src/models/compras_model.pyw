@@ -19,6 +19,7 @@ class ComprasApp(QWidget):
         super().__init__()
 
         self.engine = None
+        self.line_number = None
         self.metadata = MetaData()
         self.nnr_table = Table('NNR010', self.metadata, autoload_with=self.engine, schema='dbo')
         self.combobox = QComboBox(self)
@@ -144,6 +145,8 @@ class ComprasApp(QWidget):
         self.progress_bar.setMinimum(0)
         self.progress_bar.setMaximumWidth(400)
 
+        self.label_line_number = QLabel(f"Foram localizados {self.line_number} itens conforme os filtros "
+               f"de busca especificados!", self)
         self.label_sc = QLabel("Solicitação de Compra:", self)
         self.label_pedido = QLabel("Pedido de Compra:", self)
         self.label_codigo = QLabel("Código produto:", self)
@@ -615,14 +618,13 @@ class ComprasApp(QWidget):
 
         try:
             dataframe_line_number = pd.read_sql(query_contagem_linhas, self.engine)
-            line_number = dataframe_line_number.iloc[0, 0]
+            self.line_number = dataframe_line_number.iloc[0, 0]
             dataframe = pd.read_sql(query_consulta_filtro, self.engine)
 
             if not dataframe.empty:
 
-                self.layout_footer.addWidget(QLabel(f"Foram localizados {line_number} itens conforme os filtros "
-                                                    f"de busca especificados!", self))
-                self.progress_bar.setMaximum(line_number)
+                self.layout_footer.addWidget(self.label_line_number)
+                self.progress_bar.setMaximum(self.line_number)
 
                 self.layout_footer.addWidget(self.progress_bar)
 
