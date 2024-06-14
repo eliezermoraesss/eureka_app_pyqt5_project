@@ -1,6 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, QMessageBox, QComboBox
+    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, QMessageBox, \
+    QComboBox, QProgressBar
 from PyQt5.QtGui import QFont, QIcon, QDesktopServices
 from PyQt5.QtCore import Qt, QCoreApplication, QDate, QUrl
 import pyperclip
@@ -139,6 +140,10 @@ class ComprasApp(QWidget):
         fonte_campos = "Segoe UI"
         tamanho_fonte_campos = 16
 
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setMinimum(0)
+        self.progress_bar.setMaximumWidth(400)
+
         self.label_sc = QLabel("Solicitação de Compra:", self)
         self.label_pedido = QLabel("Pedido de Compra:", self)
         self.label_codigo = QLabel("Código produto:", self)
@@ -240,6 +245,7 @@ class ComprasApp(QWidget):
         layout = QVBoxLayout()
         layout_linha_01 = QHBoxLayout()
         self.layout_linha_02 = QHBoxLayout()
+        self.layout_footer = QHBoxLayout()
 
         container_sc = QVBoxLayout()
         container_sc.addWidget(self.label_sc)
@@ -298,6 +304,7 @@ class ComprasApp(QWidget):
         layout.addLayout(layout_linha_01)
         layout.addLayout(self.layout_linha_02)
         layout.addWidget(self.tree)
+        layout.addLayout(self.layout_footer)
         self.setLayout(layout)
 
     def setup_mssql(self):
@@ -478,28 +485,39 @@ class ComprasApp(QWidget):
             SELECT 
                 COUNT(*)
             FROM 
-                {database}.dbo.SC1010 SC
+                PROTHEUS12_R27.dbo.SC1010 SC
             LEFT JOIN 
-                {database}.dbo.SD1010 ITEM_NF
+                PROTHEUS12_R27.dbo.SD1010 ITEM_NF
             ON 
                 SC.C1_PEDIDO = ITEM_NF.D1_PEDIDO AND SC.C1_ITEMPED = ITEM_NF.D1_ITEMPC
             LEFT JOIN
-                {database}.dbo.SC7010 PC
+                PROTHEUS12_R27.dbo.SC7010 PC
             ON 
                 SC.C1_PEDIDO = PC.C7_NUM AND SC.C1_ITEMPED = PC.C7_ITEM AND SC.C1_ZZNUMQP = PC.C7_ZZNUMQP
-            WHERE 
+            LEFT JOIN
+            PROTHEUS12_R27.dbo.SA2010 FORN
+            ON
+            FORN.A2_COD = SC.C1_FORNECE
+            LEFT JOIN
+            PROTHEUS12_R27.dbo.NNR010 ARM
+            ON
+            SC.C1_LOCAL = ARM.NNR_CODIGO
+            LEFT JOIN 
+            PROTHEUS12_R27.dbo.SYS_USR US
+            ON
+            SC.C1_SOLICIT = US.USR_CODIGO 
+            WHERE
                 SC.C1_PEDIDO LIKE '{numero_pedido}%'
                 AND SC.C1_NUM LIKE '%{numero_sc}'
                 AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
                 AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
                 AND SC.C1_OP LIKE '{numero_op}%'
                 AND FORN.A2_NOME LIKE '%{fornecedor}%' {filtro_data}
-            ORDER BY 
-                SC.R_E_C_N_O_ DESC;
         """
         return query
 
-    def selecionar_query_conforme_filtro(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op, fornecedor):
+    def selecionar_query_conforme_filtro(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op,
+                                         fornecedor):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -569,7 +587,7 @@ class ComprasApp(QWidget):
                 AND SC.C1_OP LIKE '{numero_op}%' 
                 AND FORN.A2_NOME LIKE '%{fornecedor}%' {filtro_data}
             ORDER BY 
-                SC.R_E_C_N_O_ DESC;
+                PC.R_E_C_N_O_ DESC;
         """
         return query
 
@@ -582,21 +600,32 @@ class ComprasApp(QWidget):
         codigo_produto = self.campo_codigo.text().upper().strip()
         fornecedor = self.campo_fornecedor.text().upper().strip()
 
-        select_query = self.selecionar_query_conforme_filtro(numero_sc, numero_pedido, codigo_produto, numero_qp,
-                                                             numero_op, fornecedor)
+        query_consulta_filtro = self.selecionar_query_conforme_filtro(numero_sc, numero_pedido, codigo_produto,
+                                                                      numero_qp,
+                                                                      numero_op, fornecedor)
 
-        numero_linhas = self.numero_linhas_consulta(numero_sc, numero_pedido, codigo_produto, numero_qp,
-                                                    numero_op, fornecedor)
+        query_contagem_linhas = self.numero_linhas_consulta(numero_sc, numero_pedido, codigo_produto, numero_qp,
+                                                            numero_op, fornecedor)
 
         self.controle_campos_formulario(False)
+        self.layout_footer.removeItem(self.layout_footer)
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
         self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
 
         try:
-            dataframe = pd.read_sql(select_query, self.engine)
+            dataframe_line_number = pd.read_sql(query_contagem_linhas, self.engine)
+            line_number = dataframe_line_number.iloc[0, 0]
+            dataframe = pd.read_sql(query_consulta_filtro, self.engine)
 
             if not dataframe.empty:
+
+                self.layout_footer.addWidget(QLabel(f"Foram localizados {line_number} itens conforme os filtros "
+                                                    f"de busca especificados!", self))
+                self.progress_bar.setMaximum(line_number)
+
+                self.layout_footer.addWidget(self.progress_bar)
+
                 self.layout_linha_02.addWidget(self.btn_parar_consulta)
                 dataframe.insert(0, 'Status PC', '')
                 dataframe[''] = ''
@@ -666,6 +695,7 @@ class ComprasApp(QWidget):
 
                     self.tree.setItem(i, j, item)
 
+                self.progress_bar.setValue(i + 1)
                 QCoreApplication.processEvents()
 
             self.layout_linha_02.removeWidget(self.btn_parar_consulta)
