@@ -21,8 +21,41 @@ class ComprasApp(QWidget):
         self.engine = None
         self.metadata = MetaData()
         self.nnr_table = Table('NNR010', self.metadata, autoload_with=self.engine, schema='dbo')
-        self.combobox = QComboBox(self)
-        #self.populate_combobox()
+        self.combobox_armazem = QComboBox(self)
+        self.combobox_armazem.setEditable(False)
+
+        self.combobox_armazem.addItem("", None)
+
+        armazens = {
+            "01": "MATERIA PRIMA",
+            "02": "PROD. INTERMEDIARIO",
+            "03": "PROD. COMERCIAIS",
+            "04": "PROD. ACABADOS",
+            "05": "MAT.PRIMA IMP.INDIR.",
+            "06": "PROD. ELETR.NACIONAL",
+            "07": "PROD.ELETR.IMP.DIRET",
+            "08": "SRV INDUSTRIALIZACAO",
+            "09": "SRV TERCEIROS",
+            "10": "PROD.COM.IMP.INDIR.",
+            "11": "PROD.COM.IMP.DIRETO",
+            "12": "MAT.PRIMA IMP.DIR.ME",
+            "13": "E.P.I-MAT.SEGURANCA",
+            "14": "PROD.ELETR.IMP.INDIR",
+            "22": "ATIVOS",
+            "60": "PROD-FERR CONSUMIVEI",
+            "61": "EMBALAGENS",
+            "70": "SERVICOS GERAIS",
+            "71": "PRODUTOS AUTOMOTIVOS",
+            "77": "OUTROS",
+            "80": "SUCATAS",
+            "85": "SERVICOS PRESTADOS",
+            "96": "ARMAZ.NAO APLICAVEL",
+            "97": "TRAT. SUPERFICIAL"
+        }
+
+        for key, value in armazens.items():
+            self.combobox_armazem.addItem(key + ' - ' + value, key)
+
         self.altura_linha = 30
         self.tamanho_fonte_tabela = 10
         self.fonte_tabela = 'Segoe UI'
@@ -149,8 +182,8 @@ class ComprasApp(QWidget):
         self.progress_bar.setMinimum(0)
         self.progress_bar.setMaximumWidth(400)
 
-        self.label_sc = QLabel("Solicitação de Compra:", self)
-        self.label_pedido = QLabel("Pedido de Compra:", self)
+        self.label_sc = QLabel("Solic. Compra:", self)
+        self.label_pedido = QLabel("Ped. de Compra:", self)
         self.label_codigo = QLabel("Código produto:", self)
         self.label_descricao_prod = QLabel("Descrição produto:", self)
         # self.label_descricao_prod.setObjectName("descricao-produto")
@@ -165,37 +198,37 @@ class ComprasApp(QWidget):
         self.campo_sc = QLineEdit(self)
         self.campo_sc.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_sc.setMaxLength(6)
-        self.campo_sc.setFixedWidth(200)
+        self.campo_sc.setFixedWidth(110)
         self.add_clear_button(self.campo_sc)
 
         self.campo_pedido = QLineEdit(self)
         self.campo_pedido.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_pedido.setMaxLength(6)
-        self.campo_pedido.setFixedWidth(200)
+        self.campo_pedido.setFixedWidth(110)
         self.add_clear_button(self.campo_pedido)
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_codigo.setMaxLength(13)
-        self.campo_codigo.setFixedWidth(200)
+        self.campo_codigo.setFixedWidth(170)
         self.add_clear_button(self.campo_codigo)
 
         self.campo_descricao_prod = QLineEdit(self)
         self.campo_descricao_prod.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_descricao_prod.setMaxLength(60)
-        self.campo_descricao_prod.setFixedWidth(220)
+        self.campo_descricao_prod.setFixedWidth(280)
         self.add_clear_button(self.campo_descricao_prod)
 
         self.campo_qp = QLineEdit(self)
         self.campo_qp.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_qp.setMaxLength(6)
-        self.campo_qp.setFixedWidth(200)
+        self.campo_qp.setFixedWidth(110)
         self.add_clear_button(self.campo_qp)
 
         self.campo_OP = QLineEdit(self)
         self.campo_OP.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_OP.setMaxLength(6)
-        self.campo_OP.setFixedWidth(200)
+        self.campo_OP.setFixedWidth(110)
         self.add_clear_button(self.campo_OP)
 
         self.campo_fornecedor = QLineEdit(self)
@@ -252,9 +285,11 @@ class ComprasApp(QWidget):
         self.campo_sc.returnPressed.connect(self.executar_consulta)
         self.campo_pedido.returnPressed.connect(self.executar_consulta)
         self.campo_codigo.returnPressed.connect(self.executar_consulta)
+        self.campo_descricao_prod.returnPressed.connect(self.executar_consulta)
         self.campo_qp.returnPressed.connect(self.executar_consulta)
         self.campo_OP.returnPressed.connect(self.executar_consulta)
         self.campo_fornecedor.returnPressed.connect(self.executar_consulta)
+
 
         layout = QVBoxLayout()
         layout_campos_linha_01 = QHBoxLayout()
@@ -293,9 +328,9 @@ class ComprasApp(QWidget):
         container_data_fim.addWidget(self.label_data_fim)
         container_data_fim.addWidget(self.campo_data_fim)
 
-        container_combobox = QVBoxLayout()
-        container_combobox.addWidget(self.label_armazem)
-        container_combobox.addWidget(self.combobox)
+        container_combobox_armazem = QVBoxLayout()
+        container_combobox_armazem.addWidget(self.label_armazem)
+        container_combobox_armazem.addWidget(self.combobox_armazem)
 
         container_fornecedor = QVBoxLayout()
         container_fornecedor.addWidget(self.label_fornecedor)
@@ -310,7 +345,7 @@ class ComprasApp(QWidget):
         layout_campos_linha_01.addLayout(container_op)
         layout_campos_linha_01.addLayout(container_data_ini)
         layout_campos_linha_01.addLayout(container_data_fim)
-        layout_campos_linha_01.addLayout(container_combobox)
+        layout_campos_linha_01.addLayout(container_combobox_armazem)
         layout_campos_linha_01.addStretch()
 
         self.layout_buttons.addWidget(self.btn_consultar)
@@ -461,6 +496,8 @@ class ComprasApp(QWidget):
         self.campo_sc.clear()
         self.campo_pedido.clear()
         self.campo_codigo.clear()
+        self.campo_descricao_prod.clear()
+        self.campo_fornecedor.clear()
         self.campo_qp.clear()
         self.campo_OP.clear()
 
@@ -491,7 +528,7 @@ class ComprasApp(QWidget):
         root.destroy()
 
     def numero_linhas_consulta(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op, fornecedor,
-                               descricao_produto):
+                               descricao_produto, cod_armazem):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -532,13 +569,14 @@ class ComprasApp(QWidget):
                 AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
                 AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
                 AND SC.C1_DESCRI LIKE '%{descricao_produto}%'
-                AND SC.C1_OP LIKE '{numero_op}%' 
-                AND FORN.A2_NOME LIKE '%{fornecedor}%' {filtro_data}
+                AND SC.C1_OP LIKE '{numero_op}%'
+                AND FORN.A2_NOME LIKE '%{fornecedor}%' 
+                AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data}
         """
         return query
 
     def query_consulta_followup(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op,
-                                fornecedor, descricao_produto):
+                                fornecedor, descricao_produto, cod_armazem):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -607,7 +645,8 @@ class ComprasApp(QWidget):
                 AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
                 AND SC.C1_DESCRI LIKE '%{descricao_produto}%'
                 AND SC.C1_OP LIKE '{numero_op}%' 
-                AND FORN.A2_NOME LIKE '%{fornecedor}%' {filtro_data}
+                AND FORN.A2_NOME LIKE '%{fornecedor}%'
+                AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data}
             ORDER BY 
                 PC.R_E_C_N_O_ DESC;
         """
@@ -623,11 +662,15 @@ class ComprasApp(QWidget):
         fornecedor = self.campo_fornecedor.text().upper().strip()
         descricao_produto = self.campo_descricao_prod.text().upper().strip()
 
+        cod_armazem = self.combobox_armazem.currentData()
+        if cod_armazem is None:
+            cod_armazem = ''
+
         query_consulta_filtro = self.query_consulta_followup(numero_sc, numero_pedido, codigo_produto,
-                                                             numero_qp, numero_op, fornecedor, descricao_produto)
+                                                             numero_qp, numero_op, fornecedor, descricao_produto, cod_armazem)
 
         query_contagem_linhas = self.numero_linhas_consulta(numero_sc, numero_pedido, codigo_produto, numero_qp,
-                                                            numero_op, fornecedor, descricao_produto)
+                                                            numero_op, fornecedor, descricao_produto, cod_armazem)
 
         self.controle_campos_formulario(False)
         line_number = None
