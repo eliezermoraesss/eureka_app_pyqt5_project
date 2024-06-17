@@ -385,24 +385,6 @@ class ComprasApp(QWidget):
                                              16 | 0)
             sys.exit()
 
-    def populate_combobox(self):
-
-        conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
-        self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
-
-        # Definir a query
-        query = select([self.nnr_table.c.NNR_CODIGO, self.nnr_table.c.NNR_DESCRI]).where(
-            self.nnr_table.c.D_E_L_E_T_ != '*').order_by(
-            self.nnr_table.c.NNR_CODIGO.asc())
-
-        # Executar a query e obter os resultados
-        with self.engine.connect() as connection:
-            result = connection.execute(query)
-            descriptions = [row[1] for row in result]
-
-        # Adicionar descrições ao combobox
-        self.comboBox.addItems(descriptions)
-
     def abrir_nova_janela(self):
         if not self.nova_janela or not self.nova_janela.isVisible():
             self.nova_janela = ComprasApp()
@@ -694,10 +676,9 @@ class ComprasApp(QWidget):
 
                 self.layout_footer.addWidget(label_line_number)
                 self.progress_bar.setMaximum(line_number)
-
                 self.layout_footer.addWidget(self.progress_bar)
-
                 self.layout_buttons.addWidget(self.btn_parar_consulta)
+
                 dataframe.insert(0, 'Status PC', '')
                 dataframe[''] = ''
 

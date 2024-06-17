@@ -447,6 +447,32 @@ class PcpApp(QWidget):
 
         root.destroy()
 
+    def numero_linhas_consulta(self, codigo_produto, numero_qp, numero_op, descricao_produto):
+
+        data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
+        data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
+
+        filtro_data = f"AND C2_EMISSAO >= '{data_inicio_formatada}' AND C2_EMISSAO <= '{data_fim_formatada}'" if data_fim_formatada != '' and data_fim_formatada != '' else ''
+
+        query = f"""
+                    SELECT 
+                        COUNT(*)
+                    FROM 
+                        {database}.dbo.SC2010 op
+                    INNER JOIN 
+                        SB1010 prod ON C2_PRODUTO = B1_COD
+                    LEFT JOIN 
+                        {database}.dbo.SYS_USR users
+                    ON 
+                        users.USR_CNLOGON = op.C2_XMAQUIN
+                    WHERE 
+                        C2_ZZNUMQP LIKE '%{numero_qp}'
+                        AND C2_PRODUTO LIKE '{codigo_produto}%'
+                        AND prod.B1_DESC LIKE '%{descricao_produto}%'
+                        AND C2_NUM LIKE '{numero_op}%' {filtro_data}
+                        AND op.D_E_L_E_T_ <> '*'
+                """
+        return query
     def query_consulta_ordem_producao(self, codigo_produto, numero_qp, numero_op, descricao_produto):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
@@ -513,6 +539,51 @@ class PcpApp(QWidget):
                                  "info")
             return True
 
+    def configurar_tabela_tooltips(self, dataframe):
+        # Mapa de tooltips correspondentes às colunas da consulta SQL
+        tooltip_map = {
+            "Status PC": "VERMELHO -> AGUARDANDO ENTREGA\n\nAZUL -> ENTREGA PARCIAL\n\nVERDE -> PEDIDO DE COMPRA "
+                         "ENCERRADO",
+            "QP": "Número do Quadro de Produção (QP)",
+            "OP": "Número da Ordem de Produção (OP)",
+            "SC": "Número da Solicitação de Compras (SC)",
+            "Item SC": "Número do item na Solicitação de Compras",
+            "Quant. SC": "Quantidade solicitada na SC",
+            "Ped. Compra": "Número do Pedido de Compra",
+            "Item Ped.": "Número do item no Pedido de Compra",
+            "Quant. Ped.": "Quantidade solicitada no Pedido de Compra",
+            "Nota Fiscal": "Número da Nota Fiscal",
+            "Quant. Entregue": "Quantidade entregue conforme a Nota Fiscal",
+            "Quant. Pendente": "Quantidade pendente de entrega",
+            "Data Entrega": "Data da entrega",
+            "Status Ped. Compra": "Status do Pedido de Compra",
+            "Código": "Código do produto",
+            "Descrição": "Descrição do produto",
+            "UM": "Unidade de medida",
+            "Emissão SC": "Data de emissão da SC",
+            "Emissão PC": "Data de emissão do Pedido de Compra",
+            "Emissão NF": "Data de emissão da Nota Fiscal",
+            "Origem": "Origem do item",
+            "Observação": "Observações gerais sobre o item",
+            "Cod. Armazém": "Código do armazém",
+            "Desc. Armazém": "Descrição do armazém",
+            "Importado?": "Indica se o produto é importado",
+            "Observações": "Observações gerais",
+            "Observações item": "Observações específicas do item",
+            "Fornecedor": "Nome do fornecedor",
+            "Solicitante": "Nome do solicitante"
+        }
+
+        # Obtenha os cabeçalhos das colunas do dataframe
+        headers = dataframe.columns
+
+        # Adicione os cabeçalhos e os tooltips
+        for i, header in enumerate(headers):
+            item = QTableWidgetItem(header)
+            tooltip = tooltip_map.get(header, "Tooltip não definido")
+            item.setToolTip(tooltip)
+            self.tree.setHorizontalHeaderItem(i, item)
+
     def executar_consulta(self):
 
         numero_qp = self.campo_qp.text().upper().strip()
@@ -526,22 +597,34 @@ class PcpApp(QWidget):
 
         numero_qp = numero_qp.zfill(6) if numero_qp != '' else numero_qp
 
-        select_query = self.query_consulta_ordem_producao(codigo_produto, numero_qp, numero_op, descricao_produto)
+        query_consulta_op = self.query_consulta_ordem_producao(codigo_produto, numero_qp, numero_op, descricao_produto)
+        query_contagem_linhas = self.numero_linhas_consulta(codigo_produto, numero_qp, numero_op, descricao_produto)
 
         self.controle_campos_formulario(False)
+        line_number = None
+        label_line_number = QLabel(f"{line_number} itens localizados.", self)
+        self.layout_footer.removeItem(self.layout_footer)
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
         self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
 
         try:
-            dataframe = pd.read_sql(select_query, self.engine)
+            dataframe_line_number = pd.read_sql(query_contagem_linhas, self.engine)
+            line_number = dataframe_line_number.iloc[0, 0]
+            dataframe = pd.read_sql(query_consulta_op, self.engine)
 
             if not dataframe.empty:
+
+                self.layout_footer.addWidget(label_line_number)
+                self.progress_bar.setMaximum(line_number)
+                self.layout_footer.addWidget(self.progress_bar)
                 self.layout_buttons.addWidget(self.btn_parar_consulta)
+
                 dataframe.insert(0, 'Status', '')
                 dataframe[''] = ''
 
                 self.configurar_tabela(dataframe)
+                self.configurar_tabela_tooltips(dataframe)
 
                 self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
                 self.tree.setRowCount(0)
@@ -588,6 +671,7 @@ class PcpApp(QWidget):
 
                     self.tree.setItem(i, j, item)
 
+                self.progress_bar.setValue(i + 1)
                 QCoreApplication.processEvents()
 
             self.layout_buttons.removeWidget(self.btn_parar_consulta)
