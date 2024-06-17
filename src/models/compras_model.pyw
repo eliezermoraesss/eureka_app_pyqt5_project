@@ -19,7 +19,6 @@ class ComprasApp(QWidget):
         super().__init__()
 
         self.engine = None
-        self.line_number = None
         self.metadata = MetaData()
         self.nnr_table = Table('NNR010', self.metadata, autoload_with=self.engine, schema='dbo')
         self.combobox = QComboBox(self)
@@ -145,8 +144,6 @@ class ComprasApp(QWidget):
         self.progress_bar.setMinimum(0)
         self.progress_bar.setMaximumWidth(400)
 
-        self.label_line_number = QLabel(f"Foram localizados {self.line_number} itens conforme os filtros "
-               f"de busca especificados!", self)
         self.label_sc = QLabel("Solicitação de Compra:", self)
         self.label_pedido = QLabel("Pedido de Compra:", self)
         self.label_codigo = QLabel("Código produto:", self)
@@ -611,6 +608,8 @@ class ComprasApp(QWidget):
                                                             numero_op, fornecedor)
 
         self.controle_campos_formulario(False)
+        line_number = None
+        label_line_number = QLabel(f"{line_number} itens localizados.", self)
         self.layout_footer.removeItem(self.layout_footer)
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
@@ -618,13 +617,13 @@ class ComprasApp(QWidget):
 
         try:
             dataframe_line_number = pd.read_sql(query_contagem_linhas, self.engine)
-            self.line_number = dataframe_line_number.iloc[0, 0]
+            line_number = dataframe_line_number.iloc[0, 0]
             dataframe = pd.read_sql(query_consulta_filtro, self.engine)
 
             if not dataframe.empty:
 
-                self.layout_footer.addWidget(self.label_line_number)
-                self.progress_bar.setMaximum(self.line_number)
+                self.layout_footer.addWidget(label_line_number)
+                self.progress_bar.setMaximum(line_number)
 
                 self.layout_footer.addWidget(self.progress_bar)
 
@@ -633,6 +632,7 @@ class ComprasApp(QWidget):
                 dataframe[''] = ''
 
                 self.configurar_tabela(dataframe)
+                self.configurar_tabela_tooltips(dataframe)
 
                 self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
                 self.tree.setRowCount(0)
@@ -714,6 +714,51 @@ class ComprasApp(QWidget):
                 self.engine.dispose()
                 self.engine = None
             self.interromper_consulta_sql = False
+
+    def configurar_tabela_tooltips(self, dataframe):
+        # Mapa de tooltips correspondentes às colunas da consulta SQL
+        tooltip_map = {
+            "Status PC": "\nVERMELHO -> AGUARDANDO ENTREGA\n\nAZUL -> ENTREGA PARCIAL\n\nVERDE -> PEDIDO DE COMPRA"
+                         "ENCERRADO.",
+            "QP": "Número do Quadro de Produção (QP)",
+            "OP": "Número da Ordem de Produção (OP)",
+            "SC": "Número da Solicitação de Compras (SC)",
+            "Item SC": "Número do item na Solicitação de Compras",
+            "Quant. SC": "Quantidade solicitada na SC",
+            "Ped. Compra": "Número do Pedido de Compra",
+            "Item Ped.": "Número do item no Pedido de Compra",
+            "Quant. Ped.": "Quantidade solicitada no Pedido de Compra",
+            "Nota Fiscal": "Número da Nota Fiscal",
+            "Quant. Entregue": "Quantidade entregue conforme a Nota Fiscal",
+            "Quant. Pendente": "Quantidade pendente de entrega",
+            "Data Entrega": "Data da entrega",
+            "Status Ped. Compra": "Status do Pedido de Compra",
+            "Código": "Código do produto",
+            "Descrição": "Descrição do produto",
+            "UM": "Unidade de medida",
+            "Emissão SC": "Data de emissão da SC",
+            "Emissão PC": "Data de emissão do Pedido de Compra",
+            "Emissão NF": "Data de emissão da Nota Fiscal",
+            "Origem": "Origem do item",
+            "Observação": "Observações gerais sobre o item",
+            "Cod. Armazém": "Código do armazém",
+            "Desc. Armazém": "Descrição do armazém",
+            "Importado?": "Indica se o produto é importado",
+            "Observações": "Observações gerais",
+            "Observações item": "Observações específicas do item",
+            "Fornecedor": "Nome do fornecedor",
+            "Solicitante": "Nome do solicitante"
+        }
+
+        # Obtenha os cabeçalhos das colunas do dataframe
+        headers = dataframe.columns
+
+        # Adicione os cabeçalhos e os tooltips
+        for i, header in enumerate(headers):
+            item = QTableWidgetItem(header)
+            tooltip = tooltip_map.get(header, "Tooltip não definido")
+            item.setToolTip(tooltip)
+            self.tree.setHorizontalHeaderItem(i, item)
 
     def fechar_janela(self):
         self.close()
