@@ -453,7 +453,7 @@ class ConsultaApp(QWidget):
 
         root.destroy()
 
-    def selecionar_query_conforme_filtro(self):
+    def query_consulta_tabela_produtos(self):
         # Obter os valores dos campos de consulta
         codigo = self.codigo_var.text().upper().strip()
         descricao = self.descricao_var.text().upper().strip()
@@ -493,7 +493,7 @@ class ConsultaApp(QWidget):
         return query
 
     def executar_consulta(self):
-        select_query = self.selecionar_query_conforme_filtro()
+        select_query = self.query_consulta_tabela_produtos()
 
         if isinstance(select_query, bool) and select_query:
             self.btn_consultar.setEnabled(True)

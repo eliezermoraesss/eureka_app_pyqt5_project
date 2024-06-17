@@ -59,6 +59,9 @@ class ComprasApp(QWidget):
         self.altura_linha = 30
         self.tamanho_fonte_tabela = 10
         self.fonte_tabela = 'Segoe UI'
+        fonte_campos = "Segoe UI"
+        tamanho_fonte_campos = 16
+
         self.interromper_consulta_sql = False
         self.tree = QTableWidget(self)
         self.tree.setColumnCount(0)
@@ -175,9 +178,6 @@ class ComprasApp(QWidget):
             }
         """)
 
-        fonte_campos = "Segoe UI"
-        tamanho_fonte_campos = 16
-
         self.progress_bar = QProgressBar()
         self.progress_bar.setMinimum(0)
         self.progress_bar.setMaximumWidth(400)
@@ -185,13 +185,16 @@ class ComprasApp(QWidget):
         self.label_sc = QLabel("Solic. Compra:", self)
         self.label_pedido = QLabel("Ped. de Compra:", self)
         self.label_codigo = QLabel("Código produto:", self)
+
         self.label_descricao_prod = QLabel("Descrição produto:", self)
         # self.label_descricao_prod.setObjectName("descricao-produto")
+
         self.label_qp = QLabel("Número QP:", self)
         self.label_OP = QLabel("Número OP:", self)
         self.label_data_inicio = QLabel("Data inicial SC:", self)
         self.label_data_fim = QLabel("Data final SC:", self)
         self.label_armazem = QLabel("Armazém:", self)
+
         self.label_fornecedor = QLabel("Fornecedor:", self)
         # self.label_fornecedor.setObjectName("fornecedor")
 
@@ -289,7 +292,6 @@ class ComprasApp(QWidget):
         self.campo_qp.returnPressed.connect(self.executar_consulta)
         self.campo_OP.returnPressed.connect(self.executar_consulta)
         self.campo_fornecedor.returnPressed.connect(self.executar_consulta)
-
 
         layout = QVBoxLayout()
         layout_campos_linha_01 = QHBoxLayout()
@@ -504,10 +506,13 @@ class ComprasApp(QWidget):
     def controle_campos_formulario(self, status):
         self.campo_sc.setEnabled(status)
         self.campo_codigo.setEnabled(status)
+        self.campo_descricao_prod.setEnabled(status)
+        self.campo_fornecedor.setEnabled(status)
         self.campo_qp.setEnabled(status)
         self.campo_OP.setEnabled(status)
         self.campo_data_inicio.setEnabled(status)
         self.campo_data_fim.setEnabled(status)
+        self.combobox_armazem.setEnabled(status)
         self.btn_consultar.setEnabled(status)
         self.btn_exportar_excel.setEnabled(status)
 
@@ -783,8 +788,8 @@ class ComprasApp(QWidget):
     def configurar_tabela_tooltips(self, dataframe):
         # Mapa de tooltips correspondentes às colunas da consulta SQL
         tooltip_map = {
-            "Status PC": "\nVERMELHO -> AGUARDANDO ENTREGA\n\nAZUL -> ENTREGA PARCIAL\n\nVERDE -> PEDIDO DE COMPRA"
-                         "ENCERRADO.",
+            "Status PC": "VERMELHO -> AGUARDANDO ENTREGA\n\nAZUL -> ENTREGA PARCIAL\n\nVERDE -> PEDIDO DE COMPRA "
+                         "ENCERRADO",
             "QP": "Número do Quadro de Produção (QP)",
             "OP": "Número da Ordem de Produção (OP)",
             "SC": "Número da Solicitação de Compras (SC)",
