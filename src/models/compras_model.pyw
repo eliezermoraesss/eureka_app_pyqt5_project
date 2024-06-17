@@ -46,6 +46,11 @@ class ComprasApp(QWidget):
                 margin-top: 20px;
             }
             
+            QLabel#descricao-produto, QLabel#fornecedor {
+                color: #EEEEEE;
+                font-size: 14px;
+            }
+            
             QDateEdit, QComboBox {
                 background-color: #FFFFFF;
                 border: 1px solid #262626;
@@ -147,12 +152,15 @@ class ComprasApp(QWidget):
         self.label_sc = QLabel("Solicitação de Compra:", self)
         self.label_pedido = QLabel("Pedido de Compra:", self)
         self.label_codigo = QLabel("Código produto:", self)
+        self.label_descricao_prod = QLabel("Descrição produto:", self)
+        # self.label_descricao_prod.setObjectName("descricao-produto")
         self.label_qp = QLabel("Número QP:", self)
         self.label_OP = QLabel("Número OP:", self)
         self.label_data_inicio = QLabel("Data inicial SC:", self)
         self.label_data_fim = QLabel("Data final SC:", self)
         self.label_armazem = QLabel("Armazém:", self)
         self.label_fornecedor = QLabel("Fornecedor:", self)
+        # self.label_fornecedor.setObjectName("fornecedor")
 
         self.campo_sc = QLineEdit(self)
         self.campo_sc.setFont(QFont(fonte_campos, tamanho_fonte_campos))
@@ -172,6 +180,12 @@ class ComprasApp(QWidget):
         self.campo_codigo.setFixedWidth(200)
         self.add_clear_button(self.campo_codigo)
 
+        self.campo_descricao_prod = QLineEdit(self)
+        self.campo_descricao_prod.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_descricao_prod.setMaxLength(60)
+        self.campo_descricao_prod.setFixedWidth(220)
+        self.add_clear_button(self.campo_descricao_prod)
+
         self.campo_qp = QLineEdit(self)
         self.campo_qp.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_qp.setMaxLength(6)
@@ -186,8 +200,8 @@ class ComprasApp(QWidget):
 
         self.campo_fornecedor = QLineEdit(self)
         self.campo_fornecedor.setFont(QFont(fonte_campos, tamanho_fonte_campos))
-        self.campo_fornecedor.setMaxLength(30)
-        self.campo_fornecedor.setFixedWidth(300)
+        self.campo_fornecedor.setMaxLength(40)
+        self.campo_fornecedor.setFixedWidth(200)
         self.add_clear_button(self.campo_fornecedor)
 
         self.campo_data_inicio = QDateEdit(self)
@@ -243,8 +257,8 @@ class ComprasApp(QWidget):
         self.campo_fornecedor.returnPressed.connect(self.executar_consulta)
 
         layout = QVBoxLayout()
-        layout_linha_01 = QHBoxLayout()
-        self.layout_linha_02 = QHBoxLayout()
+        layout_campos_linha_01 = QHBoxLayout()
+        self.layout_buttons = QHBoxLayout()
         self.layout_footer = QHBoxLayout()
 
         container_sc = QVBoxLayout()
@@ -258,6 +272,10 @@ class ComprasApp(QWidget):
         container_codigo = QVBoxLayout()
         container_codigo.addWidget(self.label_codigo)
         container_codigo.addWidget(self.campo_codigo)
+
+        container_descricao_prod = QVBoxLayout()
+        container_descricao_prod.addWidget(self.label_descricao_prod)
+        container_descricao_prod.addWidget(self.campo_descricao_prod)
 
         container_op = QVBoxLayout()
         container_op.addWidget(self.label_OP)
@@ -283,26 +301,27 @@ class ComprasApp(QWidget):
         container_fornecedor.addWidget(self.label_fornecedor)
         container_fornecedor.addWidget(self.campo_fornecedor)
 
-        layout_linha_01.addLayout(container_sc)
-        layout_linha_01.addLayout(container_pedido)
-        layout_linha_01.addLayout(container_codigo)
-        layout_linha_01.addLayout(container_qp)
-        layout_linha_01.addLayout(container_op)
-        layout_linha_01.addLayout(container_data_ini)
-        layout_linha_01.addLayout(container_data_fim)
-        layout_linha_01.addLayout(container_combobox)
-        layout_linha_01.addLayout(container_fornecedor)
-        layout_linha_01.addStretch()
+        layout_campos_linha_01.addLayout(container_sc)
+        layout_campos_linha_01.addLayout(container_pedido)
+        layout_campos_linha_01.addLayout(container_codigo)
+        layout_campos_linha_01.addLayout(container_descricao_prod)
+        layout_campos_linha_01.addLayout(container_fornecedor)
+        layout_campos_linha_01.addLayout(container_qp)
+        layout_campos_linha_01.addLayout(container_op)
+        layout_campos_linha_01.addLayout(container_data_ini)
+        layout_campos_linha_01.addLayout(container_data_fim)
+        layout_campos_linha_01.addLayout(container_combobox)
+        layout_campos_linha_01.addStretch()
 
-        self.layout_linha_02.addWidget(self.btn_consultar)
-        self.layout_linha_02.addWidget(self.btn_nova_janela)
-        self.layout_linha_02.addWidget(self.btn_limpar)
-        self.layout_linha_02.addWidget(self.btn_exportar_excel)
-        self.layout_linha_02.addWidget(self.btn_fechar)
-        self.layout_linha_02.addStretch()
+        self.layout_buttons.addWidget(self.btn_consultar)
+        self.layout_buttons.addWidget(self.btn_nova_janela)
+        self.layout_buttons.addWidget(self.btn_limpar)
+        self.layout_buttons.addWidget(self.btn_exportar_excel)
+        self.layout_buttons.addWidget(self.btn_fechar)
+        self.layout_buttons.addStretch()
 
-        layout.addLayout(layout_linha_01)
-        layout.addLayout(self.layout_linha_02)
+        layout.addLayout(layout_campos_linha_01)
+        layout.addLayout(self.layout_buttons)
         layout.addWidget(self.tree)
         layout.addLayout(self.layout_footer)
         self.setLayout(layout)
@@ -471,7 +490,8 @@ class ComprasApp(QWidget):
 
         root.destroy()
 
-    def numero_linhas_consulta(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op, fornecedor):
+    def numero_linhas_consulta(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op, fornecedor,
+                               descricao_produto):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -485,39 +505,40 @@ class ComprasApp(QWidget):
             SELECT 
                 COUNT(*)
             FROM 
-                PROTHEUS12_R27.dbo.SC1010 SC
+                {database}.dbo.SC1010 SC
             LEFT JOIN 
-                PROTHEUS12_R27.dbo.SD1010 ITEM_NF
+                {database}.dbo.SD1010 ITEM_NF
             ON 
                 SC.C1_PEDIDO = ITEM_NF.D1_PEDIDO AND SC.C1_ITEMPED = ITEM_NF.D1_ITEMPC
             LEFT JOIN
-                PROTHEUS12_R27.dbo.SC7010 PC
+                {database}.dbo.SC7010 PC
             ON 
                 SC.C1_PEDIDO = PC.C7_NUM AND SC.C1_ITEMPED = PC.C7_ITEM AND SC.C1_ZZNUMQP = PC.C7_ZZNUMQP
             LEFT JOIN
-            PROTHEUS12_R27.dbo.SA2010 FORN
+            {database}.dbo.SA2010 FORN
             ON
             FORN.A2_COD = SC.C1_FORNECE
             LEFT JOIN
-            PROTHEUS12_R27.dbo.NNR010 ARM
+            {database}.dbo.NNR010 ARM
             ON
             SC.C1_LOCAL = ARM.NNR_CODIGO
             LEFT JOIN 
-            PROTHEUS12_R27.dbo.SYS_USR US
+            {database}.dbo.SYS_USR US
             ON
             SC.C1_SOLICIT = US.USR_CODIGO 
-            WHERE
+            WHERE 
                 SC.C1_PEDIDO LIKE '{numero_pedido}%'
                 AND SC.C1_NUM LIKE '%{numero_sc}'
                 AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
                 AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
-                AND SC.C1_OP LIKE '{numero_op}%'
+                AND SC.C1_DESCRI LIKE '%{descricao_produto}%'
+                AND SC.C1_OP LIKE '{numero_op}%' 
                 AND FORN.A2_NOME LIKE '%{fornecedor}%' {filtro_data}
         """
         return query
 
-    def selecionar_query_conforme_filtro(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op,
-                                         fornecedor):
+    def query_consulta_followup(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op,
+                                fornecedor, descricao_produto):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -584,6 +605,7 @@ class ComprasApp(QWidget):
                 AND SC.C1_NUM LIKE '%{numero_sc}'
                 AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
                 AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
+                AND SC.C1_DESCRI LIKE '%{descricao_produto}%'
                 AND SC.C1_OP LIKE '{numero_op}%' 
                 AND FORN.A2_NOME LIKE '%{fornecedor}%' {filtro_data}
             ORDER BY 
@@ -599,13 +621,13 @@ class ComprasApp(QWidget):
         numero_op = self.campo_OP.text().upper().strip()
         codigo_produto = self.campo_codigo.text().upper().strip()
         fornecedor = self.campo_fornecedor.text().upper().strip()
+        descricao_produto = self.campo_descricao_prod.text().upper().strip()
 
-        query_consulta_filtro = self.selecionar_query_conforme_filtro(numero_sc, numero_pedido, codigo_produto,
-                                                                      numero_qp,
-                                                                      numero_op, fornecedor)
+        query_consulta_filtro = self.query_consulta_followup(numero_sc, numero_pedido, codigo_produto,
+                                                             numero_qp, numero_op, fornecedor, descricao_produto)
 
         query_contagem_linhas = self.numero_linhas_consulta(numero_sc, numero_pedido, codigo_produto, numero_qp,
-                                                            numero_op, fornecedor)
+                                                            numero_op, fornecedor, descricao_produto)
 
         self.controle_campos_formulario(False)
         line_number = None
@@ -627,7 +649,7 @@ class ComprasApp(QWidget):
 
                 self.layout_footer.addWidget(self.progress_bar)
 
-                self.layout_linha_02.addWidget(self.btn_parar_consulta)
+                self.layout_buttons.addWidget(self.btn_parar_consulta)
                 dataframe.insert(0, 'Status PC', '')
                 dataframe[''] = ''
 
@@ -700,7 +722,7 @@ class ComprasApp(QWidget):
                 self.progress_bar.setValue(i + 1)
                 QCoreApplication.processEvents()
 
-            self.layout_linha_02.removeWidget(self.btn_parar_consulta)
+            self.layout_buttons.removeWidget(self.btn_parar_consulta)
             self.btn_parar_consulta.setParent(None)
             self.tree.setSortingEnabled(True)
             self.controle_campos_formulario(True)
