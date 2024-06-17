@@ -202,7 +202,7 @@ class PcpApp(QWidget):
         self.btn_abrir_compras = QPushButton("Follow-up Compras", self)
         self.btn_abrir_compras.clicked.connect(self.abrir_modulo_compras)
         self.btn_abrir_compras.setMinimumWidth(100)
-        
+
         self.btn_limpar = QPushButton("Limpar", self)
         self.btn_limpar.clicked.connect(self.limpar_campos)
         self.btn_limpar.setMinimumWidth(100)
@@ -214,7 +214,7 @@ class PcpApp(QWidget):
         self.btn_nova_janela = QPushButton("Nova Janela", self)
         self.btn_nova_janela.clicked.connect(self.abrir_nova_janela)
         self.btn_nova_janela.setMinimumWidth(100)
-        
+
         self.btn_abrir_desenho = QPushButton("Abrir Desenho", self)
         self.btn_abrir_desenho.clicked.connect(self.abrir_desenho)
         self.btn_abrir_desenho.setMinimumWidth(100)
@@ -284,13 +284,13 @@ class PcpApp(QWidget):
         layout.addWidget(self.tree)
         layout.addLayout(self.layout_footer)
         self.setLayout(layout)
-        
+
     def limpar_campos(self):
         self.campo_codigo.clear()
         self.campo_qp.clear()
         self.campo_OP.clear()
         self.campo_descricao_prod.clear()
-        
+
     def abrir_desenho(self):
         item_selecionado = self.tree.currentItem()
 
@@ -461,18 +461,15 @@ class PcpApp(QWidget):
                         {database}.dbo.SC2010 op
                     INNER JOIN 
                         SB1010 prod ON C2_PRODUTO = B1_COD
-                    LEFT JOIN 
-                        {database}.dbo.SYS_USR users
-                    ON 
-                        users.USR_CNLOGON = op.C2_XMAQUIN
                     WHERE 
                         C2_ZZNUMQP LIKE '%{numero_qp}'
                         AND C2_PRODUTO LIKE '{codigo_produto}%'
-                        AND prod.B1_DESC LIKE '%{descricao_produto}%'
+                        AND prod.B1_DESC LIKE '{descricao_produto}%'
                         AND C2_NUM LIKE '{numero_op}%' {filtro_data}
                         AND op.D_E_L_E_T_ <> '*'
                 """
         return query
+
     def query_consulta_ordem_producao(self, codigo_produto, numero_qp, numero_op, descricao_produto):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
@@ -495,20 +492,15 @@ class PcpApp(QWidget):
                 C2_DATRF AS "Fechamento", 
                 C2_OBS AS "Observação",
                 C2_QUJE AS "Quant. Produzida", 
-                C2_AGLUT AS "Aglutinada?", 
-                users.USR_NOME AS "Aberto por:" 
+                C2_AGLUT AS "Aglutinada?"
             FROM 
                 {database}.dbo.SC2010 op
-            INNER JOIN 
-                SB1010 prod ON C2_PRODUTO = B1_COD
             LEFT JOIN 
-                {database}.dbo.SYS_USR users
-            ON 
-                users.USR_CNLOGON = op.C2_XMAQUIN
+                SB1010 prod ON C2_PRODUTO = B1_COD
             WHERE 
                 C2_ZZNUMQP LIKE '%{numero_qp}'
                 AND C2_PRODUTO LIKE '{codigo_produto}%'
-                AND prod.B1_DESC LIKE '%{descricao_produto}%'
+                AND prod.B1_DESC LIKE '{descricao_produto}%'
                 AND C2_NUM LIKE '{numero_op}%' {filtro_data}
                 AND op.D_E_L_E_T_ <> '*'
             ORDER BY 
@@ -542,36 +534,7 @@ class PcpApp(QWidget):
     def configurar_tabela_tooltips(self, dataframe):
         # Mapa de tooltips correspondentes às colunas da consulta SQL
         tooltip_map = {
-            "Status PC": "VERMELHO -> AGUARDANDO ENTREGA\n\nAZUL -> ENTREGA PARCIAL\n\nVERDE -> PEDIDO DE COMPRA "
-                         "ENCERRADO",
-            "QP": "Número do Quadro de Produção (QP)",
-            "OP": "Número da Ordem de Produção (OP)",
-            "SC": "Número da Solicitação de Compras (SC)",
-            "Item SC": "Número do item na Solicitação de Compras",
-            "Quant. SC": "Quantidade solicitada na SC",
-            "Ped. Compra": "Número do Pedido de Compra",
-            "Item Ped.": "Número do item no Pedido de Compra",
-            "Quant. Ped.": "Quantidade solicitada no Pedido de Compra",
-            "Nota Fiscal": "Número da Nota Fiscal",
-            "Quant. Entregue": "Quantidade entregue conforme a Nota Fiscal",
-            "Quant. Pendente": "Quantidade pendente de entrega",
-            "Data Entrega": "Data da entrega",
-            "Status Ped. Compra": "Status do Pedido de Compra",
-            "Código": "Código do produto",
-            "Descrição": "Descrição do produto",
-            "UM": "Unidade de medida",
-            "Emissão SC": "Data de emissão da SC",
-            "Emissão PC": "Data de emissão do Pedido de Compra",
-            "Emissão NF": "Data de emissão da Nota Fiscal",
-            "Origem": "Origem do item",
-            "Observação": "Observações gerais sobre o item",
-            "Cod. Armazém": "Código do armazém",
-            "Desc. Armazém": "Descrição do armazém",
-            "Importado?": "Indica se o produto é importado",
-            "Observações": "Observações gerais",
-            "Observações item": "Observações específicas do item",
-            "Fornecedor": "Nome do fornecedor",
-            "Solicitante": "Nome do solicitante"
+            "Status OP": "VERMELHO -> OP ABERTA\nVERDE -> OP FINALIZADA"
         }
 
         # Obtenha os cabeçalhos das colunas do dataframe
@@ -580,7 +543,7 @@ class PcpApp(QWidget):
         # Adicione os cabeçalhos e os tooltips
         for i, header in enumerate(headers):
             item = QTableWidgetItem(header)
-            tooltip = tooltip_map.get(header, "Tooltip não definido")
+            tooltip = tooltip_map.get(header)
             item.setToolTip(tooltip)
             self.tree.setHorizontalHeaderItem(i, item)
 
@@ -603,6 +566,7 @@ class PcpApp(QWidget):
         self.controle_campos_formulario(False)
         line_number = None
         label_line_number = QLabel(f"{line_number} itens localizados.", self)
+        self.layout_footer.removeWidget(label_line_number)
         self.layout_footer.removeItem(self.layout_footer)
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
@@ -618,9 +582,9 @@ class PcpApp(QWidget):
                 self.layout_footer.addWidget(label_line_number)
                 self.progress_bar.setMaximum(line_number)
                 self.layout_footer.addWidget(self.progress_bar)
-                # self.layout_buttons.addWidget(self.btn_parar_consulta)
+                self.layout_buttons.addWidget(self.btn_parar_consulta)
 
-                dataframe.insert(0, 'Status', '')
+                dataframe.insert(0, 'Status OP', '')
                 dataframe[''] = ''
 
                 self.configurar_tabela(dataframe)
@@ -672,9 +636,9 @@ class PcpApp(QWidget):
                     self.tree.setItem(i, j, item)
 
                 self.progress_bar.setValue(i + 1)
-                # QCoreApplication.processEvents()
+                QCoreApplication.processEvents()
 
-            # self.layout_buttons.removeWidget(self.btn_parar_consulta)
+            self.layout_buttons.removeWidget(self.btn_parar_consulta)
             self.btn_parar_consulta.setParent(None)
             self.tree.setSortingEnabled(True)
             self.controle_campos_formulario(True)

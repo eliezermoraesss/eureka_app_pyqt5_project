@@ -555,7 +555,7 @@ class ComprasApp(QWidget):
                 AND SC.C1_NUM LIKE '%{numero_sc}'
                 AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
                 AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
-                AND SC.C1_DESCRI LIKE '%{descricao_produto}%'
+                AND SC.C1_DESCRI LIKE '{descricao_produto}%'
                 AND SC.C1_OP LIKE '{numero_op}%'
                 AND FORN.A2_NOME LIKE '%{fornecedor}%' 
                 AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data}
@@ -630,7 +630,7 @@ class ComprasApp(QWidget):
                 AND SC.C1_NUM LIKE '%{numero_sc}'
                 AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
                 AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
-                AND SC.C1_DESCRI LIKE '%{descricao_produto}%'
+                AND SC.C1_DESCRI LIKE '{descricao_produto}%'
                 AND SC.C1_OP LIKE '{numero_op}%' 
                 AND FORN.A2_NOME LIKE '%{fornecedor}%'
                 AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data}
@@ -677,7 +677,7 @@ class ComprasApp(QWidget):
                 self.layout_footer.addWidget(label_line_number)
                 self.progress_bar.setMaximum(line_number)
                 self.layout_footer.addWidget(self.progress_bar)
-                # self.layout_buttons.addWidget(self.btn_parar_consulta)
+                self.layout_buttons.addWidget(self.btn_parar_consulta)
 
                 dataframe.insert(0, 'Status PC', '')
                 dataframe[''] = ''
@@ -749,9 +749,9 @@ class ComprasApp(QWidget):
                     self.tree.setItem(i, j, item)
 
                 self.progress_bar.setValue(i + 1)
-                # QCoreApplication.processEvents()
+                QCoreApplication.processEvents()
 
-            # self.layout_buttons.removeWidget(self.btn_parar_consulta)
+            self.layout_buttons.removeWidget(self.btn_parar_consulta)
             self.btn_parar_consulta.setParent(None)
             self.tree.setSortingEnabled(True)
             self.controle_campos_formulario(True)
@@ -770,35 +770,7 @@ class ComprasApp(QWidget):
         # Mapa de tooltips correspondentes às colunas da consulta SQL
         tooltip_map = {
             "Status PC": "VERMELHO -> AGUARDANDO ENTREGA\n\nAZUL -> ENTREGA PARCIAL\n\nVERDE -> PEDIDO DE COMPRA "
-                         "ENCERRADO",
-            "QP": "Número do Quadro de Produção (QP)",
-            "OP": "Número da Ordem de Produção (OP)",
-            "SC": "Número da Solicitação de Compras (SC)",
-            "Item SC": "Número do item na Solicitação de Compras",
-            "Quant. SC": "Quantidade solicitada na SC",
-            "Ped. Compra": "Número do Pedido de Compra",
-            "Item Ped.": "Número do item no Pedido de Compra",
-            "Quant. Ped.": "Quantidade solicitada no Pedido de Compra",
-            "Nota Fiscal": "Número da Nota Fiscal",
-            "Quant. Entregue": "Quantidade entregue conforme a Nota Fiscal",
-            "Quant. Pendente": "Quantidade pendente de entrega",
-            "Data Entrega": "Data da entrega",
-            "Status Ped. Compra": "Status do Pedido de Compra",
-            "Código": "Código do produto",
-            "Descrição": "Descrição do produto",
-            "UM": "Unidade de medida",
-            "Emissão SC": "Data de emissão da SC",
-            "Emissão PC": "Data de emissão do Pedido de Compra",
-            "Emissão NF": "Data de emissão da Nota Fiscal",
-            "Origem": "Origem do item",
-            "Observação": "Observações gerais sobre o item",
-            "Cod. Armazém": "Código do armazém",
-            "Desc. Armazém": "Descrição do armazém",
-            "Importado?": "Indica se o produto é importado",
-            "Observações": "Observações gerais",
-            "Observações item": "Observações específicas do item",
-            "Fornecedor": "Nome do fornecedor",
-            "Solicitante": "Nome do solicitante"
+                         "ENCERRADO"
         }
 
         # Obtenha os cabeçalhos das colunas do dataframe
@@ -807,7 +779,7 @@ class ComprasApp(QWidget):
         # Adicione os cabeçalhos e os tooltips
         for i, header in enumerate(headers):
             item = QTableWidgetItem(header)
-            tooltip = tooltip_map.get(header, "Tooltip não definido")
+            tooltip = tooltip_map.get(header)
             item.setToolTip(tooltip)
             self.tree.setHorizontalHeaderItem(i, item)
 
