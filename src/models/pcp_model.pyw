@@ -213,8 +213,8 @@ class PcpApp(QWidget):
         self.layout_linha_03 = QHBoxLayout()
 
         layout_linha_02.addWidget(self.campo_codigo)
-        layout_linha_02.addWidget(self.campo_qp)
         layout_linha_02.addWidget(self.campo_OP)
+        layout_linha_02.addWidget(self.campo_qp)
         layout_linha_02.addWidget(QLabel("Data Emissão OP:"))
         layout_linha_02.addWidget(self.campo_data_inicio)
         layout_linha_02.addWidget(QLabel("Data Fechamento OP:"))
@@ -413,9 +413,11 @@ class PcpApp(QWidget):
             C2_PRODUTO AS "Código", B1_DESC AS "Descrição", C2_QUANT AS "Quant.", C2_UM AS "UM", 
             C2_EMISSAO AS "Emissão", C2_DATPRF AS "Prev. Entrega",
             C2_DATRF AS "Fechamento", C2_OBS AS "Observação",
-            C2_QUJE AS "Quant. Produzida", C2_AGLUT AS "Aglutinada?", C2_XMAQUIN AS "Aberto por:"
+            C2_QUJE AS "Quant. Produzida", C2_AGLUT AS "Aglutinada?", users.USR_NOME AS "Aberto por:"
             FROM {database}.dbo.SC2010 op
             INNER JOIN SB1010 prod ON C2_PRODUTO = B1_COD
+            LEFT JOIN {database}.dbo.SYS_USR users
+            ON users.USR_CNLOGON = op.C2_XMAQUIN
             WHERE C2_ZZNUMQP LIKE '%{numero_qp}'
             AND C2_PRODUTO LIKE '{codigo_produto}%'
             AND C2_NUM LIKE '{numero_op}%' {filtro_data}
@@ -516,7 +518,7 @@ class PcpApp(QWidget):
 
                         item = QTableWidgetItem(str(value).strip())
 
-                        if j not in (6, 12):
+                        if j not in (6, 12, 15):
                             item.setTextAlignment(Qt.AlignCenter)
 
                     self.tree.setItem(i, j, item)

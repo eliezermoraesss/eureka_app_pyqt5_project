@@ -259,13 +259,13 @@ class ComprasApp(QWidget):
         container_codigo.addWidget(self.label_codigo)
         container_codigo.addWidget(self.campo_codigo)
 
-        container_qp = QVBoxLayout()
-        container_qp.addWidget(self.label_qp)
-        container_qp.addWidget(self.campo_qp)
-
         container_op = QVBoxLayout()
         container_op.addWidget(self.label_OP)
         container_op.addWidget(self.campo_OP)
+
+        container_qp = QVBoxLayout()
+        container_qp.addWidget(self.label_qp)
+        container_qp.addWidget(self.campo_qp)
 
         container_data_ini = QVBoxLayout()
         container_data_ini.addWidget(self.label_data_inicio)
