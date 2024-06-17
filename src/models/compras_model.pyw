@@ -151,7 +151,7 @@ class ComprasApp(QWidget):
         self.label_OP = QLabel("Número OP:", self)
         self.label_data_inicio = QLabel("Data inicial SC:", self)
         self.label_data_fim = QLabel("Data final SC:", self)
-        self.label_armazem = QLabel("Armazéns:", self)
+        self.label_armazem = QLabel("Armazém:", self)
         self.label_fornecedor = QLabel("Fornecedor:", self)
 
         self.campo_sc = QLineEdit(self)

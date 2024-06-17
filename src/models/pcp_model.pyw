@@ -506,16 +506,18 @@ class PcpApp(QWidget):
                             item.setIcon(closed_icon)
                         item.setTextAlignment(Qt.AlignCenter)
                     else:
+                        if j == 14 and value == 'S':
+                            value = 'Sim'
+                        elif j == 14 and value != 'S':
+                            value = 'Não'
                         if 9 <= j <= 11 and not value.isspace():
                             data_obj = datetime.strptime(value, "%Y%m%d")
                             value = data_obj.strftime("%d/%m/%Y")
 
                         item = QTableWidgetItem(str(value).strip())
 
-                        if j not in (6, 13):
+                        if j not in (6, 12):
                             item.setTextAlignment(Qt.AlignCenter)
-                        elif j == 12:
-                            item.setBackground(QColor("#97BE5A"))
 
                     self.tree.setItem(i, j, item)
 
