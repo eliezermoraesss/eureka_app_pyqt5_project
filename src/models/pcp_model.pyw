@@ -1,8 +1,9 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel
-from PyQt5.QtGui import QFont, QColor, QIcon
-from PyQt5.QtCore import Qt, QCoreApplication, QDate
+    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, QMessageBox, \
+    QProgressBar
+from PyQt5.QtGui import QFont, QColor, QIcon, QDesktopServices
+from PyQt5.QtCore import Qt, QCoreApplication, QDate, QUrl, QProcess
 import pyperclip
 import pandas as pd
 import ctypes
@@ -11,7 +12,6 @@ import tkinter as tk
 from tkinter import messagebox
 from sqlalchemy import create_engine
 import os
-import subprocess
 
 
 class PcpApp(QWidget):
@@ -23,8 +23,15 @@ class PcpApp(QWidget):
         self.tree = QTableWidget(self)
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
-
+        self.process = QProcess(self)
         self.nova_janela = None
+
+        self.altura_linha = 30
+        self.tamanho_fonte_tabela = 10
+
+        self.fonte_tabela = 'Segoe UI'
+        fonte_campos = "Segoe UI"
+        tamanho_fonte_campos = 16
 
         self.setWindowTitle("EUREKA® PCP - v0.1")
 
@@ -133,38 +140,55 @@ class PcpApp(QWidget):
             }
         """)
 
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setMinimum(0)
+        self.progress_bar.setMaximumWidth(400)
+
+        self.label_codigo = QLabel("Código produto:", self)
+        self.label_descricao_prod = QLabel("Descrição produto:", self)
+        self.label_OP = QLabel("Número OP:", self)
+        self.label_qp = QLabel("Número QP:", self)
+        self.label_data_inicio = QLabel("Data inicial:", self)
+        self.label_data_fim = QLabel("Data final:", self)
+
         self.campo_codigo = QLineEdit(self)
-        self.campo_codigo.setFont(QFont("Segoe UI", 10))
-        self.campo_codigo.setFixedWidth(200)
-        self.campo_codigo.setPlaceholderText("Código produto...")
+        self.campo_codigo.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_codigo.setMaxLength(13)
+        self.campo_codigo.setFixedWidth(170)
         self.add_clear_button(self.campo_codigo)
 
+        self.campo_descricao_prod = QLineEdit(self)
+        self.campo_descricao_prod.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_descricao_prod.setMaxLength(60)
+        self.campo_descricao_prod.setFixedWidth(280)
+        self.add_clear_button(self.campo_descricao_prod)
+
         self.campo_qp = QLineEdit(self)
-        self.campo_qp.setFont(QFont("Segoe UI", 10))
-        self.campo_qp.setFixedWidth(200)
-        self.campo_qp.setPlaceholderText("Número QP...")
+        self.campo_qp.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_qp.setMaxLength(6)
+        self.campo_qp.setFixedWidth(110)
         self.add_clear_button(self.campo_qp)
 
         self.campo_OP = QLineEdit(self)
-        self.campo_OP.setFont(QFont("Segoe UI", 10))
-        self.campo_OP.setFixedWidth(200)
-        self.campo_OP.setPlaceholderText("Número OP...")
+        self.campo_OP.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_OP.setMaxLength(6)
+        self.campo_OP.setFixedWidth(110)
         self.add_clear_button(self.campo_OP)
 
         self.campo_data_inicio = QDateEdit(self)
-        self.campo_data_inicio.setFont(QFont("Segoe UI", 10))
+        self.campo_data_inicio.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_data_inicio.setFixedWidth(150)
         self.campo_data_inicio.setCalendarPopup(True)
         self.campo_data_inicio.setDisplayFormat("dd/MM/yyyy")
 
         data_atual = QDate.currentDate()
-        meses_a_remover = 2
-        data_inicio = data_atual.addMonths(-meses_a_remover)
+        intervalo_meses = 6
+        data_inicio = data_atual.addMonths(-intervalo_meses)
         self.campo_data_inicio.setDate(data_inicio)
         self.add_today_button(self.campo_data_inicio)
 
         self.campo_data_fim = QDateEdit(self)
-        self.campo_data_fim.setFont(QFont("Segoe UI", 10))
+        self.campo_data_fim.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_data_fim.setFixedWidth(150)
         self.campo_data_fim.setCalendarPopup(True)
         self.campo_data_fim.setDisplayFormat("dd/MM/yyyy")
@@ -175,9 +199,13 @@ class PcpApp(QWidget):
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setMinimumWidth(100)
 
-        self.btn_abrir_compras = QPushButton("Solic. Compras", self)
+        self.btn_abrir_compras = QPushButton("Follow-up Compras", self)
         self.btn_abrir_compras.clicked.connect(self.abrir_modulo_compras)
         self.btn_abrir_compras.setMinimumWidth(100)
+
+        self.btn_limpar = QPushButton("Limpar", self)
+        self.btn_limpar.clicked.connect(self.limpar_campos)
+        self.btn_limpar.setMinimumWidth(100)
 
         self.btn_parar_consulta = QPushButton("Parar consulta")
         self.btn_parar_consulta.clicked.connect(self.parar_consulta)
@@ -186,6 +214,10 @@ class PcpApp(QWidget):
         self.btn_nova_janela = QPushButton("Nova Janela", self)
         self.btn_nova_janela.clicked.connect(self.abrir_nova_janela)
         self.btn_nova_janela.setMinimumWidth(100)
+
+        self.btn_abrir_desenho = QPushButton("Abrir Desenho", self)
+        self.btn_abrir_desenho.clicked.connect(self.abrir_desenho)
+        self.btn_abrir_desenho.setMinimumWidth(100)
 
         self.btn_exportar_excel = QPushButton("Exportar Excel", self)
         self.btn_exportar_excel.clicked.connect(self.exportar_excel)
@@ -199,38 +231,85 @@ class PcpApp(QWidget):
         self.campo_codigo.returnPressed.connect(self.executar_consulta)
         self.campo_qp.returnPressed.connect(self.executar_consulta)
         self.campo_OP.returnPressed.connect(self.executar_consulta)
+        self.campo_descricao_prod.returnPressed.connect(self.executar_consulta)
 
         layout = QVBoxLayout()
-        #layout_linha_01 = QHBoxLayout()
-        layout_linha_02 = QHBoxLayout()
-        self.layout_linha_03 = QHBoxLayout()
+        layout_campos_linha_01 = QHBoxLayout()
+        self.layout_buttons = QHBoxLayout()
+        self.layout_footer = QHBoxLayout()
 
-        layout_linha_02.addWidget(self.campo_codigo)
-        layout_linha_02.addWidget(self.campo_qp)
-        layout_linha_02.addWidget(self.campo_OP)
-        layout_linha_02.addWidget(QLabel("Data Emissão:"))
-        layout_linha_02.addWidget(self.campo_data_inicio)
-        layout_linha_02.addWidget(QLabel("Data Fechamento:"))
-        layout_linha_02.addWidget(self.campo_data_fim)
-        layout_linha_02.addStretch()
+        container_codigo = QVBoxLayout()
+        container_codigo.addWidget(self.label_codigo)
+        container_codigo.addWidget(self.campo_codigo)
 
-        self.layout_linha_03.addWidget(self.btn_consultar)
-        self.layout_linha_03.addWidget(self.btn_abrir_compras)
-        self.layout_linha_03.addWidget(self.btn_nova_janela)
-        self.layout_linha_03.addWidget(self.btn_exportar_excel)
-        self.layout_linha_03.addWidget(self.btn_fechar)
-        self.layout_linha_03.addStretch()
+        container_descricao_prod = QVBoxLayout()
+        container_descricao_prod.addWidget(self.label_descricao_prod)
+        container_descricao_prod.addWidget(self.campo_descricao_prod)
 
-        #layout.addLayout(layout_linha_01)
-        layout.addLayout(layout_linha_02)
-        layout.addLayout(self.layout_linha_03)
+        container_op = QVBoxLayout()
+        container_op.addWidget(self.label_OP)
+        container_op.addWidget(self.campo_OP)
+
+        container_qp = QVBoxLayout()
+        container_qp.addWidget(self.label_qp)
+        container_qp.addWidget(self.campo_qp)
+
+        container_data_ini = QVBoxLayout()
+        container_data_ini.addWidget(self.label_data_inicio)
+        container_data_ini.addWidget(self.campo_data_inicio)
+
+        container_data_fim = QVBoxLayout()
+        container_data_fim.addWidget(self.label_data_fim)
+        container_data_fim.addWidget(self.campo_data_fim)
+
+        layout_campos_linha_01.addLayout(container_codigo)
+        layout_campos_linha_01.addLayout(container_descricao_prod)
+        layout_campos_linha_01.addLayout(container_qp)
+        layout_campos_linha_01.addLayout(container_op)
+        layout_campos_linha_01.addLayout(container_data_ini)
+        layout_campos_linha_01.addLayout(container_data_fim)
+        layout_campos_linha_01.addStretch()
+
+        self.layout_buttons.addWidget(self.btn_consultar)
+        self.layout_buttons.addWidget(self.btn_abrir_compras)
+        self.layout_buttons.addWidget(self.btn_nova_janela)
+        self.layout_buttons.addWidget(self.btn_limpar)
+        self.layout_buttons.addWidget(self.btn_abrir_desenho)
+        self.layout_buttons.addWidget(self.btn_exportar_excel)
+        self.layout_buttons.addWidget(self.btn_fechar)
+        self.layout_buttons.addStretch()
+
+        layout.addLayout(layout_campos_linha_01)
+        layout.addLayout(self.layout_buttons)
         layout.addWidget(self.tree)
+        layout.addLayout(self.layout_footer)
         self.setLayout(layout)
+
+    def limpar_campos(self):
+        self.campo_codigo.clear()
+        self.campo_qp.clear()
+        self.campo_OP.clear()
+        self.campo_descricao_prod.clear()
+
+    def abrir_desenho(self):
+        item_selecionado = self.tree.currentItem()
+
+        if item_selecionado:
+            codigo = self.tree.item(item_selecionado.row(), 5).text()
+            pdf_path = os.path.join(r"\\192.175.175.4\dados\EMPRESA\PROJETOS\PDF-OFICIAL", f"{codigo}.PDF")
+            pdf_path = os.path.normpath(pdf_path)
+
+            if os.path.exists(pdf_path):
+                QCoreApplication.processEvents()
+                QDesktopServices.openUrl(QUrl.fromLocalFile(pdf_path))
+            else:
+                mensagem = f"Desenho não encontrado!\n\n:-("
+                QMessageBox.information(self, f"{codigo}", mensagem)
 
     def abrir_modulo_compras(self):
         script_dir = os.path.dirname(os.path.abspath(__file__))
         script_path = os.path.join(script_dir, 'compras_model.pyw')
-        subprocess.run(["python", script_path])
+        self.process.start("python", [script_path])
 
     def abrir_nova_janela(self):
         if not self.nova_janela or not self.nova_janela.isVisible():
@@ -242,11 +321,9 @@ class PcpApp(QWidget):
         calendar = date_edit.calendarWidget()
         calendar.setGeometry(10, 10, 600, 400)
         btn_today = QPushButton("Hoje", calendar)
-        pos_x = 20
-        pos_y = 5
         largura = 50
         altura = 20
-        btn_today.setGeometry(pos_x, pos_y, largura, altura)
+        btn_today.setGeometry(20, 5, largura, altura)
         btn_today.clicked.connect(lambda: date_edit.setDate(QDate.currentDate()))
 
     def add_clear_button(self, line_edit):
@@ -325,10 +402,8 @@ class PcpApp(QWidget):
         self.tree.setSelectionBehavior(QTableWidget.SelectRows)
         self.tree.setSelectionMode(QTableWidget.SingleSelection)
         self.tree.itemDoubleClicked.connect(self.copiar_linha)
-        fonte_tabela = QFont("Segoe UI", 10)
-        self.tree.setFont(fonte_tabela)
-        altura_linha = 40
-        self.tree.verticalHeader().setDefaultSectionSize(altura_linha)
+        self.tree.setFont(QFont(self.fonte_tabela, self.tamanho_fonte_tabela))
+        self.tree.verticalHeader().setDefaultSectionSize(self.altura_linha)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
         self.tree.horizontalHeader().setStretchLastSection(True)
 
@@ -337,7 +412,7 @@ class PcpApp(QWidget):
             valor_campo = item.text()
             pyperclip.copy(str(valor_campo))
 
-    def ordenar_tabela(self, logicalIndex):
+    def ordenar_tabela(self, logical_index):
         # Obter o índice real da coluna (considerando a ordem de classificação)
         index = self.tree.horizontalHeader().sortIndicatorOrder()
 
@@ -345,20 +420,16 @@ class PcpApp(QWidget):
         order = Qt.AscendingOrder if index == 0 else Qt.DescendingOrder
 
         # Ordenar a tabela pela coluna clicada
-        self.tree.sortItems(logicalIndex, order)
+        self.tree.sortItems(logical_index, order)
 
-    def limpar_campos(self):
-        self.campo_codigo.clear()
-
-    def bloquear_campos(self):
-        self.campo_codigo.setEnabled(False)
-        self.btn_consultar.setEnabled(False)
-        self.btn_exportar_excel.setEnabled(False)
-
-    def desbloquear_campos(self):
-        self.campo_codigo.setEnabled(True)
-        self.btn_consultar.setEnabled(True)
-        self.btn_exportar_excel.setEnabled(True)
+    def controle_campos_formulario(self, status):
+        self.campo_codigo.setEnabled(status)
+        self.campo_qp.setEnabled(status)
+        self.campo_OP.setEnabled(status)
+        self.campo_data_inicio.setEnabled(status)
+        self.campo_data_fim.setEnabled(status)
+        self.btn_consultar.setEnabled(status)
+        self.btn_exportar_excel.setEnabled(status)
 
     def exibir_mensagem(self, title, message, icon_type):
         root = tk.Tk()
@@ -376,26 +447,64 @@ class PcpApp(QWidget):
 
         root.destroy()
 
-    def selecionar_query_conforme_filtro(self, codigo_produto, numero_qp, numero_op):
+    def numero_linhas_consulta(self, codigo_produto, numero_qp, numero_op, descricao_produto):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
 
-        filtro_data = f"AND C2_EMISSAO >= '{data_inicio_formatada}' AND C2_DATRF <= '{data_fim_formatada}'" if data_fim_formatada != '' and data_fim_formatada != '' else ''
+        filtro_data = f"AND C2_EMISSAO >= '{data_inicio_formatada}' AND C2_EMISSAO <= '{data_fim_formatada}'" if data_fim_formatada != '' and data_fim_formatada != '' else ''
 
         query = f"""
-            SELECT C2_ZZNUMQP AS "QP", C2_NUM AS "OP", C2_ITEM AS "Item", C2_SEQUEN AS "Seq.",
-            C2_PRODUTO AS "Código", B1_DESC AS "Descrição", C2_QUANT AS "Quant.", C2_UM AS "UM", 
-            C2_EMISSAO AS "Emissão", C2_DATPRF AS "Prev. Entrega",
-            C2_DATRF AS "Fechamento", C2_OBS AS "Observação",
-            C2_QUJE AS "Quant. Produzida", C2_AGLUT AS "Aglutinada?", C2_XMAQUIN AS "Aberto por:"
-            FROM {database}.dbo.SC2010 op
-            INNER JOIN SB1010 prod ON C2_PRODUTO = B1_COD
-            WHERE C2_ZZNUMQP LIKE '%{numero_qp}'
-            AND C2_PRODUTO LIKE '{codigo_produto}%'
-            AND C2_NUM LIKE '{numero_op}%' {filtro_data}
-            AND op.D_E_L_E_T_ <> '*'
-            ORDER BY op.R_E_C_N_O_ DESC;
+                    SELECT 
+                        COUNT(*)
+                    FROM 
+                        {database}.dbo.SC2010 op
+                    INNER JOIN 
+                        SB1010 prod ON C2_PRODUTO = B1_COD
+                    WHERE 
+                        C2_ZZNUMQP LIKE '%{numero_qp}'
+                        AND C2_PRODUTO LIKE '{codigo_produto}%'
+                        AND prod.B1_DESC LIKE '{descricao_produto}%'
+                        AND C2_NUM LIKE '{numero_op}%' {filtro_data}
+                        AND op.D_E_L_E_T_ <> '*'
+                """
+        return query
+
+    def query_consulta_ordem_producao(self, codigo_produto, numero_qp, numero_op, descricao_produto):
+
+        data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
+        data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
+
+        filtro_data = f"AND C2_EMISSAO >= '{data_inicio_formatada}' AND C2_EMISSAO <= '{data_fim_formatada}'" if data_fim_formatada != '' and data_fim_formatada != '' else ''
+
+        query = f"""
+            SELECT 
+                C2_ZZNUMQP AS "QP", 
+                C2_NUM AS "OP", 
+                C2_ITEM AS "Item", 
+                C2_SEQUEN AS "Seq.",
+                C2_PRODUTO AS "Código", 
+                B1_DESC AS "Descrição", 
+                C2_QUANT AS "Quant.", 
+                C2_UM AS "UM", 
+                C2_EMISSAO AS "Emissão", 
+                C2_DATPRF AS "Prev. Entrega",
+                C2_DATRF AS "Fechamento", 
+                C2_OBS AS "Observação",
+                C2_QUJE AS "Quant. Produzida", 
+                C2_AGLUT AS "Aglutinada?"
+            FROM 
+                {database}.dbo.SC2010 op
+            LEFT JOIN 
+                SB1010 prod ON C2_PRODUTO = B1_COD
+            WHERE 
+                C2_ZZNUMQP LIKE '%{numero_qp}'
+                AND C2_PRODUTO LIKE '{codigo_produto}%'
+                AND prod.B1_DESC LIKE '{descricao_produto}%'
+                AND C2_NUM LIKE '{numero_op}%' {filtro_data}
+                AND op.D_E_L_E_T_ <> '*'
+            ORDER BY 
+                op.R_E_C_N_O_ DESC;
         """
         return query
 
@@ -422,11 +531,28 @@ class PcpApp(QWidget):
                                  "info")
             return True
 
+    def configurar_tabela_tooltips(self, dataframe):
+        # Mapa de tooltips correspondentes às colunas da consulta SQL
+        tooltip_map = {
+            "Status OP": "VERMELHO -> OP ABERTA\nVERDE -> OP FINALIZADA"
+        }
+
+        # Obtenha os cabeçalhos das colunas do dataframe
+        headers = dataframe.columns
+
+        # Adicione os cabeçalhos e os tooltips
+        for i, header in enumerate(headers):
+            item = QTableWidgetItem(header)
+            tooltip = tooltip_map.get(header)
+            item.setToolTip(tooltip)
+            self.tree.setHorizontalHeaderItem(i, item)
+
     def executar_consulta(self):
 
         numero_qp = self.campo_qp.text().upper().strip()
         numero_op = self.campo_OP.text().upper().strip()
         codigo_produto = self.campo_codigo.text().upper().strip()
+        descricao_produto = self.campo_descricao_prod.text().upper().strip()
 
         if self.validar_campos(codigo_produto, numero_qp, numero_op):
             self.btn_consultar.setEnabled(True)
@@ -434,38 +560,47 @@ class PcpApp(QWidget):
 
         numero_qp = numero_qp.zfill(6) if numero_qp != '' else numero_qp
 
-        select_query = self.selecionar_query_conforme_filtro(codigo_produto, numero_qp, numero_op)
+        query_consulta_op = self.query_consulta_ordem_producao(codigo_produto, numero_qp, numero_op, descricao_produto)
+        query_contagem_linhas = self.numero_linhas_consulta(codigo_produto, numero_qp, numero_op, descricao_produto)
 
-        if isinstance(select_query, bool) and select_query:
-            self.btn_consultar.setEnabled(True)
-            return
-
-        self.bloquear_campos()
+        self.controle_campos_formulario(False)
+        line_number = None
+        label_line_number = QLabel(f"{line_number} itens localizados.", self)
+        self.layout_footer.removeWidget(label_line_number)
+        self.layout_footer.removeItem(self.layout_footer)
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
         self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
 
         try:
-            dataframe = pd.read_sql(select_query, self.engine)
+            dataframe_line_number = pd.read_sql(query_contagem_linhas, self.engine)
+            line_number = dataframe_line_number.iloc[0, 0]
+            dataframe = pd.read_sql(query_consulta_op, self.engine)
 
             if not dataframe.empty:
-                self.layout_linha_03.addWidget(self.btn_parar_consulta)
-                dataframe.insert(0, 'Status', '')
+
+                self.layout_footer.addWidget(label_line_number)
+                self.progress_bar.setMaximum(line_number)
+                self.layout_footer.addWidget(self.progress_bar)
+                self.layout_buttons.addWidget(self.btn_parar_consulta)
+
+                dataframe.insert(0, 'Status OP', '')
                 dataframe[''] = ''
 
                 self.configurar_tabela(dataframe)
+                self.configurar_tabela_tooltips(dataframe)
 
                 self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
                 self.tree.setRowCount(0)
             else:
                 self.exibir_mensagem("EUREKA® PCP", 'Nada encontrado!', "info")
-                self.desbloquear_campos()
+                self.controle_campos_formulario(True)
                 return
 
             # Construir caminhos relativos
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            open_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'open_status_panel.png')
-            closed_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'close_status_panel.png')
+            open_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'red.png')
+            closed_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'green.png')
 
             open_icon = QIcon(open_icon_path)
             closed_icon = QIcon(closed_icon_path)
@@ -485,25 +620,28 @@ class PcpApp(QWidget):
                             item.setIcon(closed_icon)
                         item.setTextAlignment(Qt.AlignCenter)
                     else:
+                        if j == 14 and value == 'S':
+                            value = 'Sim'
+                        elif j == 14 and value != 'S':
+                            value = 'Não'
                         if 9 <= j <= 11 and not value.isspace():
                             data_obj = datetime.strptime(value, "%Y%m%d")
                             value = data_obj.strftime("%d/%m/%Y")
 
                         item = QTableWidgetItem(str(value).strip())
 
-                        if j not in (6, 13):
+                        if j not in (6, 12, 15):
                             item.setTextAlignment(Qt.AlignCenter)
-                        elif j == 12:
-                            item.setBackground(QColor("#97BE5A"))
 
                     self.tree.setItem(i, j, item)
 
+                self.progress_bar.setValue(i + 1)
                 QCoreApplication.processEvents()
 
-            self.layout_linha_03.removeWidget(self.btn_parar_consulta)
+            self.layout_buttons.removeWidget(self.btn_parar_consulta)
             self.btn_parar_consulta.setParent(None)
             self.tree.setSortingEnabled(True)
-            self.desbloquear_campos()
+            self.controle_campos_formulario(True)
 
         except Exception as ex:
             self.exibir_mensagem('Erro ao consultar tabela', f'Erro: {str(ex)}', 'error')
@@ -522,7 +660,7 @@ class PcpApp(QWidget):
         self.interromper_consulta_sql = True
         if hasattr(self, 'engine') and self.engine is not None:
             self.engine.dispose()
-        self.desbloquear_campos()
+        self.controle_campos_formulario(True)
 
 
 if __name__ == "__main__":
@@ -531,16 +669,6 @@ if __name__ == "__main__":
     username, password, database, server = PcpApp().setup_mssql()
     driver = '{SQL Server}'
 
-    largura_janela = 1400  # Substitua pelo valor desejado
-    altura_janela = 700  # Substitua pelo valor desejado
-
-    largura_tela = app.primaryScreen().size().width()
-    altura_tela = app.primaryScreen().size().height()
-
-    pos_x = (largura_tela - largura_janela) // 2
-    pos_y = (altura_tela - altura_janela) // 2
-
-    window.setGeometry(pos_x, pos_y, largura_janela, altura_janela)
-    window.show()
+    window.showMaximized()
 
     sys.exit(app.exec_())
