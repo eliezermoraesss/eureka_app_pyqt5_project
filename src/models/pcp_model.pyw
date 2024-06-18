@@ -459,8 +459,12 @@ class PcpApp(QWidget):
                         COUNT(*)
                     FROM 
                         {database}.dbo.SC2010 op
-                    INNER JOIN 
+                    LEFT JOIN 
                         SB1010 prod ON C2_PRODUTO = B1_COD
+                    LEFT JOIN 
+                        {database}.dbo.SYS_USR users
+                    ON 
+                        users.USR_CNLOGON = op.C2_XMAQUIN AND users.D_E_L_E_T_ <> '*'
                     WHERE 
                         C2_ZZNUMQP LIKE '%{numero_qp}'
                         AND C2_PRODUTO LIKE '{codigo_produto}%'
@@ -492,11 +496,16 @@ class PcpApp(QWidget):
                 C2_DATRF AS "Fechamento", 
                 C2_OBS AS "Observação",
                 C2_QUJE AS "Quant. Produzida", 
-                C2_AGLUT AS "Aglutinada?"
+                C2_AGLUT AS "Aglutinada?",
+                users.USR_NOME AS "Aberto por:" 
             FROM 
                 {database}.dbo.SC2010 op
             LEFT JOIN 
                 SB1010 prod ON C2_PRODUTO = B1_COD
+            LEFT JOIN 
+                {database}.dbo.SYS_USR users
+            ON 
+                users.USR_CNLOGON = op.C2_XMAQUIN AND users.D_E_L_E_T_ <> '*'
             WHERE 
                 C2_ZZNUMQP LIKE '%{numero_qp}'
                 AND C2_PRODUTO LIKE '{codigo_produto}%'
