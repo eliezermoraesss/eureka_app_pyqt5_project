@@ -539,17 +539,17 @@ class ComprasApp(QWidget):
             ON 
                 SC.C1_PEDIDO = PC.C7_NUM AND SC.C1_ITEMPED = PC.C7_ITEM AND SC.C1_ZZNUMQP = PC.C7_ZZNUMQP
             LEFT JOIN
-            {database}.dbo.SA2010 FORN
+                {database}.dbo.SA2010 FORN
             ON
-            FORN.A2_COD = SC.C1_FORNECE
+                FORN.A2_COD = SC.C1_FORNECE
             LEFT JOIN
-            {database}.dbo.NNR010 ARM
+                {database}.dbo.NNR010 ARM
             ON
-            SC.C1_LOCAL = ARM.NNR_CODIGO
+                SC.C1_LOCAL = ARM.NNR_CODIGO
             LEFT JOIN 
-            {database}.dbo.SYS_USR US
+                {database}.dbo.SYS_USR US
             ON
-            SC.C1_SOLICIT = US.USR_CODIGO 
+                SC.C1_SOLICIT = US.USR_CODIGO AND US.D_E_L_E_T_ <> '*'
             WHERE 
                 SC.C1_PEDIDO LIKE '{numero_pedido}%'
                 AND SC.C1_NUM LIKE '%{numero_sc}'
@@ -614,17 +614,17 @@ class ComprasApp(QWidget):
             ON 
                 SC.C1_PEDIDO = PC.C7_NUM AND SC.C1_ITEMPED = PC.C7_ITEM AND SC.C1_ZZNUMQP = PC.C7_ZZNUMQP
             LEFT JOIN
-            {database}.dbo.SA2010 FORN
+                {database}.dbo.SA2010 FORN
             ON
-            FORN.A2_COD = SC.C1_FORNECE
+                FORN.A2_COD = SC.C1_FORNECE
             LEFT JOIN
-            {database}.dbo.NNR010 ARM
+                {database}.dbo.NNR010 ARM
             ON
-            SC.C1_LOCAL = ARM.NNR_CODIGO
+                SC.C1_LOCAL = ARM.NNR_CODIGO
             LEFT JOIN 
-            {database}.dbo.SYS_USR US
+                {database}.dbo.SYS_USR US
             ON
-            SC.C1_SOLICIT = US.USR_CODIGO 
+                SC.C1_SOLICIT = US.USR_CODIGO AND US.D_E_L_E_T_ <> '*'
             WHERE 
                 SC.C1_PEDIDO LIKE '{numero_pedido}%'
                 AND SC.C1_NUM LIKE '%{numero_sc}'
