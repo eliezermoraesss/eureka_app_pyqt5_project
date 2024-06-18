@@ -23,7 +23,7 @@ class ConsultaApp(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("EUREKA® ENGENHARIA - v0.1")
+        self.setWindowTitle("EUREKA® ENGENHARIA - v0.2")
 
         # Configurar o ícone da janela
         icon_path = "010.png"
@@ -75,16 +75,16 @@ class ConsultaApp(QWidget):
                 margin-bottom: 6px;
             }
             
-            QPushButton#PCP {
+            QPushButton#PCP, QPushButton#compras {
                 background-color: #DC5F00;
             }
             
-            QPushButton:hover, QPushButton#PCP:hover {
+            QPushButton:hover, QPushButton#PCP:hover, QPushButton#compras:hover {
                 background-color: #fff;
                 color: #0a79f8
             }
 
-            QPushButton:pressed, QPushButton#PCP:pressed {
+            QPushButton:pressed, QPushButton#PCP:pressed, QPushButton#compras:pressed {
                 background-color: #6703c5;
                 color: #fff;
             }
@@ -150,6 +150,11 @@ class ConsultaApp(QWidget):
         self.btn_abrir_pcp.setObjectName("PCP")
         self.btn_abrir_pcp.clicked.connect(self.abrir_modulo_pcp)
         self.btn_abrir_pcp.setMinimumWidth(100)
+
+        self.btn_abrir_compras = QPushButton("Compras", self)
+        self.btn_abrir_compras.setObjectName("compras")
+        self.btn_abrir_compras.clicked.connect(self.abrir_modulo_compras)
+        self.btn_abrir_compras.setMinimumWidth(100)
 
         self.btn_consultar_estrutura = QPushButton("Consultar Estrutura", self)
         self.btn_consultar_estrutura.clicked.connect(self.executar_consulta_estrutura)
@@ -245,6 +250,7 @@ class ConsultaApp(QWidget):
 
         layout_linha_03.addWidget(self.btn_consultar)
         layout_linha_03.addWidget(self.btn_abrir_pcp)
+        layout_linha_03.addWidget(self.btn_abrir_compras)
         layout_linha_03.addWidget(self.btn_consultar_estrutura)
         layout_linha_03.addWidget(self.btn_onde_e_usado)
         layout_linha_03.addWidget(self.btn_limpar)
@@ -292,6 +298,11 @@ class ConsultaApp(QWidget):
     def abrir_modulo_pcp(self):
         script_dir = os.path.dirname(os.path.abspath(__file__))
         script_path = os.path.join(script_dir, 'pcp_model.pyw')
+        self.process.start("python", [script_path])
+
+    def abrir_modulo_compras(self):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        script_path = os.path.join(script_dir, 'compras_model.pyw')
         self.process.start("python", [script_path])
 
     def criar_botao_limpar(self, campo):
