@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButto
     QTableWidgetItem, QHeaderView, QSizePolicy, QSpacerItem, QMessageBox, QFileDialog, QToolButton, QTabWidget, \
     QItemDelegate, QAbstractItemView, QCheckBox
 from PyQt5.QtGui import QFont, QIcon, QDesktopServices, QColor
-from PyQt5.QtCore import Qt, QUrl, QCoreApplication, pyqtSignal
+from PyQt5.QtCore import Qt, QUrl, QCoreApplication, pyqtSignal, QProcess
 import pyodbc
 import pyperclip
 import os
@@ -36,6 +36,7 @@ class ConsultaApp(QWidget):
         self.setPalette(palette)
 
         self.nova_janela = None  # Adicione esta linha
+        self.process = QProcess(self)
 
         self.tabWidget = QTabWidget(self)  # Adicione um QTabWidget ao layout principal
         self.tabWidget.setTabsClosable(True)  # Adicione essa linha para permitir o fechamento de guias
@@ -73,17 +74,21 @@ class ConsultaApp(QWidget):
                 margin-top: 6px;
                 margin-bottom: 6px;
             }
-
-            QPushButton:hover {
+            
+            QPushButton#PCP {
+                background-color: #DC5F00;
+            }
+            
+            QPushButton:hover, QPushButton#PCP:hover {
                 background-color: #fff;
                 color: #0a79f8
             }
 
-            QPushButton:pressed {
+            QPushButton:pressed, QPushButton#PCP:pressed {
                 background-color: #6703c5;
                 color: #fff;
             }
-
+            
             QTableWidget {
                 border: 1px solid #000000;
                 background-color: #363636;
@@ -140,6 +145,11 @@ class ConsultaApp(QWidget):
         self.btn_consultar = QPushButton("Pesquisar", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setMinimumWidth(100)
+
+        self.btn_abrir_pcp = QPushButton("PCP", self)
+        self.btn_abrir_pcp.setObjectName("PCP")
+        self.btn_abrir_pcp.clicked.connect(self.abrir_modulo_pcp)
+        self.btn_abrir_pcp.setMinimumWidth(100)
 
         self.btn_consultar_estrutura = QPushButton("Consultar Estrutura", self)
         self.btn_consultar_estrutura.clicked.connect(self.executar_consulta_estrutura)
@@ -234,6 +244,7 @@ class ConsultaApp(QWidget):
         layout_linha_03.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
         layout_linha_03.addWidget(self.btn_consultar)
+        layout_linha_03.addWidget(self.btn_abrir_pcp)
         layout_linha_03.addWidget(self.btn_consultar_estrutura)
         layout_linha_03.addWidget(self.btn_onde_e_usado)
         layout_linha_03.addWidget(self.btn_limpar)
@@ -277,6 +288,11 @@ class ConsultaApp(QWidget):
             ctypes.windll.user32.MessageBoxW(0, f"Ocorreu um erro ao ler o arquivo:", "CADASTRO DE ESTRUTURA - TOTVS®",
                                              16 | 0)
             sys.exit()
+
+    def abrir_modulo_pcp(self):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        script_path = os.path.join(script_dir, 'pcp_model.pyw')
+        self.process.start("python", [script_path])
 
     def criar_botao_limpar(self, campo):
         botao_limpar = QToolButton(self)
