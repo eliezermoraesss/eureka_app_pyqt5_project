@@ -2,7 +2,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, \
     QTableWidgetItem, QHeaderView, QSizePolicy, QSpacerItem, QMessageBox, QFileDialog, QToolButton, QTabWidget, \
-    QItemDelegate, QAbstractItemView, QCheckBox
+    QItemDelegate, QAbstractItemView, QCheckBox, QMenu, QAction
 from PyQt5.QtGui import QFont, QIcon, QDesktopServices, QColor
 from PyQt5.QtCore import Qt, QUrl, QCoreApplication, pyqtSignal, QProcess
 import pyodbc
@@ -140,8 +140,6 @@ class ConsultaApp(QWidget):
         self.grupo_var.setFont(QFont(fonte, tamanho_fonte))
         self.grupo_desc_var.setFont(QFont(fonte, tamanho_fonte))
 
-        self.configurar_campos()
-
         self.btn_consultar = QPushButton("Pesquisar", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setMinimumWidth(100)
@@ -249,8 +247,6 @@ class ConsultaApp(QWidget):
         layout_linha_03.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
         layout_linha_03.addWidget(self.btn_consultar)
-        layout_linha_03.addWidget(self.btn_abrir_pcp)
-        layout_linha_03.addWidget(self.btn_abrir_compras)
         layout_linha_03.addWidget(self.btn_consultar_estrutura)
         layout_linha_03.addWidget(self.btn_onde_e_usado)
         layout_linha_03.addWidget(self.btn_limpar)
@@ -258,6 +254,8 @@ class ConsultaApp(QWidget):
         layout_linha_03.addWidget(self.btn_abrir_desenho)
         layout_linha_03.addWidget(self.btn_exportar_excel)
         layout_linha_03.addWidget(self.btn_calculo_peso)
+        layout_linha_03.addWidget(self.btn_abrir_pcp)
+        layout_linha_03.addWidget(self.btn_abrir_compras)
         layout_linha_03.addWidget(self.btn_fechar)
 
         # Adicione um espaçador esticável para centralizar os botões
@@ -275,6 +273,7 @@ class ConsultaApp(QWidget):
 
         self.guias_abertas = []
         self.guias_abertas_onde_usado = []
+        self.guias_abertas_saldo = []
 
     def setup_mssql(self):
         caminho_do_arquivo = r"\\192.175.175.4\f\INTEGRANTES\ELIEZER\PROJETO SOLIDWORKS TOTVS\libs-python\user-password-mssql\USER_PASSWORD_MSSQL_PROD.txt"
@@ -343,16 +342,6 @@ class ConsultaApp(QWidget):
             data.append(row_data)
         return data
 
-    def configurar_campos(self):
-        self.codigo_var
-        self.descricao_var
-        self.descricao2_var
-        self.tipo_var
-        self.um_var
-        self.armazem_var
-        self.grupo_var
-        self.grupo_desc_var
-
     def configurar_tabela(self):
         self.tree = QTableWidget(self)
         self.tree.setColumnCount(15)
@@ -381,6 +370,45 @@ class ConsultaApp(QWidget):
         # Redimensionar a última coluna para preencher o espaço restante
         self.tree.horizontalHeader().setStretchLastSection(True)
 
+        self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tree.customContextMenuRequested.connect(self.showContextMenu)
+
+    def showContextMenu(self, position):
+        indexes = self.tree.selectedIndexes()
+        if indexes:
+            # Obtém o índice do item clicado
+            index = self.tree.indexAt(position)
+            if not index.isValid():
+                return
+
+            # Seleciona a linha inteira
+            self.tree.selectRow(index.row())
+
+            menu = QMenu()
+
+            context_menu_abrir_desenho = QAction('Abrir desenho...', self)
+            context_menu_abrir_desenho.triggered.connect(lambda: self.abrir_desenho())
+
+            context_menu_consultar_estrutura = QAction('Consultar estrutura...', self)
+            context_menu_consultar_estrutura.triggered.connect(lambda: self.executar_consulta_estrutura())
+
+            context_menu_consultar_onde_usado = QAction('Onde é usado?', self)
+            context_menu_consultar_onde_usado.triggered.connect(lambda: self.executar_consulta_onde_usado())
+
+            context_menu_saldo_estoque = QAction('Saldo em estoque...', self)
+            context_menu_saldo_estoque.triggered.connect(lambda: self.executar_saldo_em_estoque())
+
+            context_menu_nova_janela = QAction('Nova janela', self)
+            context_menu_nova_janela.triggered.connect(lambda: self.abrir_nova_janela())
+
+            menu.addAction(context_menu_abrir_desenho)
+            menu.addAction(context_menu_consultar_estrutura)
+            menu.addAction(context_menu_consultar_onde_usado)
+            menu.addAction(context_menu_saldo_estoque)
+            menu.addAction(context_menu_nova_janela)
+
+            menu.exec_(self.tree.viewport().mapToGlobal(position))
+
     def configurar_tabela_tooltips(self):
         headers = ["CÓDIGO", "DESCRIÇÃO", "DESC. COMP.", "TIPO", "UM", "ARMAZÉM", "GRUPO", "DESC. GRUPO", "CC",
                    "BLOQUEADO?", "REV."]
@@ -388,9 +416,11 @@ class ConsultaApp(QWidget):
             "Código do produto",
             "Descrição do produto",
             "Descrição completa do produto",
-            "Tipo de produto\n\nMC - Material de consumo\nMP - Matéria-prima\nPA - Produto Acabado\nPI - Produto Intermediário\nSV - Serviço",
+            "Tipo de produto\n\nMC - Material de consumo\nMP - Matéria-prima\nPA - Produto Acabado\nPI - Produto "
+            "Intermediário\nSV - Serviço",
             "Unidade de medida",
-            "Armazém padrão\n\n01 - Matéria-prima\n02 - Produto Intermediário\n03 - Produto Comercial\n04 - Produto Acabado",
+            "Armazém padrão\n\n01 - Matéria-prima\n02 - Produto Intermediário\n03 - Produto Comercial\n04 - Produto "
+            "Acabado",
             "Grupo do produto",
             "Descrição do grupo do produto",
             "Centro de custo",
@@ -495,7 +525,8 @@ class ConsultaApp(QWidget):
         if codigo == '' and descricao == '' and descricao2 == '' and tipo == '' and um == '' and armazem == '' and grupo == '' and desc_grupo == '':
             self.btn_consultar.setEnabled(False)
             self.exibir_mensagem("ATENÇÃO!",
-                                 "Os campos de pesquisa estão vazios.\nPreencha algum campo e tente novamente.\n\nツ\n\nSMARTPLIC®",
+                                 "Os campos de pesquisa estão vazios.\nPreencha algum campo e tente "
+                                 "novamente.\n\nツ\n\nSMARTPLIC®",
                                  "info")
             return True
 
@@ -624,7 +655,10 @@ class ConsultaApp(QWidget):
             # Utilize try/except para contornar esse problema.
             except ValueError:
                 codigo_guia_fechada = self.tabWidget.tabText(index).split(' - ')[1]
-                self.guias_abertas_onde_usado.remove(codigo_guia_fechada)
+                try:
+                    self.guias_abertas_onde_usado.remove(codigo_guia_fechada)
+                except ValueError:
+                    self.guias_abertas_saldo.remove(codigo_guia_fechada)
 
             finally:
                 self.tabWidget.removeTab(index)
@@ -679,7 +713,8 @@ class ConsultaApp(QWidget):
                     # Tornar a tabela somente leitura
                     tree_estrutura.setEditTriggers(QTableWidget.NoEditTriggers)
 
-                    # Permitir edição apenas na coluna "Quantidade" (assumindo que "Quantidade" é a terceira coluna, índice 2)
+                    # Permitir edição apenas na coluna "Quantidade" (assumindo que "Quantidade" é a terceira coluna,
+                    # índice 2)
                     tree_estrutura.setEditTriggers(QAbstractItemView.DoubleClicked)
                     tree_estrutura.setItemDelegateForColumn(2, QItemDelegate(tree_estrutura))
 
@@ -800,7 +835,8 @@ class ConsultaApp(QWidget):
             else:
                 ctypes.windll.user32.MessageBoxW(
                     0,
-                    "QUANTIDADE INVÁLIDA\n\nOs valores devem ser números, não nulos, sem espaços em branco e maiores que zero.\nPor favor, corrija tente novamente!",
+                    "QUANTIDADE INVÁLIDA\n\nOs valores devem ser números, não nulos, sem espaços em branco e maiores "
+                    "que zero.\nPor favor, corrija tente novamente!",
                     "SMARTPLIC®", 48 | 0)
 
     def executar_consulta_onde_usado(self):
@@ -911,6 +947,131 @@ class ConsultaApp(QWidget):
                 finally:
                     self.tabWidget.setCurrentIndex(self.tabWidget.indexOf(nova_guia_estrutura))
                     conn_estrutura.close()
+
+    def executar_saldo_em_estoque(self):
+        item_selecionado = self.tree.currentItem()
+
+        if item_selecionado:
+            codigo = self.tree.item(item_selecionado.row(), 0).text()
+            descricao_onde_usado = self.tree.item(item_selecionado.row(), 1).text()
+
+            if codigo not in self.guias_abertas_saldo:
+                query_saldo = f"""
+                    SELECT 
+                        B2_COD AS "Código",
+                        PROD.B1_DESC AS "Descrição",
+                        PROD.B1_UM AS "Unid. Med.",
+                        B2_QATU AS "Saldo Atual",
+                        EST.B2_QATU - EST.B2_QEMP AS "Qtd. Disponível",
+                        B2_QEMP AS "Qtd. Empenhada",
+                        B2_SALPEDI AS "Qtd. Prev. Entrada",
+                        B2_DMOV AS "Dt. Últ. Mov.", 
+                        B2_HMOV AS "Hora Últ. Mov.",
+                        B2_VATU1 AS "Valor Saldo Atual (R$)", 
+                        B2_CM1 AS "Custo Unit. (R$)",
+                        B2_DINVENT AS "Dt. Últ. Inventário"
+                    FROM 
+                        {database}.dbo.SB2010 EST
+                    INNER JOIN
+                        {database}.dbo.SB1010 PROD
+                    ON
+                        PROD.B1_COD = EST.B2_COD 
+                    WHERE 
+                        B2_COD = '{codigo}%';
+                """
+                self.guias_abertas_saldo.append(codigo)
+                try:
+                    conn_saldo = pyodbc.connect(
+                        f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}')
+
+                    cursor_saldo_estoque = conn_saldo.cursor()
+                    cursor_saldo_estoque.execute(query_saldo)
+
+                    nova_guia_saldo = QWidget()
+                    layout_nova_guia_estrutura = QVBoxLayout()
+                    layout_cabecalho = QHBoxLayout()
+
+                    tabela_saldo_estoque = QTableWidget(nova_guia_saldo)
+                    tabela_saldo_estoque.setColumnCount(len(cursor_saldo_estoque.description))
+                    tabela_saldo_estoque.setHorizontalHeaderLabels([desc[0] for desc in cursor_saldo_estoque.description])
+
+                    # Tornar a tabela somente leitura
+                    tabela_saldo_estoque.setEditTriggers(QTableWidget.NoEditTriggers)
+
+                    # Configurar a fonte da tabela
+                    fonte_tabela = QFont("Segoe UI", 8)  # Substitua por sua fonte desejada e tamanho
+                    tabela_saldo_estoque.setFont(fonte_tabela)
+
+                    # Ajustar a altura das linhas
+                    altura_linha = 22  # Substitua pelo valor desejado
+                    tabela_saldo_estoque.verticalHeader().setDefaultSectionSize(altura_linha)
+
+                    for i, row in enumerate(cursor_saldo_estoque.fetchall()):
+                        tabela_saldo_estoque.insertRow(i)
+                        for j, value in enumerate(row):
+                            valor_formatado = str(value).strip()
+
+                            item = QTableWidgetItem(valor_formatado)
+                            tabela_saldo_estoque.setItem(i, j, item)
+
+                    tabela_saldo_estoque.setSortingEnabled(True)
+
+                    # Ajustar automaticamente a largura da coluna "Descrição"
+                    self.ajustar_largura_coluna_descricao(tabela_saldo_estoque)
+
+                    layout_cabecalho.addWidget(QLabel(f'Onde é usado?\n\n{codigo} - {descricao_onde_usado}'),
+                                               alignment=Qt.AlignLeft)
+                    layout_nova_guia_estrutura.addLayout(layout_cabecalho)
+                    layout_nova_guia_estrutura.addWidget(tabela_saldo_estoque)
+                    nova_guia_saldo.setLayout(layout_nova_guia_estrutura)
+
+                    nova_guia_saldo.setStyleSheet("""                                           
+                        * {
+                            background-color: #262626;
+                        }
+
+                        QLabel {
+                            color: #A7A6A6;
+                            font-size: 18px;
+                            font-weight: bold;
+                        }
+
+                        QTableWidget {
+                            border: 1px solid #000000;
+                        }
+
+                        QTableWidget QHeaderView::section {
+                            background-color: #575a5f;
+                            color: #fff;
+                            padding: 5px;
+                            height: 18px;
+                        }
+
+                        QTableWidget QHeaderView::section:horizontal {
+                            border-top: 1px solid #333;
+                        }
+
+                        QTableWidget::item:selected {
+                            background-color: #0066ff;
+                            color: #fff;
+                            font-weight: bold;
+                        }        
+                    """)
+
+                    if not self.existe_guias_abertas():
+                        # Se não houver guias abertas, adicione a guia ao layout principal
+                        self.layout().addWidget(self.tabWidget)
+                        self.tabWidget.setVisible(True)
+
+                    self.tabWidget.addTab(nova_guia_saldo, f"Onde é usado? - {codigo}")
+                    tabela_saldo_estoque.itemDoubleClicked.connect(self.copiar_linha)
+
+                except pyodbc.Error as ex:
+                    print(f"Falha na consulta de estrutura. Erro: {str(ex)}")
+
+                finally:
+                    self.tabWidget.setCurrentIndex(self.tabWidget.indexOf(nova_guia_saldo))
+                    conn_saldo.close()
 
 
 if __name__ == "__main__":
