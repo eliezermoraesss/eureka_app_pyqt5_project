@@ -14,6 +14,7 @@ import ctypes
 from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
+import locale
 
 
 class ConsultaApp(QWidget):
@@ -24,6 +25,8 @@ class ConsultaApp(QWidget):
         super().__init__()
 
         self.setWindowTitle("EUREKA® ENGENHARIA - v0.2")
+
+        locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
         # Configurar o ícone da janela
         icon_path = "010.png"
@@ -398,7 +401,7 @@ class ConsultaApp(QWidget):
             context_menu_saldo_estoque = QAction('Saldo em estoque...', self)
             context_menu_saldo_estoque.triggered.connect(lambda: self.executar_saldo_em_estoque())
 
-            context_menu_nova_janela = QAction('Nova janela', self)
+            context_menu_nova_janela = QAction('Nova janela...', self)
             context_menu_nova_janela.triggered.connect(lambda: self.abrir_nova_janela())
 
             menu.addAction(context_menu_abrir_desenho)
@@ -700,7 +703,7 @@ class ConsultaApp(QWidget):
                         f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}')
 
                     cursor_estrutura = conn_estrutura.cursor()
-                    cursor_estrutura.execute(select_query_estrutura)
+                    resultado = cursor_estrutura.execute(select_query_estrutura)
 
                     nova_guia_estrutura = QWidget()
                     layout_nova_guia_estrutura = QVBoxLayout()
@@ -726,7 +729,7 @@ class ConsultaApp(QWidget):
                     altura_linha = 22  # Substitua pelo valor desejado
                     tree_estrutura.verticalHeader().setDefaultSectionSize(altura_linha)
 
-                    for i, row in enumerate(cursor_estrutura.fetchall()):
+                    for i, row in enumerate(resultado.fetchall()):
                         tree_estrutura.insertRow(i)
                         for j, value in enumerate(row):
                             if j == 2:
@@ -953,22 +956,20 @@ class ConsultaApp(QWidget):
 
         if item_selecionado:
             codigo = self.tree.item(item_selecionado.row(), 0).text()
-            descricao_onde_usado = self.tree.item(item_selecionado.row(), 1).text()
+            descricao = self.tree.item(item_selecionado.row(), 1).text()
 
             if codigo not in self.guias_abertas_saldo:
                 query_saldo = f"""
                     SELECT 
-                        B2_COD AS "Código",
-                        PROD.B1_DESC AS "Descrição",
-                        PROD.B1_UM AS "Unid. Med.",
                         B2_QATU AS "Saldo Atual",
                         EST.B2_QATU - EST.B2_QEMP AS "Qtd. Disponível",
                         B2_QEMP AS "Qtd. Empenhada",
                         B2_SALPEDI AS "Qtd. Prev. Entrada",
-                        B2_DMOV AS "Dt. Últ. Mov.", 
-                        B2_HMOV AS "Hora Últ. Mov.",
+                        PROD.B1_UM AS "Unid. Med.",
                         B2_VATU1 AS "Valor Saldo Atual (R$)", 
                         B2_CM1 AS "Custo Unit. (R$)",
+                        B2_DMOV AS "Dt. Últ. Mov.", 
+                        B2_HMOV AS "Hora Últ. Mov.",
                         B2_DINVENT AS "Dt. Últ. Inventário"
                     FROM 
                         {database}.dbo.SB2010 EST
@@ -977,7 +978,7 @@ class ConsultaApp(QWidget):
                     ON
                         PROD.B1_COD = EST.B2_COD 
                     WHERE 
-                        B2_COD = '{codigo}%';
+                        B2_COD = '{codigo}';
                 """
                 self.guias_abertas_saldo.append(codigo)
                 try:
@@ -988,42 +989,49 @@ class ConsultaApp(QWidget):
                     cursor_saldo_estoque.execute(query_saldo)
 
                     nova_guia_saldo = QWidget()
-                    layout_nova_guia_estrutura = QVBoxLayout()
+                    layout_nova_guia_saldo = QVBoxLayout()
                     layout_cabecalho = QHBoxLayout()
 
                     tabela_saldo_estoque = QTableWidget(nova_guia_saldo)
                     tabela_saldo_estoque.setColumnCount(len(cursor_saldo_estoque.description))
                     tabela_saldo_estoque.setHorizontalHeaderLabels([desc[0] for desc in cursor_saldo_estoque.description])
 
+                    tabela_saldo_estoque.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+
                     # Tornar a tabela somente leitura
                     tabela_saldo_estoque.setEditTriggers(QTableWidget.NoEditTriggers)
 
-                    # Configurar a fonte da tabela
-                    fonte_tabela = QFont("Segoe UI", 8)  # Substitua por sua fonte desejada e tamanho
+                    # Configurar a fonte da tabela1
+                    fonte_tabela = QFont("Segoe UI", 10)  # Substitua por sua fonte desejada e tamanho
                     tabela_saldo_estoque.setFont(fonte_tabela)
 
                     # Ajustar a altura das linhas
-                    altura_linha = 22  # Substitua pelo valor desejado
+                    altura_linha = 20  # Substitua pelo valor desejado
                     tabela_saldo_estoque.verticalHeader().setDefaultSectionSize(altura_linha)
 
                     for i, row in enumerate(cursor_saldo_estoque.fetchall()):
                         tabela_saldo_estoque.insertRow(i)
                         for j, value in enumerate(row):
-                            valor_formatado = str(value).strip()
 
+                            if j in (0, 1, 2, 3, 5, 6):
+                                value = locale.format_string("%.2f", value, grouping=True)
+
+                            elif j in (7, 9) and not value.isspace():
+                                data_obj = datetime.strptime(value, "%Y%m%d")
+                                value = data_obj.strftime("%d/%m/%Y")
+
+                            valor_formatado = str(value).strip()
                             item = QTableWidgetItem(valor_formatado)
+                            item.setTextAlignment(Qt.AlignCenter)
                             tabela_saldo_estoque.setItem(i, j, item)
 
                     tabela_saldo_estoque.setSortingEnabled(True)
 
-                    # Ajustar automaticamente a largura da coluna "Descrição"
-                    self.ajustar_largura_coluna_descricao(tabela_saldo_estoque)
-
-                    layout_cabecalho.addWidget(QLabel(f'Onde é usado?\n\n{codigo} - {descricao_onde_usado}'),
+                    layout_cabecalho.addWidget(QLabel(f'Saldos em Estoque\n\n{codigo} - {descricao}'),
                                                alignment=Qt.AlignLeft)
-                    layout_nova_guia_estrutura.addLayout(layout_cabecalho)
-                    layout_nova_guia_estrutura.addWidget(tabela_saldo_estoque)
-                    nova_guia_saldo.setLayout(layout_nova_guia_estrutura)
+                    layout_nova_guia_saldo.addLayout(layout_cabecalho)
+                    layout_nova_guia_saldo.addWidget(tabela_saldo_estoque)
+                    nova_guia_saldo.setLayout(layout_nova_guia_saldo)
 
                     nova_guia_saldo.setStyleSheet("""                                           
                         * {
@@ -1063,7 +1071,7 @@ class ConsultaApp(QWidget):
                         self.layout().addWidget(self.tabWidget)
                         self.tabWidget.setVisible(True)
 
-                    self.tabWidget.addTab(nova_guia_saldo, f"Onde é usado? - {codigo}")
+                    self.tabWidget.addTab(nova_guia_saldo, f"Saldos em Estoque - {codigo}")
                     tabela_saldo_estoque.itemDoubleClicked.connect(self.copiar_linha)
 
                 except pyodbc.Error as ex:
