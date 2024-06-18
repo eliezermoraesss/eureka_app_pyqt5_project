@@ -121,6 +121,8 @@ class ConsultaApp(QWidget):
             }
         """)
 
+        self.configurar_tabela()
+
         self.codigo_var = QLineEdit(self)
         self.descricao_var = QLineEdit(self)
         self.descricao2_var = QLineEdit(self)
@@ -176,7 +178,7 @@ class ConsultaApp(QWidget):
         self.btn_nova_janela.setMinimumWidth(100)
 
         self.btn_abrir_desenho = QPushButton("Abrir Desenho", self)
-        self.btn_abrir_desenho.clicked.connect(self.abrir_desenho)
+        self.btn_abrir_desenho.clicked.connect(lambda: self.abrir_desenho(self.tree))
         self.btn_abrir_desenho.setMinimumWidth(100)
 
         self.btn_exportar_excel = QPushButton("Exportar Excel", self)
@@ -191,8 +193,6 @@ class ConsultaApp(QWidget):
         self.btn_fechar = QPushButton("Fechar", self)
         self.btn_fechar.clicked.connect(self.fechar_janela)
         self.btn_fechar.setMinimumWidth(100)
-
-        self.configurar_tabela()
 
         # Configurar a tabela
         self.configurar_tabela_tooltips()
@@ -374,23 +374,23 @@ class ConsultaApp(QWidget):
         self.tree.horizontalHeader().setStretchLastSection(True)
 
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.tree.customContextMenuRequested.connect(self.showContextMenu)
+        self.tree.customContextMenuRequested.connect(lambda pos: self.showContextMenu(pos, self.tree))
 
-    def showContextMenu(self, position):
-        indexes = self.tree.selectedIndexes()
+    def showContextMenu(self, position, table):
+        indexes = table.selectedIndexes()
         if indexes:
             # Obtém o índice do item clicado
-            index = self.tree.indexAt(position)
+            index = table.indexAt(position)
             if not index.isValid():
                 return
 
             # Seleciona a linha inteira
-            self.tree.selectRow(index.row())
+            table.selectRow(index.row())
 
             menu = QMenu()
 
             context_menu_abrir_desenho = QAction('Abrir desenho...', self)
-            context_menu_abrir_desenho.triggered.connect(lambda: self.abrir_desenho())
+            context_menu_abrir_desenho.triggered.connect(lambda: self.abrir_desenho(table))
 
             context_menu_consultar_estrutura = QAction('Consultar estrutura...', self)
             context_menu_consultar_estrutura.triggered.connect(lambda: self.executar_consulta_estrutura())
@@ -410,7 +410,7 @@ class ConsultaApp(QWidget):
             menu.addAction(context_menu_saldo_estoque)
             menu.addAction(context_menu_nova_janela)
 
-            menu.exec_(self.tree.viewport().mapToGlobal(position))
+            menu.exec_(table.viewport().mapToGlobal(position))
 
     def configurar_tabela_tooltips(self):
         headers = ["CÓDIGO", "DESCRIÇÃO", "DESC. COMP.", "TIPO", "UM", "ARMAZÉM", "GRUPO", "DESC. GRUPO", "CC",
@@ -620,11 +620,11 @@ class ConsultaApp(QWidget):
             # Fechar a conexão com o banco de dados
             conn.close()
 
-    def abrir_desenho(self):
-        item_selecionado = self.tree.currentItem()
+    def abrir_desenho(self, table):
+        item_selecionado = table.currentItem()
 
         if item_selecionado:
-            codigo = self.tree.item(item_selecionado.row(), 0).text()
+            codigo = table.item(item_selecionado.row(), 0).text()
             pdf_path = os.path.join(r"\\192.175.175.4\dados\EMPRESA\PROJETOS\PDF-OFICIAL", f"{codigo}.PDF")
             pdf_path = os.path.normpath(pdf_path)
 
@@ -710,6 +710,10 @@ class ConsultaApp(QWidget):
                     layout_cabecalho = QHBoxLayout()
 
                     tree_estrutura = QTableWidget(nova_guia_estrutura)
+
+                    tree_estrutura.setContextMenuPolicy(Qt.CustomContextMenu)
+                    tree_estrutura.customContextMenuRequested.connect(lambda pos: self.showContextMenu(pos, tree_estrutura))
+
                     tree_estrutura.setColumnCount(len(cursor_estrutura.description))
                     tree_estrutura.setHorizontalHeaderLabels([desc[0] for desc in cursor_estrutura.description])
 
