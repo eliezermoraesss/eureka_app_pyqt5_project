@@ -645,7 +645,7 @@ class PcpApp(QWidget):
                     self.tree.setItem(i, j, item)
 
                 self.progress_bar.setValue(i + 1)
-                QCoreApplication.processEvents()
+                # QCoreApplication.processEvents()
 
             self.layout_buttons.removeWidget(self.btn_parar_consulta)
             self.btn_parar_consulta.setParent(None)
