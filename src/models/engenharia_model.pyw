@@ -82,6 +82,10 @@ class ConsultaApp(QWidget):
                 background-color: #DC5F00;
             }
             
+            QPushButton#compras {
+                background-color: #836FFF;
+            }
+            
             QPushButton:hover, QPushButton#PCP:hover, QPushButton#compras:hover {
                 background-color: #fff;
                 color: #0a79f8
@@ -279,7 +283,8 @@ class ConsultaApp(QWidget):
         self.guias_abertas_saldo = []
 
     def setup_mssql(self):
-        caminho_do_arquivo = r"\\192.175.175.4\f\INTEGRANTES\ELIEZER\PROJETO SOLIDWORKS TOTVS\libs-python\user-password-mssql\USER_PASSWORD_MSSQL_PROD.txt"
+        caminho_do_arquivo = (r"\\192.175.175.4\f\INTEGRANTES\ELIEZER\PROJETO SOLIDWORKS "
+                              r"TOTVS\libs-python\user-password-mssql\USER_PASSWORD_MSSQL_PROD.txt")
         try:
             with open(caminho_do_arquivo, 'r') as arquivo:
                 string_lida = arquivo.read()
@@ -288,7 +293,9 @@ class ConsultaApp(QWidget):
 
         except FileNotFoundError:
             ctypes.windll.user32.MessageBoxW(0,
-                                             f"Erro ao ler credenciais de acesso ao banco de dados MSSQL.\n\nBase de dados ERP TOTVS PROTHEUS.\n\nPor favor, informe ao desenvolvedor/TI sobre o erro exibido.\n\nTenha um bom dia! ツ",
+                                             f"Erro ao ler credenciais de acesso ao banco de dados MSSQL.\n\nBase de "
+                                             f"dados ERP TOTVS PROTHEUS.\n\nPor favor, informe ao desenvolvedor/TI "
+                                             f"sobre o erro exibido.\n\nTenha um bom dia! ツ",
                                              "CADASTRO DE ESTRUTURA - TOTVS®", 16 | 0)
             sys.exit()
 
@@ -350,7 +357,7 @@ class ConsultaApp(QWidget):
         self.tree.setColumnCount(15)
         self.tree.setHorizontalHeaderLabels(
             ["CÓDIGO", "DESCRIÇÃO", "DESC. COMP.", "TIPO", "UM", "ARMAZÉM", "GRUPO", "DESC. GRUPO", "CC", "BLOQUEADO?",
-             "REV.", "DATA CADASTRO", "DATA ULT. REV.", "LOCALIZ." , ""])
+             "REV.", "DATA CADASTRO", "DATA ULT. REV.", "LOCALIZ.", ""])
         self.tree.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.tree.setEditTriggers(QTableWidget.NoEditTriggers)
         self.tree.setSelectionBehavior(QTableWidget.SelectRows)
@@ -389,19 +396,19 @@ class ConsultaApp(QWidget):
 
             menu = QMenu()
 
-            context_menu_abrir_desenho = QAction('Abrir desenho...', self)
+            context_menu_abrir_desenho = QAction('Abrir desenho', self)
             context_menu_abrir_desenho.triggered.connect(lambda: self.abrir_desenho(table))
 
-            context_menu_consultar_estrutura = QAction('Consultar estrutura...', self)
+            context_menu_consultar_estrutura = QAction('Consultar estrutura', self)
             context_menu_consultar_estrutura.triggered.connect(lambda: self.executar_consulta_estrutura(table))
 
             context_menu_consultar_onde_usado = QAction('Onde é usado?', self)
             context_menu_consultar_onde_usado.triggered.connect(lambda: self.executar_consulta_onde_usado(table))
 
-            context_menu_saldo_estoque = QAction('Saldo em estoque...', self)
+            context_menu_saldo_estoque = QAction('Saldo em estoque', self)
             context_menu_saldo_estoque.triggered.connect(lambda: self.executar_saldo_em_estoque(table))
 
-            context_menu_nova_janela = QAction('Nova janela...', self)
+            context_menu_nova_janela = QAction('Nova janela', self)
             context_menu_nova_janela.triggered.connect(lambda: self.abrir_nova_janela())
 
             menu.addAction(context_menu_abrir_desenho)
@@ -607,7 +614,7 @@ class ConsultaApp(QWidget):
                     self.tree.setItem(i, j, item)
 
                 # Permitir que a interface gráfica seja atualizada
-                QCoreApplication.processEvents()
+                # QCoreApplication.processEvents()
 
             self.tree.setSortingEnabled(True)  # Permitir ordenação
 
