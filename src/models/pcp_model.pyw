@@ -591,7 +591,7 @@ class PcpApp(QWidget):
                 self.layout_footer.addWidget(label_line_number)
                 self.progress_bar.setMaximum(line_number)
                 self.layout_footer.addWidget(self.progress_bar)
-                self.layout_buttons.addWidget(self.btn_parar_consulta)
+                # self.layout_buttons.addWidget(self.btn_parar_consulta)
 
                 dataframe.insert(0, 'Status OP', '')
                 dataframe[''] = ''
@@ -647,8 +647,8 @@ class PcpApp(QWidget):
                 self.progress_bar.setValue(i + 1)
                 # QCoreApplication.processEvents()
 
-            self.layout_buttons.removeWidget(self.btn_parar_consulta)
-            self.btn_parar_consulta.setParent(None)
+            # self.layout_buttons.removeWidget(self.btn_parar_consulta)
+            # self.btn_parar_consulta.setParent(None)
             self.tree.setSortingEnabled(True)
             self.controle_campos_formulario(True)
 
