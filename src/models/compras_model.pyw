@@ -198,9 +198,11 @@ class ComprasApp(QWidget):
         self.label_data_inicio = QLabel("Data inicial SC:", self)
         self.label_data_fim = QLabel("Data final SC:", self)
         self.label_armazem = QLabel("Armazém:", self)
-        self.label_fornecedor = QLabel("Fornecedor:", self)
+        self.label_fornecedor = QLabel("Fornecedor Razão Social:", self)
         self.label_fornecedor.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         # self.label_fornecedor.setObjectName("fornecedor")
+        self.label_nm_fantasia_forn = QLabel("Fornecedor Nome Fantasia:", self)
+        self.label_nm_fantasia_forn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.campo_sc = QLineEdit(self)
         self.campo_sc.setFont(QFont(fonte_campos, tamanho_fonte_campos))
@@ -238,11 +240,17 @@ class ComprasApp(QWidget):
         self.campo_OP.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.add_clear_button(self.campo_OP)
 
-        self.campo_fornecedor = QLineEdit(self)
-        self.campo_fornecedor.setFont(QFont(fonte_campos, tamanho_fonte_campos))
-        self.campo_fornecedor.setMaxLength(40)
-        self.campo_fornecedor.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.add_clear_button(self.campo_fornecedor)
+        self.campo_razao_social_fornecedor = QLineEdit(self)
+        self.campo_razao_social_fornecedor.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_razao_social_fornecedor.setMaxLength(40)
+        self.campo_razao_social_fornecedor.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.add_clear_button(self.campo_razao_social_fornecedor)
+
+        self.campo_nm_fantasia_fornecedor = QLineEdit(self)
+        self.campo_nm_fantasia_fornecedor.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_nm_fantasia_fornecedor.setMaxLength(40)
+        self.campo_nm_fantasia_fornecedor.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.add_clear_button(self.campo_nm_fantasia_fornecedor)
 
         self.campo_data_inicio = QDateEdit(self)
         self.campo_data_inicio.setFont(QFont(fonte_campos, tamanho_fonte_campos))
@@ -294,7 +302,8 @@ class ComprasApp(QWidget):
         self.campo_descricao_prod.returnPressed.connect(self.executar_consulta)
         self.campo_qp.returnPressed.connect(self.executar_consulta)
         self.campo_OP.returnPressed.connect(self.executar_consulta)
-        self.campo_fornecedor.returnPressed.connect(self.executar_consulta)
+        self.campo_razao_social_fornecedor.returnPressed.connect(self.executar_consulta)
+        self.campo_nm_fantasia_fornecedor.returnPressed.connect(self.executar_consulta)
 
         layout = QVBoxLayout()
         layout_campos_linha_01 = QHBoxLayout()
@@ -340,18 +349,23 @@ class ComprasApp(QWidget):
 
         container_fornecedor = QVBoxLayout()
         container_fornecedor.addWidget(self.label_fornecedor)
-        container_fornecedor.addWidget(self.campo_fornecedor)
+        container_fornecedor.addWidget(self.campo_razao_social_fornecedor)
+
+        container_nm_fantasia_forn = QVBoxLayout()
+        container_nm_fantasia_forn.addWidget(self.label_nm_fantasia_forn)
+        container_nm_fantasia_forn.addWidget(self.campo_nm_fantasia_fornecedor)
 
         layout_campos_linha_01.addLayout(container_sc)
         layout_campos_linha_01.addLayout(container_pedido)
         layout_campos_linha_01.addLayout(container_op)
         layout_campos_linha_01.addLayout(container_qp)
-        layout_campos_linha_01.addLayout(container_fornecedor)
         layout_campos_linha_01.addLayout(container_codigo)
         layout_campos_linha_01.addLayout(container_descricao_prod)
         layout_campos_linha_02.addLayout(container_data_ini)
         layout_campos_linha_02.addLayout(container_data_fim)
         layout_campos_linha_02.addLayout(container_combobox_armazem)
+        layout_campos_linha_02.addLayout(container_fornecedor)
+        layout_campos_linha_02.addLayout(container_nm_fantasia_forn)
         # layout_campos_linha_01.addStretch()
         layout_campos_linha_02.addStretch()
 
@@ -487,7 +501,8 @@ class ComprasApp(QWidget):
         self.campo_pedido.clear()
         self.campo_codigo.clear()
         self.campo_descricao_prod.clear()
-        self.campo_fornecedor.clear()
+        self.campo_razao_social_fornecedor.clear()
+        self.campo_nm_fantasia_fornecedor.clear()
         self.campo_qp.clear()
         self.campo_OP.clear()
 
@@ -495,7 +510,7 @@ class ComprasApp(QWidget):
         self.campo_sc.setEnabled(status)
         self.campo_codigo.setEnabled(status)
         self.campo_descricao_prod.setEnabled(status)
-        self.campo_fornecedor.setEnabled(status)
+        self.campo_razao_social_fornecedor.setEnabled(status)
         self.campo_qp.setEnabled(status)
         self.campo_OP.setEnabled(status)
         self.campo_data_inicio.setEnabled(status)
@@ -520,8 +535,8 @@ class ComprasApp(QWidget):
 
         root.destroy()
 
-    def numero_linhas_consulta(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op, fornecedor,
-                               descricao_produto, cod_armazem):
+    def numero_linhas_consulta(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op,
+                               razao_social_fornecedor, nome_fantasia_fornecedor, descricao_produto, cod_armazem):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -557,19 +572,20 @@ class ComprasApp(QWidget):
             ON
                 SC.C1_SOLICIT = US.USR_CODIGO AND US.D_E_L_E_T_ <> '*'
             WHERE 
-                SC.C1_PEDIDO LIKE '{numero_pedido}%'
+                SC.C1_PEDIDO LIKE '%{numero_pedido}%'
                 AND SC.C1_NUM LIKE '%{numero_sc}'
                 AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
                 AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
                 AND SC.C1_DESCRI LIKE '{descricao_produto}%'
-                AND SC.C1_OP LIKE '{numero_op}%'
-                AND FORN.A2_NOME LIKE '%{fornecedor}%' 
+                AND SC.C1_OP LIKE '{numero_op}%' 
+                AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}%'
+                AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
                 AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data}
         """
         return query
 
     def query_consulta_followup(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op,
-                                fornecedor, descricao_produto, cod_armazem):
+                                razao_social_fornecedor, nome_fantasia_fornecedor, descricao_produto, cod_armazem):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -634,13 +650,14 @@ class ComprasApp(QWidget):
             ON
                 SC.C1_SOLICIT = US.USR_CODIGO AND US.D_E_L_E_T_ <> '*'
             WHERE 
-                SC.C1_PEDIDO LIKE '{numero_pedido}%'
+                SC.C1_PEDIDO LIKE '%{numero_pedido}%'
                 AND SC.C1_NUM LIKE '%{numero_sc}'
                 AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
                 AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
                 AND SC.C1_DESCRI LIKE '{descricao_produto}%'
                 AND SC.C1_OP LIKE '{numero_op}%' 
-                AND FORN.A2_NOME LIKE '%{fornecedor}%'
+                AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}%'
+                AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
                 AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data}
             ORDER BY 
                 PC.R_E_C_N_O_ DESC;
@@ -654,7 +671,8 @@ class ComprasApp(QWidget):
         numero_qp = self.campo_qp.text().upper().strip()
         numero_op = self.campo_OP.text().upper().strip()
         codigo_produto = self.campo_codigo.text().upper().strip()
-        fornecedor = self.campo_fornecedor.text().upper().strip()
+        razao_social_fornecedor = self.campo_razao_social_fornecedor.text().upper().strip()
+        nome_fantasia_fornecedor = self.campo_nm_fantasia_fornecedor.text().upper().strip()
         descricao_produto = self.campo_descricao_prod.text().upper().strip()
 
         cod_armazem = self.combobox_armazem.currentData()
@@ -662,11 +680,11 @@ class ComprasApp(QWidget):
             cod_armazem = ''
 
         query_consulta_filtro = self.query_consulta_followup(numero_sc, numero_pedido, codigo_produto,
-                                                             numero_qp, numero_op, fornecedor, descricao_produto,
-                                                             cod_armazem)
+                                                             numero_qp, numero_op, razao_social_fornecedor, nome_fantasia_fornecedor,
+                                                             descricao_produto, cod_armazem)
 
         query_contagem_linhas = self.numero_linhas_consulta(numero_sc, numero_pedido, codigo_produto, numero_qp,
-                                                            numero_op, fornecedor, descricao_produto, cod_armazem)
+                                                            numero_op, razao_social_fornecedor, nome_fantasia_fornecedor, descricao_produto, cod_armazem)
 
         self.controle_campos_formulario(False)
         line_number = None
