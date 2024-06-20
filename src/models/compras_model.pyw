@@ -607,7 +607,9 @@ class ComprasApp(QWidget):
                 SC.C1_IMPORT AS "Importado?",
                 PC.C7_OBS AS "Observações",
                 PC.C7_OBSM AS "Observações item",
-                FORN.A2_NOME AS "Fornecedor",
+                FORN.A2_COD AS "Cód. Forn.",
+                FORN.A2_NOME AS "Raz. Soc. Forn.",
+                FORN.A2_NREDUZ AS "Nom. Fantasia Forn.",
                 US.USR_NOME AS "Solicitante"
             FROM 
                 {database}.dbo.SC1010 SC
