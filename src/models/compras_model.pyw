@@ -18,11 +18,14 @@ class ComprasApp(QWidget):
     def __init__(self):
         super().__init__()
 
+        self.setWindowTitle("EUREKA® Compras - v2.0")
+
         self.engine = None
         self.metadata = MetaData()
         self.nnr_table = Table('NNR010', self.metadata, autoload_with=self.engine, schema='dbo')
         self.combobox_armazem = QComboBox(self)
         self.combobox_armazem.setEditable(False)
+        self.combobox_armazem.setObjectName('combobox-armazem')
 
         self.combobox_armazem.addItem("", None)
 
@@ -68,114 +71,6 @@ class ComprasApp(QWidget):
         self.tree.setRowCount(0)
 
         self.nova_janela = None
-
-        self.setWindowTitle("EUREKA® Compras - v0.1")
-
-        self.setStyleSheet("""
-            * {
-                background-color: #373A40;
-            }
-
-            QLabel {
-                color: #EEEEEE;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            
-            QLabel#descricao-produto, QLabel#fornecedor {
-                color: #EEEEEE;
-                font-size: 14px;
-            }
-            
-            QDateEdit, QComboBox {
-                background-color: #FFFFFF;
-                border: 1px solid #262626;
-                margin-bottom: 20px;
-                padding: 5px 10px;
-                border-radius: 10px;
-                height: 24px;
-                font-size: 16px;
-            }
-            
-            QDateEdit::drop-down, QComboBox::drop-down {
-                subcontrol-origin: padding;
-                subcontrol-position: top right;
-                width: 30px;
-                border-left-width: 1px;
-                border-left-color: darkgray;
-                border-left-style: solid;
-                border-top-right-radius: 3px;
-                border-bottom-right-radius: 3px;
-            }
-            
-            QDateEdit::down-arrow, QComboBox::down-arrow {
-                image: url(../resources/images/arrow.png);
-                width: 10px;
-                height: 10px;
-            }
-
-            QLineEdit {
-                background-color: #FFFFFF;
-                border: 1px solid #262626;
-                padding: 5px 10px;
-                border-radius: 10px;
-                height: 24px;
-                font-size: 16px;
-            }
-
-            QPushButton {
-                background-color: #836FFF;
-                color: #EEEEEE;
-                padding: 10px;
-                border: 2px;
-                border-radius: 8px;
-                font-size: 12px;
-                height: 20px;
-                font-weight: bold;
-                margin: 0px 5px 10px 5px;
-            }
-
-            QPushButton:hover {
-                background-color: #E84545;
-                color: #fff
-            }
-
-            QPushButton:pressed {
-                background-color: #6703c5;
-                color: #fff;
-            }
-
-            QTableWidget {
-                border: 1px solid #000000;
-                background-color: #686D76;
-                padding-left: 10px;
-            }
-
-            QTableWidget QHeaderView::section {
-                background-color: #262626;
-                color: #A7A6A6;
-                padding: 5px;
-                height: 18px;
-            }
-
-            QTableWidget QHeaderView::section:horizontal {
-                border-top: 1px solid #333;
-            }
-
-            QTableWidget::item {
-                background-color: #363636;
-                color: #EEEEEE;
-                font-weight: bold;
-                padding-right: 8px;
-                padding-left: 8px;
-            }
-
-            QTableWidget::item:selected {
-                background-color: #000000;
-                color: #EEEEEE;
-                font-weight: bold;
-            }
-        """)
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setMinimum(0)
@@ -382,6 +277,107 @@ class ComprasApp(QWidget):
         layout.addWidget(self.tree)
         layout.addLayout(self.layout_footer)
         self.setLayout(layout)
+
+        self.setStyleSheet("""
+            * {
+                background-color: #373A40;
+            }
+    
+            QLabel {
+                color: #EEEEEE;
+                font-size: 12px;
+                font-weight: bold;
+            }
+    
+            QDateEdit, QComboBox {
+                background-color: #FFFFFF;
+                border: 1px solid #262626;
+                margin-bottom: 20px;
+                padding: 5px 10px;
+                border-radius: 10px;
+                height: 24px;
+                font-size: 16px;
+            }
+    
+            QDateEdit::drop-down, QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 30px;
+                border-left-width: 1px;
+                border-left-color: darkgray;
+                border-left-style: solid;
+                border-top-right-radius: 3px;
+                border-bottom-right-radius: 3px;
+            }
+    
+            QDateEdit::down-arrow, QComboBox::down-arrow {
+                image: url(../resources/images/arrow.png);
+                width: 10px;
+                height: 10px;
+            }
+    
+            QLineEdit {
+                background-color: #FFFFFF;
+                border: 1px solid #262626;
+                padding: 5px 10px;
+                border-radius: 10px;
+                height: 24px;
+                font-size: 16px;
+            }
+    
+            QPushButton {
+                background-color: #836FFF;
+                color: #EEEEEE;
+                padding: 10px;
+                border: 2px;
+                border-radius: 8px;
+                font-size: 12px;
+                height: 20px;
+                font-weight: bold;
+                margin: 0px 5px 10px 5px;
+            }
+    
+            QPushButton:hover {
+                background-color: #E84545;
+                color: #fff
+            }
+    
+            QPushButton:pressed {
+                background-color: #6703c5;
+                color: #fff;
+            }
+    
+            QTableWidget {
+                border: 1px solid #000000;
+                background-color: #686D76;
+                padding-left: 10px;
+            }
+    
+            QTableWidget QHeaderView::section {
+                background-color: #262626;
+                color: #A7A6A6;
+                padding: 5px;
+                height: 18px;
+            }
+    
+            QTableWidget QHeaderView::section:horizontal {
+                border-top: 1px solid #333;
+            }
+    
+            QTableWidget::item {
+                background-color: #363636;
+                color: #EEEEEE;
+                font-weight: bold;
+                padding-right: 8px;
+                padding-left: 8px;
+            }
+    
+            QTableWidget::item:selected {
+                background-color: #000000;
+                color: #EEEEEE;
+                font-weight: bold;
+            }
+        """)
 
     def setup_mssql(self):
         caminho_do_arquivo = (r"\\192.175.175.4\f\INTEGRANTES\ELIEZER\PROJETO SOLIDWORKS "
