@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, QMessageBox, \
-    QProgressBar
+    QProgressBar, QSizePolicy
 from PyQt5.QtGui import QFont, QColor, QIcon, QDesktopServices
 from PyQt5.QtCore import Qt, QCoreApplication, QDate, QUrl, QProcess
 import pyperclip
@@ -43,14 +43,13 @@ class PcpApp(QWidget):
             QLabel {
                 color: #EEEEEE;
                 font-size: 12px;
-                padding: 5px;
                 font-weight: bold;
+                padding-left: 3px;
             }
             
             QDateEdit {
                 background-color: #FFFFFF;
                 border: 1px solid #262626;
-                margin-top: 20px;
                 margin-bottom: 20px;
                 padding: 5px 10px;
                 border-radius: 10px;
@@ -78,8 +77,6 @@ class PcpApp(QWidget):
             QLineEdit {
                 background-color: #FFFFFF;
                 border: 1px solid #262626;
-                margin-top: 20px;
-                margin-bottom: 20px;
                 padding: 5px 10px;
                 border-radius: 10px;
                 height: 24px;
@@ -93,9 +90,9 @@ class PcpApp(QWidget):
                 border: 2px;
                 border-radius: 8px;
                 font-size: 12px;
-                height: 15px;
+                height: 20px;
                 font-weight: bold;
-                margin-bottom: 8px;
+                margin: 0px 5px 10px 5px;
             }
 
             QPushButton:hover {
@@ -149,7 +146,9 @@ class PcpApp(QWidget):
         self.label_OP = QLabel("Número OP:", self)
         self.label_qp = QLabel("Número QP:", self)
         self.label_data_inicio = QLabel("Data inicial:", self)
+        self.label_data_inicio.setObjectName("data-inicio")
         self.label_data_fim = QLabel("Data final:", self)
+        self.label_data_fim.setObjectName("data-fim")
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont(fonte_campos, tamanho_fonte_campos))
@@ -182,7 +181,7 @@ class PcpApp(QWidget):
         self.campo_data_inicio.setDisplayFormat("dd/MM/yyyy")
 
         data_atual = QDate.currentDate()
-        intervalo_meses = 6
+        intervalo_meses = 12
         data_inicio = data_atual.addMonths(-intervalo_meses)
         self.campo_data_inicio.setDate(data_inicio)
         self.add_today_button(self.campo_data_inicio)
@@ -197,36 +196,36 @@ class PcpApp(QWidget):
 
         self.btn_consultar = QPushButton("Pesquisar", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
-        self.btn_consultar.setMinimumWidth(100)
+        self.btn_consultar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.btn_abrir_compras = QPushButton("Follow-up Compras", self)
         self.btn_abrir_compras.clicked.connect(self.abrir_modulo_compras)
-        self.btn_abrir_compras.setMinimumWidth(100)
+        self.btn_abrir_compras.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.btn_limpar = QPushButton("Limpar", self)
         self.btn_limpar.clicked.connect(self.limpar_campos)
-        self.btn_limpar.setMinimumWidth(100)
+        self.btn_limpar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.btn_parar_consulta = QPushButton("Parar consulta")
         self.btn_parar_consulta.clicked.connect(self.parar_consulta)
-        self.btn_parar_consulta.setMinimumWidth(100)
+        self.btn_parar_consulta.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.btn_nova_janela = QPushButton("Nova Janela", self)
         self.btn_nova_janela.clicked.connect(self.abrir_nova_janela)
-        self.btn_nova_janela.setMinimumWidth(100)
+        self.btn_nova_janela.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.btn_abrir_desenho = QPushButton("Abrir Desenho", self)
         self.btn_abrir_desenho.clicked.connect(self.abrir_desenho)
-        self.btn_abrir_desenho.setMinimumWidth(100)
+        self.btn_abrir_desenho.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.btn_exportar_excel = QPushButton("Exportar Excel", self)
         self.btn_exportar_excel.clicked.connect(self.exportar_excel)
-        self.btn_exportar_excel.setMinimumWidth(100)
+        self.btn_exportar_excel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.btn_exportar_excel.setEnabled(False)
 
         self.btn_fechar = QPushButton("Fechar", self)
         self.btn_fechar.clicked.connect(self.fechar_janela)
-        self.btn_fechar.setMinimumWidth(100)
+        self.btn_fechar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.campo_codigo.returnPressed.connect(self.executar_consulta)
         self.campo_qp.returnPressed.connect(self.executar_consulta)
@@ -235,6 +234,7 @@ class PcpApp(QWidget):
 
         layout = QVBoxLayout()
         layout_campos_linha_01 = QHBoxLayout()
+        layout_campos_linha_02 = QHBoxLayout()
         self.layout_buttons = QHBoxLayout()
         self.layout_footer = QHBoxLayout()
 
@@ -264,11 +264,12 @@ class PcpApp(QWidget):
 
         layout_campos_linha_01.addLayout(container_codigo)
         layout_campos_linha_01.addLayout(container_descricao_prod)
-        layout_campos_linha_01.addLayout(container_qp)
         layout_campos_linha_01.addLayout(container_op)
-        layout_campos_linha_01.addLayout(container_data_ini)
-        layout_campos_linha_01.addLayout(container_data_fim)
+        layout_campos_linha_01.addLayout(container_qp)
+        layout_campos_linha_02.addLayout(container_data_ini)
+        layout_campos_linha_02.addLayout(container_data_fim)
         layout_campos_linha_01.addStretch()
+        layout_campos_linha_02.addStretch()
 
         self.layout_buttons.addWidget(self.btn_consultar)
         self.layout_buttons.addWidget(self.btn_abrir_compras)
@@ -280,6 +281,7 @@ class PcpApp(QWidget):
         self.layout_buttons.addStretch()
 
         layout.addLayout(layout_campos_linha_01)
+        layout.addLayout(layout_campos_linha_02)
         layout.addLayout(self.layout_buttons)
         layout.addWidget(self.tree)
         layout.addLayout(self.layout_footer)

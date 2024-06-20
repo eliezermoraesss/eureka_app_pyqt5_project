@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, QMessageBox, \
-    QComboBox, QProgressBar
+    QComboBox, QProgressBar, QSizePolicy
 from PyQt5.QtGui import QFont, QIcon, QDesktopServices
 from PyQt5.QtCore import Qt, QCoreApplication, QDate, QUrl
 import pyperclip
@@ -78,8 +78,8 @@ class ComprasApp(QWidget):
 
             QLabel {
                 color: #EEEEEE;
-                font-size: 14px;
-                margin-top: 20px;
+                font-size: 12px;
+                font-weight: bold;
             }
             
             QLabel#descricao-produto, QLabel#fornecedor {
@@ -117,8 +117,6 @@ class ComprasApp(QWidget):
             QLineEdit {
                 background-color: #FFFFFF;
                 border: 1px solid #262626;
-                margin-top: 20px;
-                margin-bottom: 20px;
                 padding: 5px 10px;
                 border-radius: 10px;
                 height: 24px;
@@ -129,11 +127,12 @@ class ComprasApp(QWidget):
                 background-color: #836FFF;
                 color: #EEEEEE;
                 padding: 10px;
+                border: 2px;
                 border-radius: 8px;
                 font-size: 12px;
-                height: 15px;
+                height: 20px;
                 font-weight: bold;
-                margin-bottom: 8px;
+                margin: 0px 5px 10px 5px;
             }
 
             QPushButton:hover {
@@ -183,61 +182,66 @@ class ComprasApp(QWidget):
         self.progress_bar.setMaximumWidth(400)
 
         self.label_sc = QLabel("Solic. Compra:", self)
+        self.label_sc.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.label_pedido = QLabel("Ped. de Compra:", self)
+        self.label_pedido.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.label_codigo = QLabel("Código produto:", self)
-
+        self.label_codigo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.label_descricao_prod = QLabel("Descrição produto:", self)
+        self.label_descricao_prod.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         # self.label_descricao_prod.setObjectName("descricao-produto")
 
         self.label_qp = QLabel("Número QP:", self)
+        self.label_qp.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.label_OP = QLabel("Número OP:", self)
+        self.label_OP.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.label_data_inicio = QLabel("Data inicial SC:", self)
         self.label_data_fim = QLabel("Data final SC:", self)
         self.label_armazem = QLabel("Armazém:", self)
-
         self.label_fornecedor = QLabel("Fornecedor:", self)
+        self.label_fornecedor.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         # self.label_fornecedor.setObjectName("fornecedor")
 
         self.campo_sc = QLineEdit(self)
         self.campo_sc.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_sc.setMaxLength(6)
-        self.campo_sc.setFixedWidth(110)
+        self.campo_sc.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.add_clear_button(self.campo_sc)
 
         self.campo_pedido = QLineEdit(self)
         self.campo_pedido.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_pedido.setMaxLength(6)
-        self.campo_pedido.setFixedWidth(110)
+        self.campo_pedido.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.add_clear_button(self.campo_pedido)
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_codigo.setMaxLength(13)
-        self.campo_codigo.setFixedWidth(170)
+        self.campo_codigo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.add_clear_button(self.campo_codigo)
 
         self.campo_descricao_prod = QLineEdit(self)
         self.campo_descricao_prod.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_descricao_prod.setMaxLength(60)
-        self.campo_descricao_prod.setFixedWidth(280)
+        self.campo_descricao_prod.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.add_clear_button(self.campo_descricao_prod)
 
         self.campo_qp = QLineEdit(self)
         self.campo_qp.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_qp.setMaxLength(6)
-        self.campo_qp.setFixedWidth(110)
+        self.campo_qp.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.add_clear_button(self.campo_qp)
 
         self.campo_OP = QLineEdit(self)
         self.campo_OP.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_OP.setMaxLength(6)
-        self.campo_OP.setFixedWidth(110)
+        self.campo_OP.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.add_clear_button(self.campo_OP)
 
         self.campo_fornecedor = QLineEdit(self)
         self.campo_fornecedor.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_fornecedor.setMaxLength(40)
-        self.campo_fornecedor.setFixedWidth(200)
+        self.campo_fornecedor.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.add_clear_button(self.campo_fornecedor)
 
         self.campo_data_inicio = QDateEdit(self)
@@ -247,7 +251,7 @@ class ComprasApp(QWidget):
         self.campo_data_inicio.setDisplayFormat("dd/MM/yyyy")
 
         data_atual = QDate.currentDate()
-        intervalo_meses = 6
+        intervalo_meses = 12
         data_inicio = data_atual.addMonths(-intervalo_meses)
         self.campo_data_inicio.setDate(data_inicio)
         self.add_today_button(self.campo_data_inicio)
@@ -262,28 +266,27 @@ class ComprasApp(QWidget):
 
         self.btn_consultar = QPushButton("Pesquisar", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
-        self.btn_consultar.setMinimumWidth(100)
+        self.btn_consultar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.btn_limpar = QPushButton("Limpar", self)
         self.btn_limpar.clicked.connect(self.limpar_campos)
-        self.btn_limpar.setMinimumWidth(100)
-
+        self.btn_limpar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.btn_parar_consulta = QPushButton("Parar consulta")
         self.btn_parar_consulta.clicked.connect(self.parar_consulta)
-        self.btn_parar_consulta.setMinimumWidth(100)
+        self.btn_parar_consulta.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.btn_nova_janela = QPushButton("Nova Janela", self)
         self.btn_nova_janela.clicked.connect(self.abrir_nova_janela)
-        self.btn_nova_janela.setMinimumWidth(100)
+        self.btn_nova_janela.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.btn_exportar_excel = QPushButton("Exportar Excel", self)
         self.btn_exportar_excel.clicked.connect(self.exportar_excel)
-        self.btn_exportar_excel.setMinimumWidth(100)
+        self.btn_exportar_excel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.btn_exportar_excel.setEnabled(False)
 
         self.btn_fechar = QPushButton("Fechar", self)
         self.btn_fechar.clicked.connect(self.fechar_janela)
-        self.btn_fechar.setMinimumWidth(100)
+        self.btn_fechar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.campo_sc.returnPressed.connect(self.executar_consulta)
         self.campo_pedido.returnPressed.connect(self.executar_consulta)
@@ -295,6 +298,7 @@ class ComprasApp(QWidget):
 
         layout = QVBoxLayout()
         layout_campos_linha_01 = QHBoxLayout()
+        layout_campos_linha_02 = QHBoxLayout()
         self.layout_buttons = QHBoxLayout()
         self.layout_footer = QHBoxLayout()
 
@@ -340,15 +344,16 @@ class ComprasApp(QWidget):
 
         layout_campos_linha_01.addLayout(container_sc)
         layout_campos_linha_01.addLayout(container_pedido)
+        layout_campos_linha_01.addLayout(container_op)
+        layout_campos_linha_01.addLayout(container_qp)
+        layout_campos_linha_01.addLayout(container_fornecedor)
         layout_campos_linha_01.addLayout(container_codigo)
         layout_campos_linha_01.addLayout(container_descricao_prod)
-        layout_campos_linha_01.addLayout(container_fornecedor)
-        layout_campos_linha_01.addLayout(container_qp)
-        layout_campos_linha_01.addLayout(container_op)
-        layout_campos_linha_01.addLayout(container_data_ini)
-        layout_campos_linha_01.addLayout(container_data_fim)
-        layout_campos_linha_01.addLayout(container_combobox_armazem)
-        layout_campos_linha_01.addStretch()
+        layout_campos_linha_02.addLayout(container_data_ini)
+        layout_campos_linha_02.addLayout(container_data_fim)
+        layout_campos_linha_02.addLayout(container_combobox_armazem)
+        # layout_campos_linha_01.addStretch()
+        layout_campos_linha_02.addStretch()
 
         self.layout_buttons.addWidget(self.btn_consultar)
         self.layout_buttons.addWidget(self.btn_nova_janela)
@@ -358,6 +363,7 @@ class ComprasApp(QWidget):
         self.layout_buttons.addStretch()
 
         layout.addLayout(layout_campos_linha_01)
+        layout.addLayout(layout_campos_linha_02)
         layout.addLayout(self.layout_buttons)
         layout.addWidget(self.tree)
         layout.addLayout(self.layout_footer)
@@ -654,7 +660,8 @@ class ComprasApp(QWidget):
             cod_armazem = ''
 
         query_consulta_filtro = self.query_consulta_followup(numero_sc, numero_pedido, codigo_produto,
-                                                             numero_qp, numero_op, fornecedor, descricao_produto, cod_armazem)
+                                                             numero_qp, numero_op, fornecedor, descricao_produto,
+                                                             cod_armazem)
 
         query_contagem_linhas = self.numero_linhas_consulta(numero_sc, numero_pedido, codigo_produto, numero_qp,
                                                             numero_op, fornecedor, descricao_produto, cod_armazem)
@@ -798,5 +805,6 @@ if __name__ == "__main__":
     window = ComprasApp()
     username, password, database, server = ComprasApp().setup_mssql()
     driver = '{SQL Server}'
+
     window.showMaximized()
     sys.exit(app.exec_())
