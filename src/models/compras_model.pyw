@@ -96,8 +96,8 @@ class ComprasApp(QWidget):
         self.label_fornecedor = QLabel("Fornecedor Razão Social:", self)
         self.label_fornecedor.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         # self.label_fornecedor.setObjectName("fornecedor")
-        self.label_nm_fantasia_forn = QLabel("Fornecedor Nome Fantasia:", self)
-        self.label_nm_fantasia_forn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        # self.label_nm_fantasia_forn = QLabel("Fornecedor Nome Fantasia:", self)
+        # self.label_nm_fantasia_forn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.campo_sc = QLineEdit(self)
         self.campo_sc.setFont(QFont(fonte_campos, tamanho_fonte_campos))
@@ -138,14 +138,12 @@ class ComprasApp(QWidget):
         self.campo_razao_social_fornecedor = QLineEdit(self)
         self.campo_razao_social_fornecedor.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_razao_social_fornecedor.setMaxLength(40)
-        self.campo_razao_social_fornecedor.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.add_clear_button(self.campo_razao_social_fornecedor)
 
-        self.campo_nm_fantasia_fornecedor = QLineEdit(self)
-        self.campo_nm_fantasia_fornecedor.setFont(QFont(fonte_campos, tamanho_fonte_campos))
-        self.campo_nm_fantasia_fornecedor.setMaxLength(40)
-        self.campo_nm_fantasia_fornecedor.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.add_clear_button(self.campo_nm_fantasia_fornecedor)
+        # self.campo_nm_fantasia_fornecedor = QLineEdit(self)
+        # self.campo_nm_fantasia_fornecedor.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        # self.campo_nm_fantasia_fornecedor.setMaxLength(40)
+        # self.add_clear_button(self.campo_nm_fantasia_fornecedor)
 
         self.campo_data_inicio = QDateEdit(self)
         self.campo_data_inicio.setFont(QFont(fonte_campos, tamanho_fonte_campos))
@@ -198,7 +196,7 @@ class ComprasApp(QWidget):
         self.campo_qp.returnPressed.connect(self.executar_consulta)
         self.campo_OP.returnPressed.connect(self.executar_consulta)
         self.campo_razao_social_fornecedor.returnPressed.connect(self.executar_consulta)
-        self.campo_nm_fantasia_fornecedor.returnPressed.connect(self.executar_consulta)
+        # self.campo_nm_fantasia_fornecedor.returnPressed.connect(self.executar_consulta)
 
         layout = QVBoxLayout()
         layout_campos_linha_01 = QHBoxLayout()
@@ -246,9 +244,9 @@ class ComprasApp(QWidget):
         container_fornecedor.addWidget(self.label_fornecedor)
         container_fornecedor.addWidget(self.campo_razao_social_fornecedor)
 
-        container_nm_fantasia_forn = QVBoxLayout()
-        container_nm_fantasia_forn.addWidget(self.label_nm_fantasia_forn)
-        container_nm_fantasia_forn.addWidget(self.campo_nm_fantasia_fornecedor)
+        # container_nm_fantasia_forn = QVBoxLayout()
+        # container_nm_fantasia_forn.addWidget(self.label_nm_fantasia_forn)
+        # container_nm_fantasia_forn.addWidget(self.campo_nm_fantasia_fornecedor)
 
         layout_campos_linha_01.addLayout(container_sc)
         layout_campos_linha_01.addLayout(container_pedido)
@@ -256,12 +254,12 @@ class ComprasApp(QWidget):
         layout_campos_linha_01.addLayout(container_qp)
         layout_campos_linha_01.addLayout(container_codigo)
         layout_campos_linha_01.addLayout(container_descricao_prod)
+        layout_campos_linha_01.addLayout(container_fornecedor)
+        # layout_campos_linha_02.addLayout(container_nm_fantasia_forn)
         layout_campos_linha_02.addLayout(container_data_ini)
         layout_campos_linha_02.addLayout(container_data_fim)
         layout_campos_linha_02.addLayout(container_combobox_armazem)
-        layout_campos_linha_02.addLayout(container_fornecedor)
-        layout_campos_linha_02.addLayout(container_nm_fantasia_forn)
-        # layout_campos_linha_01.addStretch()
+        layout_campos_linha_01.addStretch()
         layout_campos_linha_02.addStretch()
 
         self.layout_buttons.addWidget(self.btn_consultar)
@@ -532,7 +530,7 @@ class ComprasApp(QWidget):
         root.destroy()
 
     def numero_linhas_consulta(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op,
-                               razao_social_fornecedor, nome_fantasia_fornecedor, descricao_produto, cod_armazem):
+                               razao_social_fornecedor, descricao_produto, cod_armazem):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -575,13 +573,12 @@ class ComprasApp(QWidget):
                 AND SC.C1_DESCRI LIKE '{descricao_produto}%'
                 AND SC.C1_OP LIKE '{numero_op}%' 
                 AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}%'
-                AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
                 AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data}
         """
-        return query
+        return query # AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
 
     def query_consulta_followup(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op,
-                                razao_social_fornecedor, nome_fantasia_fornecedor, descricao_produto, cod_armazem):
+                                razao_social_fornecedor, descricao_produto, cod_armazem):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -594,16 +591,18 @@ class ComprasApp(QWidget):
         query = f"""
             SELECT 
                 SC.C1_ZZNUMQP AS "QP",
-                SC.C1_OP AS "OP",
                 SC.C1_NUM AS "SC",
                 SC.C1_ITEM AS "Item SC",
-                SC.C1_QUANT AS "Quant. SC",
+                SC.C1_QUANT AS "Qtd. SC",
                 SC.C1_PEDIDO AS "Ped. Compra",
                 SC.C1_ITEMPED AS "Item Ped.",
-                SC.C1_QUJE AS "Quant. Ped.",
-                ITEM_NF.D1_DOC AS "Nota Fiscal",
-                ITEM_NF.D1_QUANT AS "Quant. Entregue",
-                CASE WHEN ITEM_NF.D1_QUANT IS NULL THEN SC.C1_QUJE ELSE SC.C1_QUJE - ITEM_NF.D1_QUANT END AS "Quant. Pendente",
+                PC.C7_QUANT AS "Qtd. Ped.",
+                PC.C7_PRECO AS "Preço Unit. (R$)",
+                PC.C7_TOTAL AS "Sub-total (R$)",
+                PC.C7_DATPRF AS "Previsão Entrega",
+                ITEM_NF.D1_DOC AS "Nota Fiscal Ent.",
+                ITEM_NF.D1_QUANT AS "Qtd. Entregue",
+                CASE WHEN ITEM_NF.D1_QUANT IS NULL THEN SC.C1_QUJE ELSE SC.C1_QUJE - ITEM_NF.D1_QUANT END AS "Qtd. Pendente",
                 ITEM_NF.D1_DTDIGIT AS "Data Entrega",
                 PC.C7_ENCER AS "Status Ped. Compra",
                 SC.C1_PRODUTO AS "Código",
@@ -622,7 +621,9 @@ class ComprasApp(QWidget):
                 FORN.A2_COD AS "Cód. Forn.",
                 FORN.A2_NOME AS "Raz. Soc. Forn.",
                 FORN.A2_NREDUZ AS "Nom. Fantasia Forn.",
-                US.USR_NOME AS "Solicitante"
+                US.USR_NOME AS "Solicitante",
+                PC.S_T_A_M_P_ AS "Aberto em:",
+                SC.C1_OP AS "OP"
             FROM 
                 {database}.dbo.SC1010 SC
             LEFT JOIN 
@@ -653,12 +654,11 @@ class ComprasApp(QWidget):
                 AND SC.C1_DESCRI LIKE '{descricao_produto}%'
                 AND SC.C1_OP LIKE '{numero_op}%' 
                 AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}%'
-                AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
                 AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data}
             ORDER BY 
                 PC.R_E_C_N_O_ DESC;
         """
-        return query
+        return query  # AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
 
     def executar_consulta(self):
 
@@ -668,7 +668,7 @@ class ComprasApp(QWidget):
         numero_op = self.campo_OP.text().upper().strip()
         codigo_produto = self.campo_codigo.text().upper().strip()
         razao_social_fornecedor = self.campo_razao_social_fornecedor.text().upper().strip()
-        nome_fantasia_fornecedor = self.campo_nm_fantasia_fornecedor.text().upper().strip()
+        # nome_fantasia_fornecedor = self.campo_nm_fantasia_fornecedor.text().upper().strip()
         descricao_produto = self.campo_descricao_prod.text().upper().strip()
 
         cod_armazem = self.combobox_armazem.currentData()
@@ -676,11 +676,12 @@ class ComprasApp(QWidget):
             cod_armazem = ''
 
         query_consulta_filtro = self.query_consulta_followup(numero_sc, numero_pedido, codigo_produto,
-                                                             numero_qp, numero_op, razao_social_fornecedor, nome_fantasia_fornecedor,
+                                                             numero_qp, numero_op, razao_social_fornecedor,
                                                              descricao_produto, cod_armazem)
 
         query_contagem_linhas = self.numero_linhas_consulta(numero_sc, numero_pedido, codigo_produto, numero_qp,
-                                                            numero_op, razao_social_fornecedor, nome_fantasia_fornecedor, descricao_produto, cod_armazem)
+                                                            numero_op, razao_social_fornecedor,
+                                                            descricao_produto, cod_armazem)
 
         self.controle_campos_formulario(False)
         line_number = None
@@ -704,6 +705,9 @@ class ComprasApp(QWidget):
 
                 dataframe.insert(0, 'Status PC', '')
                 dataframe[''] = ''
+                dataframe.insert(11, 'Dias restantes', '')
+
+                data_atual = datetime.now()
 
                 self.configurar_tabela(dataframe)
                 self.configurar_tabela_tooltips(dataframe)
@@ -737,36 +741,51 @@ class ComprasApp(QWidget):
                     if value is not None:
                         if j == 0:
                             item = QTableWidgetItem()
-                            if row['Status Ped. Compra'].strip() == '' and row['Nota Fiscal'] is None:
+                            if row['Status Ped. Compra'].strip() == '' and row['Nota Fiscal Ent.'] is None:
                                 item.setIcon(no_order)
-                            elif row['Status Ped. Compra'].strip() == '' and row['Nota Fiscal'] is not None:
+                            elif row['Status Ped. Compra'].strip() == '' and row['Nota Fiscal Ent.'] is not None:
                                 item.setIcon(wait_delivery)
                             elif row['Status Ped. Compra'] == 'E':
                                 item.setIcon(end_order)
                         else:
-                            if j == 10 and pd.isna(value):
+                            if j == 11 and row['Nota Fiscal Ent.'] is None:
+                                previsao_entrega_sem_formatacao = row['Previsão Entrega']
+                                if pd.notna(previsao_entrega_sem_formatacao):
+                                    previsao_entrega_obj = datetime.strptime(previsao_entrega_sem_formatacao, "%Y%m%d")
+                                    previsao_entrega_formatada = previsao_entrega_obj.strftime("%d/%m/%Y")
+                                    previsao_entrega = pd.to_datetime(previsao_entrega_formatada, dayfirst=True)
+                                    value = (data_atual - previsao_entrega).days
+                            elif j == 11 and row['Nota Fiscal Ent.'] is not None:
                                 value = '-'
-                            if j == 11 and value:
+                            if j == 14 and pd.isna(value):  # COLUNA QTD. ENTREGUE
+                                value = '-'
+                            elif j == 14 and value:   # COLUNA QTD. PENDENTE
                                 value = round(value, 2)
-                            if j == 20 and value.strip() == 'MATA650':  # Indica na coluna 'Origem' se o item foi
+
+                            if j == 16 and value == 'E':
+                                value = 'Encerrado'
+                            elif j == 16 and value.strip() == '':
+                                value = '-'
+
+                            if j == 23 and value.strip() == 'MATA650':  # Indica na coluna 'Origem' se o item foi
                                 # empenhado ou será comprado
                                 value = 'Empenho'
-                            elif j == 20 and value.strip() == '':
+                            elif j == 23 and value.strip() == '':
                                 value = 'Compras'
 
-                            if j == 24 and value.strip() == 'N':  # Escreve sim ou não na coluna 'Importado?'
+                            if j == 27 and value.strip() == 'N':  # Escreve sim ou não na coluna 'Importado?'
                                 value = 'Não'
-                            elif j == 24 and value.strip() == '':
+                            elif j == 27 and value.strip() == '':
                                 value = 'Sim'
 
-                            if j in (12, 17, 18, 19) and not value.isspace():  # Formatação das datas no formato
+                            if j in (10, 15, 20, 21, 22) and not value.isspace():  # Formatação das datas no formato
                                 # dd/mm/YYYY
                                 data_obj = datetime.strptime(value, "%Y%m%d")
                                 value = data_obj.strftime("%d/%m/%Y")
 
                             item = QTableWidgetItem(str(value).strip())
 
-                            if j not in (14, 15, 21, 25, 26, 27, 28):  # Alinhamento a esquerda de colunas
+                            if j not in (17, 27, 28, 30, 31):  # Alinhamento a esquerda de colunas
                                 item.setTextAlignment(Qt.AlignCenter)
 
                     self.tree.setItem(i, j, item)
