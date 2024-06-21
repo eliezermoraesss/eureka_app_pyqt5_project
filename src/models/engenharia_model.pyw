@@ -11,7 +11,7 @@ import os
 import time
 import pandas as pd
 import ctypes
-from datetime import datetime
+from datetime import datetime, date
 import tkinter as tk
 from tkinter import messagebox
 import locale
@@ -322,21 +322,28 @@ class ConsultaApp(QWidget):
         return botao_limpar
 
     def exportar_excel(self):
-        # Obter o caminho do arquivo para salvar
-        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como', '',
+        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
+                                                   f'report_{date.today().strftime('%Y-%m-%d')}',
                                                    'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
 
         if file_path:
-            # Obter os dados da tabela
             data = self.obter_dados_tabela()
+            column_headers = [self.tree.horizontalHeaderItem(i).text() for i in range(self.tree.columnCount())]
+            df = pd.DataFrame(data, columns=column_headers)
 
-            # Criar um DataFrame pandas
-            df = pd.DataFrame(data, columns=["CÓDIGO", "DESCRIÇÃO", "DESC. COMP.", "TIPO", "UM", "ARMAZÉM", "GRUPO",
-                                             "DESC. GRUPO", "CC", "BLOQUEADO?", "REV.", "DATA CADASTRO",
-                                             "DATA ULT. REV.", ""])
+            writer = pd.ExcelWriter(file_path, engine='xlsxwriter')
+            df.to_excel(writer, sheet_name='Dados', index=False)
 
-            # Salvar o DataFrame como um arquivo Excel
-            df.to_excel(file_path, index=False)
+            workbook = writer.book
+            worksheet = writer.sheets['Dados']
+
+            for i, col in enumerate(df.columns):
+                max_len = df[col].astype(str).map(len).max()
+                worksheet.set_column(i, i, max_len + 2)
+
+            writer.close()
+
+            os.startfile(file_path)
 
     def obter_dados_tabela(self):
         # Obter os dados da tabela
