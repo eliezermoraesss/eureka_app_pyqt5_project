@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBox
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, \
     QComboBox, QProgressBar, QSizePolicy, QTabWidget, QMenu
 from PyQt5.QtGui import QFont, QIcon
-from PyQt5.QtCore import Qt, QDate
+from PyQt5.QtCore import Qt, QDate, QProcess
 import pyperclip
 import pandas as pd
 import ctypes
@@ -75,6 +75,7 @@ class ComprasApp(QWidget):
         self.tree.setRowCount(0)
 
         self.nova_janela = None
+        self.process = QProcess(self)
 
         self.tabWidget = QTabWidget(self)  # Adicione um QTabWidget ao layout principal
         self.tabWidget.setTabsClosable(True)  # Adicione essa linha para permitir o fechamento de guias
@@ -182,9 +183,10 @@ class ComprasApp(QWidget):
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
-        self.btn_consultar = QPushButton("Engenharia", self)
-        self.btn_consultar.clicked.connect(self.abrir_modulo_engenharia)
-        self.btn_consultar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.btn_abrir_engenharia = QPushButton("Engenharia", self)
+        self.btn_abrir_engenharia.setObjectName("btn_engenharia")
+        self.btn_abrir_engenharia.clicked.connect(self.abrir_modulo_engenharia)
+        self.btn_abrir_engenharia.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.btn_limpar = QPushButton("Limpar", self)
         self.btn_limpar.clicked.connect(self.limpar_campos)
@@ -281,6 +283,7 @@ class ComprasApp(QWidget):
         layout_campos_linha_02.addStretch()
 
         self.layout_buttons.addWidget(self.btn_consultar)
+        self.layout_buttons.addWidget(self.btn_abrir_engenharia)
         self.layout_buttons.addWidget(self.btn_nova_janela)
         self.layout_buttons.addWidget(self.btn_limpar)
         self.layout_buttons.addWidget(self.btn_exportar_excel)
@@ -352,13 +355,17 @@ class ComprasApp(QWidget):
                 font-weight: bold;
                 margin: 0px 5px 10px 5px;
             }
+            
+            QPushButton#btn_engenharia {
+                background-color: #0a79f8;
+            }
     
-            QPushButton:hover {
+            QPushButton:hover, QPushButton:hover#btn_engenharia {
                 background-color: #E84545;
                 color: #fff
             }
     
-            QPushButton:pressed {
+            QPushButton:pressed, QPushButton:pressed#btn_engenharia {
                 background-color: #6703c5;
                 color: #fff;
             }
