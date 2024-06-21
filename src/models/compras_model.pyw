@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBox
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, \
     QComboBox, QProgressBar, QSizePolicy, QTabWidget, QMenu
 from PyQt5.QtGui import QFont, QIcon
-from PyQt5.QtCore import Qt, QDate, QProcess
+from PyQt5.QtCore import Qt, QDate, QProcess, pyqtSignal
 import pyperclip
 import pandas as pd
 import ctypes
@@ -18,6 +18,7 @@ import os
 
 
 class ComprasApp(QWidget):
+    guia_fechada = pyqtSignal()
     def __init__(self):
         super().__init__()
 
@@ -451,6 +452,10 @@ class ComprasApp(QWidget):
     def existe_guias_abertas(self):
         return self.tabWidget.count() > 0
 
+    def ajustar_largura_coluna_descricao(self, tree_widget):
+        header = tree_widget.horizontalHeader()
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+
     def showContextMenu(self, position, table):
         indexes = table.selectedIndexes()
         if indexes:
@@ -464,9 +469,6 @@ class ComprasApp(QWidget):
 
             menu = QMenu()
 
-            context_menu_abrir_desenho = QAction('Abrir desenho', self)
-            context_menu_abrir_desenho.triggered.connect(lambda: self.abrir_desenho(table))
-
             context_menu_consultar_onde_usado = QAction('Onde é usado?', self)
             context_menu_consultar_onde_usado.triggered.connect(lambda: self.executar_consulta_onde_usado(table))
 
@@ -476,7 +478,6 @@ class ComprasApp(QWidget):
             context_menu_nova_janela = QAction('Nova janela', self)
             context_menu_nova_janela.triggered.connect(lambda: self.abrir_nova_janela())
 
-            menu.addAction(context_menu_abrir_desenho)
             menu.addAction(context_menu_consultar_onde_usado)
             menu.addAction(context_menu_saldo_estoque)
             menu.addAction(context_menu_nova_janela)
@@ -661,7 +662,7 @@ class ComprasApp(QWidget):
                 AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}%'
                 AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data}
         """
-        return query # AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
+        return query  # AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
 
     def query_consulta_followup(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op,
                                 razao_social_fornecedor, descricao_produto, cod_armazem):
@@ -845,7 +846,7 @@ class ComprasApp(QWidget):
                                 value = '-'
                             if j == 14 and pd.isna(value):  # COLUNA QTD. ENTREGUE
                                 value = '-'
-                            elif j == 14 and value:   # COLUNA QTD. PENDENTE
+                            elif j == 14 and value:  # COLUNA QTD. PENDENTE
                                 value = round(value, 2)
 
                             if j == 16 and value == 'E':
@@ -927,14 +928,27 @@ class ComprasApp(QWidget):
 
     def executar_consulta_onde_usado(self, table):
         item_selecionado = table.currentItem()
+        codigo, descricao = None, None
 
         if item_selecionado:
-            codigo = table.item(item_selecionado.row(), 0).text()
-            descricao_onde_usado = table.item(item_selecionado.row(), 1).text()
+            header = table.horizontalHeader()
+            codigo_col = None
+            descricao_col = None
+
+            for col in range(header.count()):
+                header_text = table.horizontalHeaderItem(col).text()
+                if header_text == 'Código':
+                    codigo_col = col
+                elif header_text == 'Descrição':
+                    descricao_col = col
+
+            if codigo_col is not None and descricao_col is not None:
+                codigo = table.item(item_selecionado.row(), codigo_col).text()
+                descricao = table.item(item_selecionado.row(), descricao_col).text()
 
             if codigo not in self.guias_abertas_onde_usado:
                 query_onde_usado = f"""
-                    SELECT STRUT.G1_COD AS "CÓDIGO", PROD.B1_DESC "DESCRIÇÃO" 
+                    SELECT STRUT.G1_COD AS "Código", PROD.B1_DESC "Descrição" 
                     FROM {database}.dbo.SG1010 STRUT 
                     INNER JOIN {database}.dbo.SB1010 PROD 
                     ON G1_COD = B1_COD WHERE G1_COMP = '{codigo}' 
@@ -985,7 +999,7 @@ class ComprasApp(QWidget):
                     # Ajustar automaticamente a largura da coluna "Descrição"
                     self.ajustar_largura_coluna_descricao(tabela_onde_usado)
 
-                    layout_cabecalho.addWidget(QLabel(f'Onde é usado?\n\n{codigo} - {descricao_onde_usado}'),
+                    layout_cabecalho.addWidget(QLabel(f'Onde é usado?\n\n{codigo} - {descricao}'),
                                                alignment=Qt.AlignLeft)
                     layout_nova_guia_estrutura.addLayout(layout_cabecalho)
                     layout_nova_guia_estrutura.addWidget(tabela_onde_usado)
@@ -1041,10 +1055,23 @@ class ComprasApp(QWidget):
 
     def executar_saldo_em_estoque(self, table):
         item_selecionado = table.currentItem()
+        codigo, descricao = None, None
 
         if item_selecionado:
-            codigo = table.item(item_selecionado.row(), 0).text()
-            descricao = table.item(item_selecionado.row(), 1).text()
+            header = table.horizontalHeader()
+            codigo_col = None
+            descricao_col = None
+
+            for col in range(header.count()):
+                header_text = table.horizontalHeaderItem(col).text()
+                if header_text == 'Código':
+                    codigo_col = col
+                elif header_text == 'Descrição':
+                    descricao_col = col
+
+            if codigo_col is not None and descricao_col is not None:
+                codigo = table.item(item_selecionado.row(), codigo_col).text()
+                descricao = table.item(item_selecionado.row(), descricao_col).text()
 
             if codigo not in self.guias_abertas_saldo:
                 query_saldo = f"""
@@ -1081,10 +1108,6 @@ class ComprasApp(QWidget):
                     layout_cabecalho = QHBoxLayout()
 
                     tabela_saldo_estoque = QTableWidget(nova_guia_saldo)
-
-                    tabela_saldo_estoque.setContextMenuPolicy(Qt.CustomContextMenu)
-                    tabela_saldo_estoque.customContextMenuRequested.connect(
-                        lambda pos: self.showContextMenu(pos, tabela_saldo_estoque))
 
                     tabela_saldo_estoque.setColumnCount(len(cursor_saldo_estoque.description))
                     tabela_saldo_estoque.setHorizontalHeaderLabels(
