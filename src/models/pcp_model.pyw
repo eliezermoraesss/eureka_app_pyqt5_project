@@ -493,8 +493,12 @@ class PcpApp(QWidget):
             sys.exit()
 
     def exportar_excel(self):
-        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
-                                                   f'report_{date.today().strftime('%Y-%m-%d')}',
+        desktop_path = os.path.join(os.path.expanduser("~"), 'Desktop')
+
+        now = datetime.now()
+        default_filename = f'PCP-report_{now.today().strftime('%Y-%m-%d_%H%M%S')}.xlsx'
+
+        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como', os.path.join(desktop_path, default_filename),
                                                    'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
 
         if file_path:
