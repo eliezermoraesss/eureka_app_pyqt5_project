@@ -1,9 +1,9 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, QMessageBox, \
-    QProgressBar, QSizePolicy
+    QProgressBar, QSizePolicy, QTabWidget
 from PyQt5.QtGui import QFont, QColor, QIcon, QDesktopServices
-from PyQt5.QtCore import Qt, QCoreApplication, QDate, QUrl, QProcess
+from PyQt5.QtCore import Qt, QCoreApplication, QDate, QUrl, QProcess, pyqtSignal
 import pyperclip
 import pandas as pd
 import ctypes
@@ -15,6 +15,7 @@ import os
 
 
 class PcpApp(QWidget):
+    guia_fechada = pyqtSignal()
     def __init__(self):
         super().__init__()
 
@@ -25,6 +26,10 @@ class PcpApp(QWidget):
         self.tree.setRowCount(0)
         self.process = QProcess(self)
         self.nova_janela = None
+        self.tabWidget = QTabWidget(self)  # Adicione um QTabWidget ao layout principal
+        self.tabWidget.setTabsClosable(True)  # Adicione essa linha para permitir o fechamento de guias
+        self.tabWidget.tabCloseRequested.connect(self.fechar_guia)
+        self.tabWidget.setVisible(False)  # Inicialmente, a guia está invisível
 
         self.altura_linha = 30
         self.tamanho_fonte_tabela = 10

@@ -189,6 +189,16 @@ class ComprasApp(QWidget):
         self.btn_abrir_engenharia.clicked.connect(self.abrir_modulo_engenharia)
         self.btn_abrir_engenharia.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
+        self.btn_onde_e_usado = QPushButton("Onde é usado?", self)
+        self.btn_onde_e_usado.clicked.connect(lambda: self.executar_consulta_onde_usado(self.tree))
+        self.btn_onde_e_usado.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.btn_onde_e_usado.setEnabled(False)
+
+        self.btn_saldo_estoque = QPushButton("Saldos em Estoque", self)
+        self.btn_saldo_estoque.clicked.connect(lambda: self.executar_saldo_em_estoque(self.tree))
+        self.btn_saldo_estoque.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.btn_saldo_estoque.setEnabled(False)
+
         self.btn_limpar = QPushButton("Limpar", self)
         self.btn_limpar.clicked.connect(self.limpar_campos)
         self.btn_limpar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -284,6 +294,8 @@ class ComprasApp(QWidget):
         layout_campos_linha_02.addStretch()
 
         self.layout_buttons.addWidget(self.btn_consultar)
+        self.layout_buttons.addWidget(self.btn_saldo_estoque)
+        self.layout_buttons.addWidget(self.btn_onde_e_usado)
         self.layout_buttons.addWidget(self.btn_abrir_engenharia)
         self.layout_buttons.addWidget(self.btn_nova_janela)
         self.layout_buttons.addWidget(self.btn_limpar)
@@ -599,6 +611,8 @@ class ComprasApp(QWidget):
         self.combobox_armazem.setEnabled(status)
         self.btn_consultar.setEnabled(status)
         self.btn_exportar_excel.setEnabled(status)
+        self.btn_saldo_estoque.setEnabled(status)
+        self.btn_onde_e_usado.setEnabled(status)
 
     def exibir_mensagem(self, title, message, icon_type):
         root = tk.Tk()
