@@ -296,10 +296,10 @@ class ComprasApp(QWidget):
         self.layout_buttons.addWidget(self.btn_consultar)
         self.layout_buttons.addWidget(self.btn_saldo_estoque)
         self.layout_buttons.addWidget(self.btn_onde_e_usado)
-        self.layout_buttons.addWidget(self.btn_abrir_engenharia)
         self.layout_buttons.addWidget(self.btn_nova_janela)
         self.layout_buttons.addWidget(self.btn_limpar)
         self.layout_buttons.addWidget(self.btn_exportar_excel)
+        self.layout_buttons.addWidget(self.btn_abrir_engenharia)
         self.layout_buttons.addWidget(self.btn_fechar)
         self.layout_buttons.addStretch()
 

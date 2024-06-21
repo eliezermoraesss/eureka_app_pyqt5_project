@@ -1,7 +1,10 @@
+import locale
 import sys
+
+import pyodbc
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, QMessageBox, \
-    QProgressBar, QSizePolicy, QTabWidget
+    QProgressBar, QSizePolicy, QTabWidget, QMenu
 from PyQt5.QtGui import QFont, QColor, QIcon, QDesktopServices
 from PyQt5.QtCore import Qt, QCoreApplication, QDate, QUrl, QProcess, pyqtSignal
 import pyperclip
@@ -16,8 +19,12 @@ import os
 
 class PcpApp(QWidget):
     guia_fechada = pyqtSignal()
+
     def __init__(self):
         super().__init__()
+
+        self.setWindowTitle("EUREKA® PCP - v2.0")
+        locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
         self.engine = None
         self.interromper_consulta_sql = False
@@ -31,14 +38,16 @@ class PcpApp(QWidget):
         self.tabWidget.tabCloseRequested.connect(self.fechar_guia)
         self.tabWidget.setVisible(False)  # Inicialmente, a guia está invisível
 
+        self.guias_abertas = []
+        self.guias_abertas_onde_usado = []
+        self.guias_abertas_saldo = []
+
         self.altura_linha = 30
         self.tamanho_fonte_tabela = 10
 
         self.fonte_tabela = 'Segoe UI'
         fonte_campos = "Segoe UI"
         tamanho_fonte_campos = 16
-
-        self.setWindowTitle("EUREKA® PCP - v0.1")
 
         self.setStyleSheet("""
             * {
@@ -99,13 +108,21 @@ class PcpApp(QWidget):
                 font-weight: bold;
                 margin: 0px 5px 10px 5px;
             }
-
-            QPushButton:hover {
+            
+            QPushButton#btn_engenharia {
                 background-color: #0a79f8;
-                color: #fff
+            }
+            
+            QPushButton#btn_compras {
+                background-color: #836FFF;
             }
 
-            QPushButton:pressed {
+            QPushButton:hover, QPushButton:hover#btn_engenharia, QPushButton:hover#btn_compras {
+                background-color: #E84545;
+                color: #fff
+            }
+    
+            QPushButton:pressed, QPushButton:pressed#btn_engenharia, QPushButton:pressed#btn_compras {
                 background-color: #6703c5;
                 color: #fff;
             }
@@ -203,9 +220,25 @@ class PcpApp(QWidget):
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
-        self.btn_abrir_compras = QPushButton("Follow-up Compras", self)
+        self.btn_abrir_compras = QPushButton("Compras", self)
+        self.btn_abrir_compras.setObjectName("btn_compras")
         self.btn_abrir_compras.clicked.connect(self.abrir_modulo_compras)
         self.btn_abrir_compras.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+        self.btn_abrir_engenharia = QPushButton("Engenharia", self)
+        self.btn_abrir_engenharia.setObjectName("btn_engenharia")
+        self.btn_abrir_engenharia.clicked.connect(self.abrir_modulo_engenharia)
+        self.btn_abrir_engenharia.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+        self.btn_onde_e_usado = QPushButton("Onde é usado?", self)
+        self.btn_onde_e_usado.clicked.connect(lambda: self.executar_consulta_onde_usado(self.tree))
+        self.btn_onde_e_usado.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.btn_onde_e_usado.setEnabled(False)
+
+        self.btn_saldo_estoque = QPushButton("Saldos em Estoque", self)
+        self.btn_saldo_estoque.clicked.connect(lambda: self.executar_saldo_em_estoque(self.tree))
+        self.btn_saldo_estoque.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.btn_saldo_estoque.setEnabled(False)
 
         self.btn_limpar = QPushButton("Limpar", self)
         self.btn_limpar.clicked.connect(self.limpar_campos)
@@ -222,6 +255,7 @@ class PcpApp(QWidget):
         self.btn_abrir_desenho = QPushButton("Abrir Desenho", self)
         self.btn_abrir_desenho.clicked.connect(self.abrir_desenho)
         self.btn_abrir_desenho.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.btn_abrir_desenho.setEnabled(False)
 
         self.btn_exportar_excel = QPushButton("Exportar Excel", self)
         self.btn_exportar_excel.clicked.connect(self.exportar_excel)
@@ -277,11 +311,14 @@ class PcpApp(QWidget):
         layout_campos_linha_02.addStretch()
 
         self.layout_buttons.addWidget(self.btn_consultar)
-        self.layout_buttons.addWidget(self.btn_abrir_compras)
+        self.layout_buttons.addWidget(self.btn_saldo_estoque)
+        self.layout_buttons.addWidget(self.btn_onde_e_usado)
         self.layout_buttons.addWidget(self.btn_nova_janela)
         self.layout_buttons.addWidget(self.btn_limpar)
         self.layout_buttons.addWidget(self.btn_abrir_desenho)
         self.layout_buttons.addWidget(self.btn_exportar_excel)
+        self.layout_buttons.addWidget(self.btn_abrir_compras)
+        self.layout_buttons.addWidget(self.btn_abrir_engenharia)
         self.layout_buttons.addWidget(self.btn_fechar)
         self.layout_buttons.addStretch()
 
@@ -291,6 +328,65 @@ class PcpApp(QWidget):
         layout.addWidget(self.tree)
         layout.addLayout(self.layout_footer)
         self.setLayout(layout)
+
+    def fechar_guia(self, index):
+        if index >= 0:
+            try:
+                codigo_guia_fechada = self.tabWidget.tabText(index)
+                self.guias_abertas.remove(codigo_guia_fechada)
+
+            # Por ter duas listas de controle de abas abertas, 'guias_abertas = []' e 'guias_abertas_onde_usado = []',
+            # ao fechar uma guia ocorre uma exceção (ValueError) se o código não for encontrado em uma das listas.
+            # Utilize try/except para contornar esse problema.
+            except ValueError:
+                codigo_guia_fechada = self.tabWidget.tabText(index).split(' - ')[1]
+                try:
+                    self.guias_abertas_onde_usado.remove(codigo_guia_fechada)
+                except ValueError:
+                    self.guias_abertas_saldo.remove(codigo_guia_fechada)
+
+            finally:
+                self.tabWidget.removeTab(index)
+
+                if not self.existe_guias_abertas():
+                    # Se não houver mais guias abertas, remova a guia do layout principal
+                    self.tabWidget.setVisible(False)
+                    self.guia_fechada.emit()
+
+    def existe_guias_abertas(self):
+        return self.tabWidget.count() > 0
+
+    def ajustar_largura_coluna_descricao(self, tree_widget):
+        header = tree_widget.horizontalHeader()
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+
+    def showContextMenu(self, position, table):
+        indexes = table.selectedIndexes()
+        if indexes:
+            # Obtém o índice do item clicado
+            index = table.indexAt(position)
+            if not index.isValid():
+                return
+
+            # Seleciona a linha inteira
+            table.selectRow(index.row())
+
+            menu = QMenu()
+
+            context_menu_consultar_onde_usado = QAction('Onde é usado?', self)
+            context_menu_consultar_onde_usado.triggered.connect(lambda: self.executar_consulta_onde_usado(table))
+
+            context_menu_saldo_estoque = QAction('Saldo em estoque', self)
+            context_menu_saldo_estoque.triggered.connect(lambda: self.executar_saldo_em_estoque(table))
+
+            context_menu_nova_janela = QAction('Nova janela', self)
+            context_menu_nova_janela.triggered.connect(lambda: self.abrir_nova_janela())
+
+            menu.addAction(context_menu_consultar_onde_usado)
+            menu.addAction(context_menu_saldo_estoque)
+            menu.addAction(context_menu_nova_janela)
+
+            menu.exec_(table.viewport().mapToGlobal(position))
 
     def limpar_campos(self):
         self.campo_codigo.clear()
@@ -312,6 +408,11 @@ class PcpApp(QWidget):
             else:
                 mensagem = f"Desenho não encontrado!\n\n:-("
                 QMessageBox.information(self, f"{codigo}", mensagem)
+
+    def abrir_modulo_engenharia(self):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        script_path = os.path.join(script_dir, 'engenharia_model.pyw')
+        self.process.start("python", [script_path])
 
     def abrir_modulo_compras(self):
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -413,6 +514,8 @@ class PcpApp(QWidget):
         self.tree.verticalHeader().setDefaultSectionSize(self.altura_linha)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
         self.tree.horizontalHeader().setStretchLastSection(True)
+        self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tree.customContextMenuRequested.connect(lambda pos: self.showContextMenu(pos, self.tree))
 
     def copiar_linha(self, item):
         if item is not None:
@@ -437,6 +540,9 @@ class PcpApp(QWidget):
         self.campo_data_fim.setEnabled(status)
         self.btn_consultar.setEnabled(status)
         self.btn_exportar_excel.setEnabled(status)
+        self.btn_abrir_desenho.setEnabled(status)
+        self.btn_onde_e_usado.setEnabled(status)
+        self.btn_saldo_estoque.setEnabled(status)
 
     def exibir_mensagem(self, title, message, icon_type):
         root = tk.Tk()
@@ -677,6 +783,278 @@ class PcpApp(QWidget):
         if hasattr(self, 'engine') and self.engine is not None:
             self.engine.dispose()
         self.controle_campos_formulario(True)
+
+    def executar_consulta_onde_usado(self, table):
+        item_selecionado = table.currentItem()
+        codigo, descricao = None, None
+
+        if item_selecionado:
+            header = table.horizontalHeader()
+            codigo_col = None
+            descricao_col = None
+
+            for col in range(header.count()):
+                header_text = table.horizontalHeaderItem(col).text()
+                if header_text == 'Código':
+                    codigo_col = col
+                elif header_text == 'Descrição':
+                    descricao_col = col
+
+            if codigo_col is not None and descricao_col is not None:
+                codigo = table.item(item_selecionado.row(), codigo_col).text()
+                descricao = table.item(item_selecionado.row(), descricao_col).text()
+
+            if codigo not in self.guias_abertas_onde_usado:
+                query_onde_usado = f"""
+                    SELECT STRUT.G1_COD AS "Código", PROD.B1_DESC "Descrição" 
+                    FROM {database}.dbo.SG1010 STRUT 
+                    INNER JOIN {database}.dbo.SB1010 PROD 
+                    ON G1_COD = B1_COD WHERE G1_COMP = '{codigo}' 
+                    AND STRUT.D_E_L_E_T_ <> '*';
+                """
+                self.guias_abertas_onde_usado.append(codigo)
+                try:
+                    conn = pyodbc.connect(
+                        f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}')
+
+                    cursor_tabela = conn.cursor()
+                    cursor_tabela.execute(query_onde_usado)
+
+                    nova_guia_estrutura = QWidget()
+                    layout_nova_guia_estrutura = QVBoxLayout()
+                    layout_cabecalho = QHBoxLayout()
+
+                    tabela_onde_usado = QTableWidget(nova_guia_estrutura)
+
+                    tabela_onde_usado.setContextMenuPolicy(Qt.CustomContextMenu)
+                    tabela_onde_usado.customContextMenuRequested.connect(
+                        lambda pos: self.showContextMenu(pos, tabela_onde_usado))
+
+                    tabela_onde_usado.setColumnCount(len(cursor_tabela.description))
+                    tabela_onde_usado.setHorizontalHeaderLabels([desc[0] for desc in cursor_tabela.description])
+
+                    # Tornar a tabela somente leitura
+                    tabela_onde_usado.setEditTriggers(QTableWidget.NoEditTriggers)
+
+                    # Configurar a fonte da tabela
+                    fonte_tabela = QFont("Segoe UI", 8)  # Substitua por sua fonte desejada e tamanho
+                    tabela_onde_usado.setFont(fonte_tabela)
+
+                    # Ajustar a altura das linhas
+                    altura_linha = 22  # Substitua pelo valor desejado
+                    tabela_onde_usado.verticalHeader().setDefaultSectionSize(altura_linha)
+
+                    for i, row in enumerate(cursor_tabela.fetchall()):
+                        tabela_onde_usado.insertRow(i)
+                        for j, value in enumerate(row):
+                            valor_formatado = str(value).strip()
+
+                            item = QTableWidgetItem(valor_formatado)
+                            tabela_onde_usado.setItem(i, j, item)
+
+                    tabela_onde_usado.setSortingEnabled(True)
+
+                    # Ajustar automaticamente a largura da coluna "Descrição"
+                    self.ajustar_largura_coluna_descricao(tabela_onde_usado)
+
+                    layout_cabecalho.addWidget(QLabel(f'Onde é usado?\n\n{codigo} - {descricao}'),
+                                               alignment=Qt.AlignLeft)
+                    layout_nova_guia_estrutura.addLayout(layout_cabecalho)
+                    layout_nova_guia_estrutura.addWidget(tabela_onde_usado)
+                    nova_guia_estrutura.setLayout(layout_nova_guia_estrutura)
+
+                    nova_guia_estrutura.setStyleSheet("""                                           
+                        * {
+                            background-color: #262626;
+                        }
+
+                        QLabel {
+                            color: #A7A6A6;
+                            font-size: 18px;
+                            font-weight: bold;
+                        }
+
+                        QTableWidget {
+                            border: 1px solid #000000;
+                        }
+
+                        QTableWidget QHeaderView::section {
+                            background-color: #575a5f;
+                            color: #fff;
+                            padding: 5px;
+                            height: 18px;
+                        }
+
+                        QTableWidget QHeaderView::section:horizontal {
+                            border-top: 1px solid #333;
+                        }
+
+                        QTableWidget::item:selected {
+                            background-color: #0066ff;
+                            color: #fff;
+                            font-weight: bold;
+                        }        
+                    """)
+
+                    if not self.existe_guias_abertas():
+                        # Se não houver guias abertas, adicione a guia ao layout principal
+                        self.layout().addWidget(self.tabWidget)
+                        self.tabWidget.setVisible(True)
+
+                    self.tabWidget.addTab(nova_guia_estrutura, f"Onde é usado? - {codigo}")
+                    tabela_onde_usado.itemDoubleClicked.connect(self.copiar_linha)
+
+                except pyodbc.Error as ex:
+                    print(f"Falha na consulta de estrutura. Erro: {str(ex)}")
+
+                finally:
+                    self.tabWidget.setCurrentIndex(self.tabWidget.indexOf(nova_guia_estrutura))
+                    conn.close()
+
+    def executar_saldo_em_estoque(self, table):
+        item_selecionado = table.currentItem()
+        codigo, descricao = None, None
+
+        if item_selecionado:
+            header = table.horizontalHeader()
+            codigo_col = None
+            descricao_col = None
+
+            for col in range(header.count()):
+                header_text = table.horizontalHeaderItem(col).text()
+                if header_text == 'Código':
+                    codigo_col = col
+                elif header_text == 'Descrição':
+                    descricao_col = col
+
+            if codigo_col is not None and descricao_col is not None:
+                codigo = table.item(item_selecionado.row(), codigo_col).text()
+                descricao = table.item(item_selecionado.row(), descricao_col).text()
+
+            if codigo not in self.guias_abertas_saldo:
+                query_saldo = f"""
+                    SELECT 
+                        B2_QATU AS "Saldo Atual",
+                        EST.B2_QATU - EST.B2_QEMP AS "Qtd. Disponível",
+                        B2_QEMP AS "Qtd. Empenhada",
+                        B2_SALPEDI AS "Qtd. Prev. Entrada",
+                        PROD.B1_UM AS "Unid. Med.",
+                        B2_VATU1 AS "Valor Saldo Atual (R$)", 
+                        B2_CM1 AS "Custo Unit. (R$)",
+                        B2_DMOV AS "Dt. Últ. Mov.", 
+                        B2_HMOV AS "Hora Últ. Mov.",
+                        B2_DINVENT AS "Dt. Últ. Inventário"
+                    FROM 
+                        {database}.dbo.SB2010 EST
+                    INNER JOIN
+                        {database}.dbo.SB1010 PROD
+                    ON
+                        PROD.B1_COD = EST.B2_COD 
+                    WHERE 
+                        B2_COD = '{codigo}';
+                """
+                self.guias_abertas_saldo.append(codigo)
+                try:
+                    conn_saldo = pyodbc.connect(
+                        f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}')
+
+                    cursor_saldo_estoque = conn_saldo.cursor()
+                    cursor_saldo_estoque.execute(query_saldo)
+
+                    nova_guia_saldo = QWidget()
+                    layout_nova_guia_saldo = QVBoxLayout()
+                    layout_cabecalho = QHBoxLayout()
+
+                    tabela_saldo_estoque = QTableWidget(nova_guia_saldo)
+
+                    tabela_saldo_estoque.setColumnCount(len(cursor_saldo_estoque.description))
+                    tabela_saldo_estoque.setHorizontalHeaderLabels(
+                        [desc[0] for desc in cursor_saldo_estoque.description])
+
+                    tabela_saldo_estoque.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+
+                    # Tornar a tabela somente leitura
+                    tabela_saldo_estoque.setEditTriggers(QTableWidget.NoEditTriggers)
+
+                    # Configurar a fonte da tabela1
+                    fonte_tabela = QFont("Segoe UI", 10)  # Substitua por sua fonte desejada e tamanho
+                    tabela_saldo_estoque.setFont(fonte_tabela)
+
+                    # Ajustar a altura das linhas
+                    altura_linha = 20  # Substitua pelo valor desejado
+                    tabela_saldo_estoque.verticalHeader().setDefaultSectionSize(altura_linha)
+
+                    for i, row in enumerate(cursor_saldo_estoque.fetchall()):
+                        tabela_saldo_estoque.insertRow(i)
+                        for j, value in enumerate(row):
+
+                            if j in (0, 1, 2, 3, 5, 6):
+                                value = locale.format_string("%.2f", value, grouping=True)
+
+                            elif j in (7, 9) and not value.isspace():
+                                data_obj = datetime.strptime(value, "%Y%m%d")
+                                value = data_obj.strftime("%d/%m/%Y")
+
+                            valor_formatado = str(value).strip()
+                            item = QTableWidgetItem(valor_formatado)
+                            item.setTextAlignment(Qt.AlignCenter)
+                            tabela_saldo_estoque.setItem(i, j, item)
+
+                    tabela_saldo_estoque.setSortingEnabled(True)
+
+                    layout_cabecalho.addWidget(QLabel(f'Saldos em Estoque\n\n{codigo} - {descricao}'),
+                                               alignment=Qt.AlignLeft)
+                    layout_nova_guia_saldo.addLayout(layout_cabecalho)
+                    layout_nova_guia_saldo.addWidget(tabela_saldo_estoque)
+                    nova_guia_saldo.setLayout(layout_nova_guia_saldo)
+
+                    nova_guia_saldo.setStyleSheet("""                                           
+                        * {
+                            background-color: #262626;
+                        }
+
+                        QLabel {
+                            color: #A7A6A6;
+                            font-size: 18px;
+                            font-weight: bold;
+                        }
+
+                        QTableWidget {
+                            border: 1px solid #000000;
+                        }
+
+                        QTableWidget QHeaderView::section {
+                            background-color: #575a5f;
+                            color: #fff;
+                            padding: 5px;
+                            height: 18px;
+                        }
+
+                        QTableWidget QHeaderView::section:horizontal {
+                            border-top: 1px solid #333;
+                        }
+
+                        QTableWidget::item:selected {
+                            background-color: #0066ff;
+                            color: #fff;
+                            font-weight: bold;
+                        }        
+                    """)
+
+                    if not self.existe_guias_abertas():
+                        # Se não houver guias abertas, adicione a guia ao layout principal
+                        self.layout().addWidget(self.tabWidget)
+                        self.tabWidget.setVisible(True)
+
+                    self.tabWidget.addTab(nova_guia_saldo, f"Saldos em Estoque - {codigo}")
+                    tabela_saldo_estoque.itemDoubleClicked.connect(self.copiar_linha)
+
+                except pyodbc.Error as ex:
+                    print(f"Falha na consulta de estrutura. Erro: {str(ex)}")
+
+                finally:
+                    self.tabWidget.setCurrentIndex(self.tabWidget.indexOf(nova_guia_saldo))
+                    conn_saldo.close()
 
 
 if __name__ == "__main__":
