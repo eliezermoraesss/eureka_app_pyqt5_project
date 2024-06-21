@@ -182,9 +182,14 @@ class ComprasApp(QWidget):
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
+        self.btn_consultar = QPushButton("Engenharia", self)
+        self.btn_consultar.clicked.connect(self.abrir_modulo_engenharia)
+        self.btn_consultar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
         self.btn_limpar = QPushButton("Limpar", self)
         self.btn_limpar.clicked.connect(self.limpar_campos)
         self.btn_limpar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
         self.btn_parar_consulta = QPushButton("Parar consulta")
         self.btn_parar_consulta.clicked.connect(self.parar_consulta)
         self.btn_parar_consulta.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -546,6 +551,8 @@ class ComprasApp(QWidget):
         self.tree.verticalHeader().setDefaultSectionSize(self.altura_linha)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
         self.tree.horizontalHeader().setStretchLastSection(True)
+        self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tree.customContextMenuRequested.connect(lambda pos: self.showContextMenu(pos, self.tree))
 
     def copiar_linha(self, item):
         if item is not None:
@@ -905,6 +912,11 @@ class ComprasApp(QWidget):
         if hasattr(self, 'engine') and self.engine is not None:
             self.engine.dispose()
         self.controle_campos_formulario(True)
+
+    def abrir_modulo_engenharia(self):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        script_path = os.path.join(script_dir, 'engenharia_model.pyw')
+        self.process.start("python", [script_path])
 
     def executar_consulta_onde_usado(self, table):
         item_selecionado = table.currentItem()
