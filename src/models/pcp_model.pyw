@@ -253,7 +253,7 @@ class PcpApp(QWidget):
         self.btn_nova_janela.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.btn_abrir_desenho = QPushButton("Abrir Desenho", self)
-        self.btn_abrir_desenho.clicked.connect(self.abrir_desenho)
+        self.btn_abrir_desenho.clicked.connect(lambda: self.abrir_desenho(self.tree))
         self.btn_abrir_desenho.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.btn_abrir_desenho.setEnabled(False)
 
@@ -385,6 +385,7 @@ class PcpApp(QWidget):
             context_menu_nova_janela = QAction('Nova janela', self)
             context_menu_nova_janela.triggered.connect(lambda: self.abrir_nova_janela())
 
+            menu.addAction(context_menu_abrir_desenho)
             menu.addAction(context_menu_consultar_onde_usado)
             menu.addAction(context_menu_saldo_estoque)
             menu.addAction(context_menu_nova_janela)
@@ -397,11 +398,21 @@ class PcpApp(QWidget):
         self.campo_OP.clear()
         self.campo_descricao_prod.clear()
 
-    def abrir_desenho(self):
-        item_selecionado = self.tree.currentItem()
+    def abrir_desenho(self, table):
+        item_selecionado = table.currentItem()
+        header = table.horizontalHeader()
+        codigo_col = None
+        codigo = None
+
+        for col in range(header.count()):
+            header_text = table.horizontalHeaderItem(col).text()
+            if header_text == 'Código':
+                codigo_col = col
+
+            if codigo_col is not None:
+                codigo = table.item(item_selecionado.row(), codigo_col).text()
 
         if item_selecionado:
-            codigo = self.tree.item(item_selecionado.row(), 5).text()
             pdf_path = os.path.join(r"\\192.175.175.4\dados\EMPRESA\PROJETOS\PDF-OFICIAL", f"{codigo}.PDF")
             pdf_path = os.path.normpath(pdf_path)
 
