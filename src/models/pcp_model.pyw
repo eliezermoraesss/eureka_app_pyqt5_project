@@ -171,6 +171,7 @@ class PcpApp(QWidget):
         self.label_data_inicio.setObjectName("data-inicio")
         self.label_data_fim = QLabel("Data final:", self)
         self.label_data_fim.setObjectName("data-fim")
+        self.label_campo_observacao = QLabel("Observação:", self)
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont(fonte_campos, tamanho_fonte_campos))
@@ -216,6 +217,12 @@ class PcpApp(QWidget):
         self.campo_data_fim.setDate(QDate().currentDate())
         self.add_today_button(self.campo_data_fim)
 
+        self.campo_observacao = QLineEdit(self)
+        self.campo_observacao.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_observacao.setMaxLength(60)
+        self.campo_observacao.setFixedWidth(400)
+        self.add_clear_button(self.campo_observacao)
+
         self.btn_consultar = QPushButton("Pesquisar", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -253,7 +260,7 @@ class PcpApp(QWidget):
         self.btn_nova_janela.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.btn_abrir_desenho = QPushButton("Abrir Desenho", self)
-        self.btn_abrir_desenho.clicked.connect(self.abrir_desenho)
+        self.btn_abrir_desenho.clicked.connect(lambda: self.abrir_desenho(self.tree))
         self.btn_abrir_desenho.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.btn_abrir_desenho.setEnabled(False)
 
@@ -270,6 +277,7 @@ class PcpApp(QWidget):
         self.campo_qp.returnPressed.connect(self.executar_consulta)
         self.campo_OP.returnPressed.connect(self.executar_consulta)
         self.campo_descricao_prod.returnPressed.connect(self.executar_consulta)
+        self.campo_observacao.returnPressed.connect(self.executar_consulta)
 
         layout = QVBoxLayout()
         layout_campos_linha_01 = QHBoxLayout()
@@ -301,10 +309,15 @@ class PcpApp(QWidget):
         container_data_fim.addWidget(self.label_data_fim)
         container_data_fim.addWidget(self.campo_data_fim)
 
+        container_observacao = QVBoxLayout()
+        container_observacao.addWidget(self.label_campo_observacao)
+        container_observacao.addWidget(self.campo_observacao)
+
         layout_campos_linha_01.addLayout(container_codigo)
         layout_campos_linha_01.addLayout(container_descricao_prod)
         layout_campos_linha_01.addLayout(container_op)
         layout_campos_linha_01.addLayout(container_qp)
+        layout_campos_linha_01.addLayout(container_observacao)
         layout_campos_linha_02.addLayout(container_data_ini)
         layout_campos_linha_02.addLayout(container_data_fim)
         layout_campos_linha_01.addStretch()
@@ -385,6 +398,7 @@ class PcpApp(QWidget):
             context_menu_nova_janela = QAction('Nova janela', self)
             context_menu_nova_janela.triggered.connect(lambda: self.abrir_nova_janela())
 
+            menu.addAction(context_menu_abrir_desenho)
             menu.addAction(context_menu_consultar_onde_usado)
             menu.addAction(context_menu_saldo_estoque)
             menu.addAction(context_menu_nova_janela)
@@ -396,12 +410,23 @@ class PcpApp(QWidget):
         self.campo_qp.clear()
         self.campo_OP.clear()
         self.campo_descricao_prod.clear()
+        self.campo_observacao.clear()
 
-    def abrir_desenho(self):
-        item_selecionado = self.tree.currentItem()
+    def abrir_desenho(self, table):
+        item_selecionado = table.currentItem()
+        header = table.horizontalHeader()
+        codigo_col = None
+        codigo = None
+
+        for col in range(header.count()):
+            header_text = table.horizontalHeaderItem(col).text()
+            if header_text == 'Código':
+                codigo_col = col
+
+            if codigo_col is not None:
+                codigo = table.item(item_selecionado.row(), codigo_col).text()
 
         if item_selecionado:
-            codigo = self.tree.item(item_selecionado.row(), 5).text()
             pdf_path = os.path.join(r"\\192.175.175.4\dados\EMPRESA\PROJETOS\PDF-OFICIAL", f"{codigo}.PDF")
             pdf_path = os.path.normpath(pdf_path)
 
@@ -468,8 +493,12 @@ class PcpApp(QWidget):
             sys.exit()
 
     def exportar_excel(self):
-        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
-                                                   f'report_{date.today().strftime('%Y-%m-%d')}',
+        desktop_path = os.path.join(os.path.expanduser("~"), 'Desktop')
+
+        now = datetime.now()
+        default_filename = f'PCP-report_{now.today().strftime('%Y-%m-%d_%H%M%S')}.xlsx'
+
+        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como', os.path.join(desktop_path, default_filename),
                                                    'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
 
         if file_path:
@@ -539,6 +568,7 @@ class PcpApp(QWidget):
         self.campo_codigo.setEnabled(status)
         self.campo_qp.setEnabled(status)
         self.campo_OP.setEnabled(status)
+        self.campo_observacao.setEnabled(status)
         self.campo_data_inicio.setEnabled(status)
         self.campo_data_fim.setEnabled(status)
         self.btn_consultar.setEnabled(status)
@@ -563,7 +593,7 @@ class PcpApp(QWidget):
 
         root.destroy()
 
-    def numero_linhas_consulta(self, codigo_produto, numero_qp, numero_op, descricao_produto):
+    def numero_linhas_consulta(self, codigo_produto, numero_qp, numero_op, descricao_produto, observacao):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -585,12 +615,13 @@ class PcpApp(QWidget):
                         C2_ZZNUMQP LIKE '%{numero_qp}'
                         AND C2_PRODUTO LIKE '{codigo_produto}%'
                         AND prod.B1_DESC LIKE '{descricao_produto}%'
+                        AND C2_OBS LIKE '%{observacao}%'
                         AND C2_NUM LIKE '{numero_op}%' {filtro_data}
                         AND op.D_E_L_E_T_ <> '*'
                 """
         return query
 
-    def query_consulta_ordem_producao(self, codigo_produto, numero_qp, numero_op, descricao_produto):
+    def query_consulta_ordem_producao(self, codigo_produto, numero_qp, numero_op, descricao_produto, observacao):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -626,6 +657,7 @@ class PcpApp(QWidget):
                 C2_ZZNUMQP LIKE '%{numero_qp}'
                 AND C2_PRODUTO LIKE '{codigo_produto}%'
                 AND prod.B1_DESC LIKE '{descricao_produto}%'
+                AND C2_OBS LIKE '%{observacao}%'
                 AND C2_NUM LIKE '{numero_op}%' {filtro_data}
                 AND op.D_E_L_E_T_ <> '*'
             ORDER BY 
@@ -678,6 +710,7 @@ class PcpApp(QWidget):
         numero_op = self.campo_OP.text().upper().strip()
         codigo_produto = self.campo_codigo.text().upper().strip()
         descricao_produto = self.campo_descricao_prod.text().upper().strip()
+        observacao = self.campo_observacao.text().upper().strip()
 
         if self.validar_campos(codigo_produto, numero_qp, numero_op):
             self.btn_consultar.setEnabled(True)
@@ -685,8 +718,8 @@ class PcpApp(QWidget):
 
         numero_qp = numero_qp.zfill(6) if numero_qp != '' else numero_qp
 
-        query_consulta_op = self.query_consulta_ordem_producao(codigo_produto, numero_qp, numero_op, descricao_produto)
-        query_contagem_linhas = self.numero_linhas_consulta(codigo_produto, numero_qp, numero_op, descricao_produto)
+        query_consulta_op = self.query_consulta_ordem_producao(codigo_produto, numero_qp, numero_op, descricao_produto, observacao)
+        query_contagem_linhas = self.numero_linhas_consulta(codigo_produto, numero_qp, numero_op, descricao_produto, observacao)
 
         self.controle_campos_formulario(False)
         line_number = None

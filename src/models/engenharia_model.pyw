@@ -2,7 +2,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, \
     QTableWidgetItem, QHeaderView, QSizePolicy, QSpacerItem, QMessageBox, QFileDialog, QToolButton, QTabWidget, \
-    QItemDelegate, QAbstractItemView, QCheckBox, QMenu, QAction
+    QItemDelegate, QAbstractItemView, QCheckBox, QMenu, QAction, QComboBox, QStyle
 from PyQt5.QtGui import QFont, QIcon, QDesktopServices, QColor
 from PyQt5.QtCore import Qt, QUrl, QCoreApplication, pyqtSignal, QProcess
 import pyodbc
@@ -16,29 +16,36 @@ import tkinter as tk
 from tkinter import messagebox
 import locale
 
+from sqlalchemy import create_engine
 
-class ConsultaApp(QWidget):
+
+class EngenhariaApp(QWidget):
     # Adicione este sinal à classe
     guia_fechada = pyqtSignal()
 
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("EUREKA® ENGENHARIA - v0.2")
+        self.setWindowTitle("EUREKA® ENGENHARIA - v2.0")
 
         locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
-        # Configurar o ícone da janela
-        icon_path = "010.png"
-        self.setWindowIcon(QIcon(icon_path))
-
-        # Ajuste a cor de fundo da janela
-        self.setAutoFillBackground(True)
-        palette = self.palette()
-        palette.setColor(self.backgroundRole(), QColor('#363636'))  # Substitua pela cor desejada
-        self.setPalette(palette)
-
         self.nova_janela = None  # Adicione esta linha
+        self.guias_abertas = []
+        self.guias_abertas_onde_usado = []
+        self.guias_abertas_saldo = []
+        fonte = "Segoe UI"
+        tamanho_fonte = 10
+
+        self.altura_linha = 30
+        self.tamanho_fonte_tabela = 10
+        self.fonte_tabela = 'Segoe UI'
+
+        self.interromper_consulta_sql = False
+        self.tree = QTableWidget(self)
+        self.tree.setColumnCount(0)
+        self.tree.setRowCount(0)
+
         self.process = QProcess(self)
 
         self.tabWidget = QTabWidget(self)  # Adicione um QTabWidget ao layout principal
@@ -46,108 +53,65 @@ class ConsultaApp(QWidget):
         self.tabWidget.tabCloseRequested.connect(self.fechar_guia)
         self.tabWidget.setVisible(False)  # Inicialmente, a guia está invisível
 
-        # Aplicar folha de estilo ao aplicativo
-        self.setStyleSheet("""
-            * {
-                background-color: #363636;
-            }
+        self.combobox_armazem = QComboBox(self)
+        self.combobox_armazem.setEditable(False)
+        self.combobox_armazem.setObjectName('combobox-armazem')
 
-            QLabel, QCheckBox {
-                color: #EEEEEE;
-                font-size: 11px;
-                font-weight: bold;
-            }
+        self.combobox_armazem.addItem("", None)
 
-            QLineEdit {
-                background-color: #A7A6A6;
-                border: 1px solid #262626;
-                padding: 5px;
-                border-radius: 8px;
-            }
+        armazens = {
+            "01": "MATERIA PRIMA",
+            "02": "PROD. INTERMEDIARIO",
+            "03": "PROD. COMERCIAIS",
+            "04": "PROD. ACABADOS",
+            "05": "MAT.PRIMA IMP.INDIR.",
+            "06": "PROD. ELETR.NACIONAL",
+            "07": "PROD.ELETR.IMP.DIRET",
+            "08": "SRV INDUSTRIALIZACAO",
+            "09": "SRV TERCEIROS",
+            "10": "PROD.COM.IMP.INDIR.",
+            "11": "PROD.COM.IMP.DIRETO",
+            "12": "MAT.PRIMA IMP.DIR.ME",
+            "13": "E.P.I-MAT.SEGURANCA",
+            "14": "PROD.ELETR.IMP.INDIR",
+            "22": "ATIVOS",
+            "60": "PROD-FERR CONSUMIVEI",
+            "61": "EMBALAGENS",
+            "70": "SERVICOS GERAIS",
+            "71": "PRODUTOS AUTOMOTIVOS",
+            "77": "OUTROS",
+            "80": "SUCATAS",
+            "85": "SERVICOS PRESTADOS",
+            "96": "ARMAZ.NAO APLICAVEL",
+            "97": "TRAT. SUPERFICIAL"
+        }
 
-            QPushButton {
-                background-color: #0a79f8;
-                color: #fff;
-                padding: 5px 15px;
-                border: 2px;
-                border-radius: 8px;
-                font-size: 11px;
-                height: 20px;
-                font-weight: bold;
-                margin-top: 6px;
-                margin-bottom: 6px;
-            }
-            
-            QPushButton#PCP, QPushButton#compras {
-                background-color: #DC5F00;
-            }
-            
-            QPushButton#compras {
-                background-color: #836FFF;
-            }
-            
-            QPushButton:hover, QPushButton#PCP:hover, QPushButton#compras:hover {
-                background-color: #fff;
-                color: #0a79f8
-            }
+        for key, value in armazens.items():
+            self.combobox_armazem.addItem(key + ' - ' + value, key)
 
-            QPushButton:pressed, QPushButton#PCP:pressed, QPushButton#compras:pressed {
-                background-color: #6703c5;
-                color: #fff;
-            }
-            
-            QTableWidget {
-                border: 1px solid #000000;
-                background-color: #363636;
-            }
+        self.campo_codigo = QLineEdit(self)
+        self.campo_codigo.setFont(QFont(fonte, tamanho_fonte))
+        self.add_clear_button(self.campo_codigo)
 
-            QTableWidget QHeaderView::section {
-                background-color: #262626;
-                color: #A7A6A6;
-                padding: 5px;
-                height: 18px;
-            }
+        self.campo_descricao = QLineEdit(self)
+        self.campo_descricao.setFont(QFont(fonte, tamanho_fonte))
+        self.add_clear_button(self.campo_descricao)
 
-            QTableWidget QHeaderView::section:horizontal {
-                border-top: 1px solid #333;
-            }
+        self.campo_contem_descricao = QLineEdit(self)
+        self.campo_contem_descricao.setFont(QFont(fonte, tamanho_fonte))
+        self.add_clear_button(self.campo_contem_descricao)
 
-            QTableWidget::item {
-                background-color: #363636;
-                color: #fff;
-                font-weight: bold;
-            }
-
-            QTableWidget::item:selected {
-                background-color: #000000;
-                color: #EEEEEE;
-                font-weight: bold;
-            }
-        """)
-
-        self.configurar_tabela()
-
-        self.codigo_var = QLineEdit(self)
-        self.descricao_var = QLineEdit(self)
-        self.descricao2_var = QLineEdit(self)
         self.tipo_var = QLineEdit(self)
-        self.um_var = QLineEdit(self)
-        self.armazem_var = QLineEdit(self)
-        self.grupo_var = QLineEdit(self)
-        self.grupo_desc_var = QLineEdit(self)
-
-        fonte = "Segoe UI"
-        tamanho_fonte = 10
-
-        self.codigo_var.setFont(
-            QFont(fonte, tamanho_fonte))  # Substitua "Arial" pela fonte desejada e 12 pelo tamanho desejado
-        self.descricao_var.setFont(QFont(fonte, tamanho_fonte))
-        self.descricao2_var.setFont(QFont(fonte, tamanho_fonte))
         self.tipo_var.setFont(QFont(fonte, tamanho_fonte))
+        self.add_clear_button(self.tipo_var)
+
+        self.um_var = QLineEdit(self)
         self.um_var.setFont(QFont(fonte, tamanho_fonte))
-        self.armazem_var.setFont(QFont(fonte, tamanho_fonte))
+        self.add_clear_button(self.um_var)
+
+        self.grupo_var = QLineEdit(self)
         self.grupo_var.setFont(QFont(fonte, tamanho_fonte))
-        self.grupo_desc_var.setFont(QFont(fonte, tamanho_fonte))
+        self.add_clear_button(self.grupo_var)
 
         self.btn_consultar = QPushButton("Pesquisar", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
@@ -198,18 +162,13 @@ class ConsultaApp(QWidget):
         self.btn_fechar.clicked.connect(self.fechar_janela)
         self.btn_fechar.setMinimumWidth(100)
 
-        # Configurar a tabela
-        self.configurar_tabela_tooltips()
-
         # Conectar o evento returnPressed dos campos de entrada ao método executar_consulta
-        self.codigo_var.returnPressed.connect(self.executar_consulta)
-        self.descricao_var.returnPressed.connect(self.executar_consulta)
-        self.descricao2_var.returnPressed.connect(self.executar_consulta)
+        self.campo_codigo.returnPressed.connect(self.executar_consulta)
+        self.campo_descricao.returnPressed.connect(self.executar_consulta)
+        self.campo_contem_descricao.returnPressed.connect(self.executar_consulta)
         self.tipo_var.returnPressed.connect(self.executar_consulta)
         self.um_var.returnPressed.connect(self.executar_consulta)
-        self.armazem_var.returnPressed.connect(self.executar_consulta)
         self.grupo_var.returnPressed.connect(self.executar_consulta)
-        self.grupo_desc_var.returnPressed.connect(self.executar_consulta)
 
         layout = QVBoxLayout()
         layout_linha_01 = QHBoxLayout()
@@ -217,36 +176,25 @@ class ConsultaApp(QWidget):
         layout_linha_03 = QHBoxLayout()
 
         layout_linha_01.addWidget(QLabel("Código:"))
-        layout_linha_01.addWidget(self.codigo_var)
-        layout_linha_01.addWidget(self.criar_botao_limpar(self.codigo_var))
+        layout_linha_01.addWidget(self.campo_codigo)
 
         layout_linha_01.addWidget(QLabel("Descrição:"))
-        layout_linha_01.addWidget(self.descricao_var)
-        layout_linha_01.addWidget(self.criar_botao_limpar(self.descricao_var))
+        layout_linha_01.addWidget(self.campo_descricao)
 
         layout_linha_01.addWidget(QLabel("Contém na Descrição:"))
-        layout_linha_01.addWidget(self.descricao2_var)
-        layout_linha_01.addWidget(self.criar_botao_limpar(self.descricao2_var))
+        layout_linha_01.addWidget(self.campo_contem_descricao)
 
         layout_linha_02.addWidget(QLabel("Tipo:"))
         layout_linha_02.addWidget(self.tipo_var)
-        layout_linha_02.addWidget(self.criar_botao_limpar(self.tipo_var))
 
         layout_linha_02.addWidget(QLabel("Unid. Medida:"))
         layout_linha_02.addWidget(self.um_var)
-        layout_linha_02.addWidget(self.criar_botao_limpar(self.um_var))
 
         layout_linha_02.addWidget(QLabel("Armazém:"))
-        layout_linha_02.addWidget(self.armazem_var)
-        layout_linha_02.addWidget(self.criar_botao_limpar(self.armazem_var))
+        layout_linha_02.addWidget(self.combobox_armazem)
 
         layout_linha_02.addWidget(QLabel("Grupo:"))
         layout_linha_02.addWidget(self.grupo_var)
-        layout_linha_02.addWidget(self.criar_botao_limpar(self.grupo_var))
-
-        layout_linha_02.addWidget(QLabel("Desc. Grupo:"))
-        layout_linha_02.addWidget(self.grupo_desc_var)
-        layout_linha_02.addWidget(self.criar_botao_limpar(self.grupo_desc_var))
 
         self.checkbox_bloqueado = QCheckBox("Bloqueado?", self)
         layout_linha_02.addWidget(self.checkbox_bloqueado)
@@ -278,9 +226,109 @@ class ConsultaApp(QWidget):
 
         self.setLayout(layout)
 
-        self.guias_abertas = []
-        self.guias_abertas_onde_usado = []
-        self.guias_abertas_saldo = []
+        self.setStyleSheet("""
+                    * {
+                        background-color: #363636;
+                    }
+
+                    QLabel, QCheckBox {
+                        color: #EEEEEE;
+                        font-size: 11px;
+                        font-weight: bold;
+                    }
+
+                    QLineEdit {
+                        background-color: #EEEEEE;
+                        border: 1px solid #262626;
+                        padding: 5px;
+                        border-radius: 8px;
+                    }
+                    
+                    QDateEdit, QComboBox {
+                        background-color: #EEEEEE;
+                        border: 1px solid #262626;
+                        padding: 5px 10px;
+                        border-radius: 10px;
+                        height: 20px;
+                        font-size: 16px;
+                    }
+            
+                    QDateEdit::drop-down, QComboBox::drop-down {
+                        subcontrol-origin: padding;
+                        subcontrol-position: top right;
+                        width: 30px;
+                        border-left-width: 1px;
+                        border-left-color: darkgray;
+                        border-left-style: solid;
+                        border-top-right-radius: 3px;
+                        border-bottom-right-radius: 3px;
+                    }
+            
+                    QDateEdit::down-arrow, QComboBox::down-arrow {
+                        image: url(../resources/images/arrow.png);
+                        width: 10px;
+                        height: 10px;
+                    }   
+
+                    QPushButton {
+                        background-color: #0a79f8;
+                        color: #fff;
+                        padding: 5px 15px;
+                        border: 2px;
+                        border-radius: 8px;
+                        font-size: 11px;
+                        height: 20px;
+                        font-weight: bold;
+                        margin-top: 6px;
+                        margin-bottom: 6px;
+                    }
+
+                    QPushButton#PCP, QPushButton#compras {
+                        background-color: #DC5F00;
+                    }
+
+                    QPushButton#compras {
+                        background-color: #836FFF;
+                    }
+
+                    QPushButton:hover, QPushButton#PCP:hover, QPushButton#compras:hover {
+                        background-color: #fff;
+                        color: #0a79f8
+                    }
+
+                    QPushButton:pressed, QPushButton#PCP:pressed, QPushButton#compras:pressed {
+                        background-color: #6703c5;
+                        color: #fff;
+                    }
+
+                    QTableWidget {
+                        border: 1px solid #000000;
+                        background-color: #363636;
+                    }
+
+                    QTableWidget QHeaderView::section {
+                        background-color: #262626;
+                        color: #A7A6A6;
+                        padding: 5px;
+                        height: 18px;
+                    }
+
+                    QTableWidget QHeaderView::section:horizontal {
+                        border-top: 1px solid #333;
+                    }
+
+                    QTableWidget::item {
+                        background-color: #363636;
+                        color: #fff;
+                        font-weight: bold;
+                    }
+
+                    QTableWidget::item:selected {
+                        background-color: #000000;
+                        color: #EEEEEE;
+                        font-weight: bold;
+                    }
+                """)
 
     def setup_mssql(self):
         caminho_do_arquivo = (r"\\192.175.175.4\f\INTEGRANTES\ELIEZER\PROJETO SOLIDWORKS "
@@ -314,29 +362,45 @@ class ConsultaApp(QWidget):
         script_path = os.path.join(script_dir, 'compras_model.pyw')
         self.process.start("python", [script_path])
 
-    def criar_botao_limpar(self, campo):
-        botao_limpar = QToolButton(self)
-        botao_limpar.setIcon(QIcon('clear_icon.png'))  # Substitua 'icone_limpar.png' pelo caminho do ícone desejado
-        botao_limpar.setCursor(Qt.PointingHandCursor)
-        botao_limpar.clicked.connect(lambda: campo.clear())
-        return botao_limpar
+    def add_clear_button(self, line_edit):
+        clear_icon = self.style().standardIcon(QStyle.SP_LineEditClearButton)
+
+        line_edit_height = line_edit.height()
+        pixmap = clear_icon.pixmap(line_edit_height - 4, line_edit_height - 4)
+        larger_clear_icon = QIcon(pixmap)
+
+        clear_action = QAction(larger_clear_icon, "Limpar", line_edit)
+        clear_action.triggered.connect(line_edit.clear)
+        line_edit.addAction(clear_action, QLineEdit.TrailingPosition)
 
     def exportar_excel(self):
-        # Obter o caminho do arquivo para salvar
-        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como', '',
+
+        desktop_path = os.path.join(os.path.expanduser("~"), 'Desktop')
+
+        now = datetime.now()
+        default_filename = f'ENG-report_{now.today().strftime('%Y-%m-%d_%H%M%S')}.xlsx'
+
+        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como', os.path.join(desktop_path, default_filename),
                                                    'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
 
         if file_path:
-            # Obter os dados da tabela
             data = self.obter_dados_tabela()
+            column_headers = [self.tree.horizontalHeaderItem(i).text() for i in range(self.tree.columnCount())]
+            df = pd.DataFrame(data, columns=column_headers)
 
-            # Criar um DataFrame pandas
-            df = pd.DataFrame(data, columns=["CÓDIGO", "DESCRIÇÃO", "DESC. COMP.", "TIPO", "UM", "ARMAZÉM", "GRUPO",
-                                             "DESC. GRUPO", "CC", "BLOQUEADO?", "REV.", "DATA CADASTRO",
-                                             "DATA ULT. REV.", ""])
+            writer = pd.ExcelWriter(file_path, engine='xlsxwriter')
+            df.to_excel(writer, sheet_name='Dados', index=False)
 
-            # Salvar o DataFrame como um arquivo Excel
-            df.to_excel(file_path, index=False)
+            workbook = writer.book
+            worksheet = writer.sheets['Dados']
+
+            for i, col in enumerate(df.columns):
+                max_len = df[col].astype(str).map(len).max()
+                worksheet.set_column(i, i, max_len + 2)
+
+            writer.close()
+
+            os.startfile(file_path)
 
     def obter_dados_tabela(self):
         # Obter os dados da tabela
@@ -352,34 +416,18 @@ class ConsultaApp(QWidget):
             data.append(row_data)
         return data
 
-    def configurar_tabela(self):
-        self.tree = QTableWidget(self)
-        self.tree.setColumnCount(15)
-        self.tree.setHorizontalHeaderLabels(
-            ["CÓDIGO", "DESCRIÇÃO", "DESC. COMP.", "TIPO", "UM", "ARMAZÉM", "GRUPO", "DESC. GRUPO", "CC", "BLOQUEADO?",
-             "REV.", "DATA CADASTRO", "DATA ULT. REV.", "LOCALIZ.", ""])
+    def configurar_tabela(self, dataframe):
+        self.tree.setColumnCount(len(dataframe.columns))
+        self.tree.setHorizontalHeaderLabels(dataframe.columns)
         self.tree.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.tree.setEditTriggers(QTableWidget.NoEditTriggers)
         self.tree.setSelectionBehavior(QTableWidget.SelectRows)
         self.tree.setSelectionMode(QTableWidget.SingleSelection)
-
-        # Conectar o evento itemDoubleClicked ao método copiar_linha
         self.tree.itemDoubleClicked.connect(self.copiar_linha)
-
-        # Configurar a fonte da tabela
-        fonte_tabela = QFont("Segoe UI", 10)  # Substitua por sua fonte desejada e tamanho
-        self.tree.setFont(fonte_tabela)
-
-        # Ajustar a altura das linhas
-        altura_linha = 34  # Substitua pelo valor desejado
-        self.tree.verticalHeader().setDefaultSectionSize(altura_linha)
-
-        # Conectar o evento sectionClicked ao método ordenar_tabela
+        self.tree.setFont(QFont(self.fonte_tabela, self.tamanho_fonte_tabela))
+        self.tree.verticalHeader().setDefaultSectionSize(self.altura_linha)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
-
-        # Redimensionar a última coluna para preencher o espaço restante
         self.tree.horizontalHeader().setStretchLastSection(True)
-
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(lambda pos: self.showContextMenu(pos, self.tree))
 
@@ -419,28 +467,34 @@ class ConsultaApp(QWidget):
 
             menu.exec_(table.viewport().mapToGlobal(position))
 
-    def configurar_tabela_tooltips(self):
-        headers = ["CÓDIGO", "DESCRIÇÃO", "DESC. COMP.", "TIPO", "UM", "ARMAZÉM", "GRUPO", "DESC. GRUPO", "CC",
-                   "BLOQUEADO?", "REV."]
-        tooltips = [
-            "Código do produto",
-            "Descrição do produto",
-            "Descrição completa do produto",
-            "Tipo de produto\n\nMC - Material de consumo\nMP - Matéria-prima\nPA - Produto Acabado\nPI - Produto "
-            "Intermediário\nSV - Serviço",
-            "Unidade de medida",
-            "Armazém padrão\n\n01 - Matéria-prima\n02 - Produto Intermediário\n03 - Produto Comercial\n04 - Produto "
-            "Acabado",
-            "Grupo do produto",
-            "Descrição do grupo do produto",
-            "Centro de custo",
-            "Indica se o produto está bloqueado",
-            "Revisão atual do produto"
-        ]
+    def configurar_tabela_tooltips(self, dataframe):
+        tooltips = {
+            "B1_COD": "Código do produto",
+            "B1_DESC": "Descrição do produto",
+            "B1_XDESC2": "Descrição completa do produto",
+            "B1_TIPO": "Tipo de produto\n\nMC - Material de consumo\nMP - Matéria-prima\nPA - Produto Acabado\nPI - "
+                       "Produto Intermediário\nSV - Serviço",
+            "B1_UM": "Unidade de medida",
+            "B1_LOCPAD": "Armazém padrão\n\n01 - Matéria-prima\n02 - Produto Intermediário\n03 - Produto "
+                         "Comercial\n04 - Produto Acabado",
+            "B1_GRUPO": "Grupo do produto",
+            "B1_ZZNOGRP": "Descrição do grupo do produto",
+            "B1_CC": "Centro de custo",
+            "B1_MSBLQL": "Indica se o produto está bloqueado",
+            "B1_REVATU": "Revisão atual do produto",
+            "B1_DATREF": "Data de referência",
+            "B1_UREV": "Unidade de revisão",
+            "B1_ZZLOCAL": "Localização do produto"
+        }
 
+        headers = dataframe.columns
+
+        # Adicione os cabeçalhos e os tooltips
         for i, header in enumerate(headers):
-            self.tree.setHorizontalHeaderItem(i, QTableWidgetItem(header))
-            self.tree.horizontalHeaderItem(i).setToolTip(tooltips[i])
+            item = QTableWidgetItem(header)
+            tooltip = tooltips.get(header)
+            item.setToolTip(tooltip)
+            self.tree.setHorizontalHeaderItem(i, item)
 
     def copiar_linha(self, item):
         # Verificar se um item foi clicado
@@ -460,49 +514,27 @@ class ConsultaApp(QWidget):
 
     def limpar_campos(self):
         # Limpar os dados dos campos
-        self.codigo_var.clear()
-        self.descricao_var.clear()
-        self.descricao2_var.clear()
+        self.campo_codigo.clear()
+        self.campo_descricao.clear()
+        self.campo_contem_descricao.clear()
         self.tipo_var.clear()
         self.um_var.clear()
-        self.armazem_var.clear()
+        self.combobox_armazem.clear()
         self.grupo_var.clear()
-        self.grupo_desc_var.clear()
         self.checkbox_bloqueado.setChecked(False)
 
-    def bloquear_campos_pesquisa(self):
-        # Bloquear campos de pesquisa
-        self.codigo_var.setEnabled(False)
-        self.descricao_var.setEnabled(False)
-        self.descricao2_var.setEnabled(False)
-        self.tipo_var.setEnabled(False)
-        self.um_var.setEnabled(False)
-        self.armazem_var.setEnabled(False)
-        self.grupo_var.setEnabled(False)
-        self.grupo_desc_var.setEnabled(False)
-
-        # Desativar os botões após o carregamento da tabela
-        self.btn_consultar.setEnabled(False)
-        self.btn_exportar_excel.setEnabled(False)
-        self.btn_consultar_estrutura.setEnabled(False)
-        self.btn_onde_e_usado.setEnabled(False)
-
-    def desbloquear_campos_pesquisa(self):
-        # Desbloquear campos de pesquisa
-        self.codigo_var.setEnabled(True)
-        self.descricao_var.setEnabled(True)
-        self.descricao2_var.setEnabled(True)
-        self.tipo_var.setEnabled(True)
-        self.um_var.setEnabled(True)
-        self.armazem_var.setEnabled(True)
-        self.grupo_var.setEnabled(True)
-        self.grupo_desc_var.setEnabled(True)
-
-        # Ativar o botões após o carregamento da tabela
-        self.btn_consultar.setEnabled(True)
-        self.btn_exportar_excel.setEnabled(True)
-        self.btn_consultar_estrutura.setEnabled(True)
-        self.btn_onde_e_usado.setEnabled(True)
+    def controle_campos_formulario(self, status):
+        self.campo_codigo.setEnabled(status)
+        self.campo_descricao.setEnabled(status)
+        self.campo_contem_descricao.setEnabled(status)
+        self.tipo_var.setEnabled(status)
+        self.um_var.setEnabled(status)
+        self.combobox_armazem.setEnabled(status)
+        self.grupo_var.setEnabled(status)
+        self.btn_consultar.setEnabled(status)
+        self.btn_exportar_excel.setEnabled(status)
+        self.btn_consultar_estrutura.setEnabled(status)
+        self.btn_onde_e_usado.setEnabled(status)
 
     def exibir_mensagem(self, title, message, icon_type):
         root = tk.Tk()
@@ -521,18 +553,19 @@ class ConsultaApp(QWidget):
         root.destroy()
 
     def query_consulta_tabela_produtos(self):
-        # Obter os valores dos campos de consulta
-        codigo = self.codigo_var.text().upper().strip()
-        descricao = self.descricao_var.text().upper().strip()
-        descricao2 = self.descricao2_var.text().upper().strip()
+
+        codigo = self.campo_codigo.text().upper().strip()
+        descricao = self.campo_descricao.text().upper().strip()
+        descricao2 = self.campo_contem_descricao.text().upper().strip()
         tipo = self.tipo_var.text().upper().strip()
         um = self.um_var.text().upper().strip()
-        armazem = self.armazem_var.text().upper().strip()
+        armazem = self.combobox_armazem.currentData()
         grupo = self.grupo_var.text().upper().strip()
-        desc_grupo = self.grupo_desc_var.text().upper().strip()
         status_checkbox = self.checkbox_bloqueado.isChecked()
 
-        if codigo == '' and descricao == '' and descricao2 == '' and tipo == '' and um == '' and armazem == '' and grupo == '' and desc_grupo == '':
+        armazem = armazem if armazem is not None else ''
+
+        if codigo == '' and descricao == '' and descricao2 == '' and tipo == '' and um == '' and armazem == '' and grupo == '':
             self.btn_consultar.setEnabled(False)
             self.exibir_mensagem("ATENÇÃO!",
                                  "Os campos de pesquisa estão vazios.\nPreencha algum campo e tente "
@@ -550,13 +583,32 @@ class ConsultaApp(QWidget):
         status_clause = f"AND B1_MSBLQL = '{status_bloqueado}'" if status_checkbox else ''
 
         query = f"""
-        SELECT B1_COD, B1_DESC, B1_XDESC2, B1_TIPO, B1_UM, B1_LOCPAD, B1_GRUPO, B1_ZZNOGRP, B1_CC, B1_MSBLQL, B1_REVATU, B1_DATREF, B1_UREV, B1_ZZLOCAL
-        FROM {database}.dbo.SB1010
-        WHERE B1_COD LIKE '{codigo}%' AND B1_DESC LIKE '{descricao}%' AND {descricao2_clauses}
-        AND B1_TIPO LIKE '{tipo}%' AND B1_UM LIKE '{um}%' AND B1_LOCPAD LIKE '{armazem}%' AND B1_GRUPO LIKE '{grupo}%' 
-        AND B1_ZZNOGRP LIKE '%{desc_grupo}%' {status_clause}
-        AND D_E_L_E_T_ <> '*'
-        ORDER BY B1_COD ASC
+        SELECT B1_COD AS "Código", 
+            B1_DESC AS "Descrição", 
+            B1_XDESC2 AS "Desc. Compl.", 
+            B1_TIPO AS "Tipo", 
+            B1_UM AS "Unid. Med", 
+            B1_LOCPAD AS "Armazém", 
+            B1_GRUPO AS "Grupo", 
+            B1_ZZNOGRP AS "ZZNOGRP", 
+            B1_CC AS "Centro Custo", 
+            B1_MSBLQL AS "Bloqueado?", 
+            B1_REVATU AS "Últ. Rev.", 
+            B1_DATREF AS "Cadastrado em:", 
+            B1_UREV AS "Data Últ. Rev.", 
+            B1_ZZLOCAL AS "Endereço"
+        FROM 
+            {database}.dbo.SB1010
+        WHERE 
+            B1_COD LIKE '{codigo}%' 
+            AND B1_DESC LIKE '{descricao}%' 
+            AND {descricao2_clauses}
+            AND B1_TIPO LIKE '{tipo}%' 
+            AND B1_UM LIKE '{um}%' 
+            AND B1_LOCPAD LIKE '{armazem}%' 
+            AND B1_GRUPO LIKE '{grupo}%' {status_clause}
+            AND D_E_L_E_T_ <> '*'
+            ORDER BY B1_COD ASC
         """
         return query
 
@@ -567,29 +619,34 @@ class ConsultaApp(QWidget):
             self.btn_consultar.setEnabled(True)
             return
 
-        self.bloquear_campos_pesquisa()
+        self.controle_campos_formulario(False)
+
+        conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
+        self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
 
         try:
-            # Estabelecer a conexão com o banco de dados
-            conn = pyodbc.connect(
-                f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}')
+            dataframe = pd.read_sql(select_query, self.engine)
+            dataframe[''] = ''
 
-            # Criar um cursor para executar comandos SQL
-            cursor = conn.cursor()
+            if not dataframe.empty:
 
-            # Executar a consulta
-            cursor.execute(select_query)
+                self.configurar_tabela(dataframe)
+                self.configurar_tabela_tooltips(dataframe)
 
-            # Limpar a ordenação
-            self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
+                # Limpar a ordenação
+                self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
 
-            # Limpar a tabela
-            self.tree.setRowCount(0)
+                # Limpar a tabela
+                self.tree.setRowCount(0)
 
-            time.sleep(0.1)
+                time.sleep(0.1)
+            else:
+                self.exibir_mensagem("EUREKA® engenharia", 'Nada encontrado!', "info")
+                self.controle_campos_formulario(True)
+                return
 
             # Preencher a tabela com os resultados
-            for i, row in enumerate(cursor.fetchall()):
+            for i, row in dataframe.iterrows():
 
                 self.tree.setSortingEnabled(False)  # Permitir ordenação
                 # Inserir os valores formatados na tabela
@@ -618,14 +675,16 @@ class ConsultaApp(QWidget):
 
             self.tree.setSortingEnabled(True)  # Permitir ordenação
 
-            self.desbloquear_campos_pesquisa()
+            self.controle_campos_formulario(True)
 
         except pyodbc.Error as ex:
             print(f"Falha na consulta. Erro: {str(ex)}")
 
         finally:
-            # Fechar a conexão com o banco de dados
-            conn.close()
+            if hasattr(self, 'engine'):
+                self.engine.dispose()
+                self.engine = None
+            self.interromper_consulta_sql = False
 
     def abrir_desenho(self, table):
         item_selecionado = table.currentItem()
@@ -647,7 +706,7 @@ class ConsultaApp(QWidget):
 
     def abrir_nova_janela(self):
         if not self.nova_janela or not self.nova_janela.isVisible():
-            self.nova_janela = ConsultaApp()
+            self.nova_janela = EngenhariaApp()
             self.nova_janela.setGeometry(self.x() + 50, self.y() + 50, self.width(), self.height())
             self.nova_janela.show()
 
@@ -1112,8 +1171,8 @@ class ConsultaApp(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = ConsultaApp()
-    username, password, database, server = ConsultaApp().setup_mssql()
+    window = EngenhariaApp()
+    username, password, database, server = EngenhariaApp().setup_mssql()
     driver = '{SQL Server}'
 
     largura_janela = 1400  # Substitua pelo valor desejado
