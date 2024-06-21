@@ -373,6 +373,9 @@ class PcpApp(QWidget):
 
             menu = QMenu()
 
+            context_menu_abrir_desenho = QAction('Abrir desenho', self)
+            context_menu_abrir_desenho.triggered.connect(lambda: self.abrir_desenho(table))
+
             context_menu_consultar_onde_usado = QAction('Onde é usado?', self)
             context_menu_consultar_onde_usado.triggered.connect(lambda: self.executar_consulta_onde_usado(table))
 
