@@ -2,7 +2,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, \
     QTableWidgetItem, QHeaderView, QSizePolicy, QSpacerItem, QMessageBox, QFileDialog, QToolButton, QTabWidget, \
-    QItemDelegate, QAbstractItemView, QCheckBox, QMenu, QAction
+    QItemDelegate, QAbstractItemView, QCheckBox, QMenu, QAction, QComboBox
 from PyQt5.QtGui import QFont, QIcon, QDesktopServices, QColor
 from PyQt5.QtCore import Qt, QUrl, QCoreApplication, pyqtSignal, QProcess
 import pyodbc
@@ -11,34 +11,30 @@ import os
 import time
 import pandas as pd
 import ctypes
-from datetime import datetime, date
+from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
 import locale
 
 
-class ConsultaApp(QWidget):
+class EngenhariaApp(QWidget):
     # Adicione este sinal à classe
     guia_fechada = pyqtSignal()
 
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("EUREKA® ENGENHARIA - v0.2")
+        self.setWindowTitle("EUREKA® ENGENHARIA - v2.0")
 
         locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
-        # Configurar o ícone da janela
-        icon_path = "010.png"
-        self.setWindowIcon(QIcon(icon_path))
-
-        # Ajuste a cor de fundo da janela
-        self.setAutoFillBackground(True)
-        palette = self.palette()
-        palette.setColor(self.backgroundRole(), QColor('#363636'))  # Substitua pela cor desejada
-        self.setPalette(palette)
-
         self.nova_janela = None  # Adicione esta linha
+        self.guias_abertas = []
+        self.guias_abertas_onde_usado = []
+        self.guias_abertas_saldo = []
+        fonte = "Segoe UI"
+        tamanho_fonte = 10
+
         self.process = QProcess(self)
 
         self.tabWidget = QTabWidget(self)  # Adicione um QTabWidget ao layout principal
@@ -46,106 +42,60 @@ class ConsultaApp(QWidget):
         self.tabWidget.tabCloseRequested.connect(self.fechar_guia)
         self.tabWidget.setVisible(False)  # Inicialmente, a guia está invisível
 
-        # Aplicar folha de estilo ao aplicativo
-        self.setStyleSheet("""
-            * {
-                background-color: #363636;
-            }
-
-            QLabel, QCheckBox {
-                color: #EEEEEE;
-                font-size: 11px;
-                font-weight: bold;
-            }
-
-            QLineEdit {
-                background-color: #A7A6A6;
-                border: 1px solid #262626;
-                padding: 5px;
-                border-radius: 8px;
-            }
-
-            QPushButton {
-                background-color: #0a79f8;
-                color: #fff;
-                padding: 5px 15px;
-                border: 2px;
-                border-radius: 8px;
-                font-size: 11px;
-                height: 20px;
-                font-weight: bold;
-                margin-top: 6px;
-                margin-bottom: 6px;
-            }
-            
-            QPushButton#PCP, QPushButton#compras {
-                background-color: #DC5F00;
-            }
-            
-            QPushButton#compras {
-                background-color: #836FFF;
-            }
-            
-            QPushButton:hover, QPushButton#PCP:hover, QPushButton#compras:hover {
-                background-color: #fff;
-                color: #0a79f8
-            }
-
-            QPushButton:pressed, QPushButton#PCP:pressed, QPushButton#compras:pressed {
-                background-color: #6703c5;
-                color: #fff;
-            }
-            
-            QTableWidget {
-                border: 1px solid #000000;
-                background-color: #363636;
-            }
-
-            QTableWidget QHeaderView::section {
-                background-color: #262626;
-                color: #A7A6A6;
-                padding: 5px;
-                height: 18px;
-            }
-
-            QTableWidget QHeaderView::section:horizontal {
-                border-top: 1px solid #333;
-            }
-
-            QTableWidget::item {
-                background-color: #363636;
-                color: #fff;
-                font-weight: bold;
-            }
-
-            QTableWidget::item:selected {
-                background-color: #000000;
-                color: #EEEEEE;
-                font-weight: bold;
-            }
-        """)
-
         self.configurar_tabela()
 
-        self.codigo_var = QLineEdit(self)
-        self.descricao_var = QLineEdit(self)
-        self.descricao2_var = QLineEdit(self)
+        self.combobox_armazem = QComboBox(self)
+        self.combobox_armazem.setEditable(False)
+        self.combobox_armazem.setObjectName('combobox-armazem')
+
+        self.combobox_armazem.addItem("", None)
+
+        armazens = {
+            "01": "MATERIA PRIMA",
+            "02": "PROD. INTERMEDIARIO",
+            "03": "PROD. COMERCIAIS",
+            "04": "PROD. ACABADOS",
+            "05": "MAT.PRIMA IMP.INDIR.",
+            "06": "PROD. ELETR.NACIONAL",
+            "07": "PROD.ELETR.IMP.DIRET",
+            "08": "SRV INDUSTRIALIZACAO",
+            "09": "SRV TERCEIROS",
+            "10": "PROD.COM.IMP.INDIR.",
+            "11": "PROD.COM.IMP.DIRETO",
+            "12": "MAT.PRIMA IMP.DIR.ME",
+            "13": "E.P.I-MAT.SEGURANCA",
+            "14": "PROD.ELETR.IMP.INDIR",
+            "22": "ATIVOS",
+            "60": "PROD-FERR CONSUMIVEI",
+            "61": "EMBALAGENS",
+            "70": "SERVICOS GERAIS",
+            "71": "PRODUTOS AUTOMOTIVOS",
+            "77": "OUTROS",
+            "80": "SUCATAS",
+            "85": "SERVICOS PRESTADOS",
+            "96": "ARMAZ.NAO APLICAVEL",
+            "97": "TRAT. SUPERFICIAL"
+        }
+
+        for key, value in armazens.items():
+            self.combobox_armazem.addItem(key + ' - ' + value, key)
+
+        self.campo_codigo = QLineEdit(self)
+        self.campo_codigo.setFont(QFont(fonte, tamanho_fonte))
+
+        self.campo_descricao = QLineEdit(self)
+        self.campo_descricao.setFont(QFont(fonte, tamanho_fonte))
+
+        self.campo_contem_descricao = QLineEdit(self)
+        self.campo_contem_descricao.setFont(QFont(fonte, tamanho_fonte))
+
         self.tipo_var = QLineEdit(self)
         self.um_var = QLineEdit(self)
-        self.armazem_var = QLineEdit(self)
         self.grupo_var = QLineEdit(self)
         self.grupo_desc_var = QLineEdit(self)
 
-        fonte = "Segoe UI"
-        tamanho_fonte = 10
-
-        self.codigo_var.setFont(
-            QFont(fonte, tamanho_fonte))  # Substitua "Arial" pela fonte desejada e 12 pelo tamanho desejado
-        self.descricao_var.setFont(QFont(fonte, tamanho_fonte))
-        self.descricao2_var.setFont(QFont(fonte, tamanho_fonte))
         self.tipo_var.setFont(QFont(fonte, tamanho_fonte))
         self.um_var.setFont(QFont(fonte, tamanho_fonte))
-        self.armazem_var.setFont(QFont(fonte, tamanho_fonte))
         self.grupo_var.setFont(QFont(fonte, tamanho_fonte))
         self.grupo_desc_var.setFont(QFont(fonte, tamanho_fonte))
 
@@ -202,12 +152,11 @@ class ConsultaApp(QWidget):
         self.configurar_tabela_tooltips()
 
         # Conectar o evento returnPressed dos campos de entrada ao método executar_consulta
-        self.codigo_var.returnPressed.connect(self.executar_consulta)
-        self.descricao_var.returnPressed.connect(self.executar_consulta)
-        self.descricao2_var.returnPressed.connect(self.executar_consulta)
+        self.campo_codigo.returnPressed.connect(self.executar_consulta)
+        self.campo_descricao.returnPressed.connect(self.executar_consulta)
+        self.campo_contem_descricao.returnPressed.connect(self.executar_consulta)
         self.tipo_var.returnPressed.connect(self.executar_consulta)
         self.um_var.returnPressed.connect(self.executar_consulta)
-        self.armazem_var.returnPressed.connect(self.executar_consulta)
         self.grupo_var.returnPressed.connect(self.executar_consulta)
         self.grupo_desc_var.returnPressed.connect(self.executar_consulta)
 
@@ -217,16 +166,16 @@ class ConsultaApp(QWidget):
         layout_linha_03 = QHBoxLayout()
 
         layout_linha_01.addWidget(QLabel("Código:"))
-        layout_linha_01.addWidget(self.codigo_var)
-        layout_linha_01.addWidget(self.criar_botao_limpar(self.codigo_var))
+        layout_linha_01.addWidget(self.campo_codigo)
+        layout_linha_01.addWidget(self.criar_botao_limpar(self.campo_codigo))
 
         layout_linha_01.addWidget(QLabel("Descrição:"))
-        layout_linha_01.addWidget(self.descricao_var)
-        layout_linha_01.addWidget(self.criar_botao_limpar(self.descricao_var))
+        layout_linha_01.addWidget(self.campo_descricao)
+        layout_linha_01.addWidget(self.criar_botao_limpar(self.campo_descricao))
 
         layout_linha_01.addWidget(QLabel("Contém na Descrição:"))
-        layout_linha_01.addWidget(self.descricao2_var)
-        layout_linha_01.addWidget(self.criar_botao_limpar(self.descricao2_var))
+        layout_linha_01.addWidget(self.campo_contem_descricao)
+        layout_linha_01.addWidget(self.criar_botao_limpar(self.campo_contem_descricao))
 
         layout_linha_02.addWidget(QLabel("Tipo:"))
         layout_linha_02.addWidget(self.tipo_var)
@@ -237,8 +186,8 @@ class ConsultaApp(QWidget):
         layout_linha_02.addWidget(self.criar_botao_limpar(self.um_var))
 
         layout_linha_02.addWidget(QLabel("Armazém:"))
-        layout_linha_02.addWidget(self.armazem_var)
-        layout_linha_02.addWidget(self.criar_botao_limpar(self.armazem_var))
+        layout_linha_02.addWidget(self.combobox_armazem)
+        layout_linha_02.addWidget(self.criar_botao_limpar(self.combobox_armazem))
 
         layout_linha_02.addWidget(QLabel("Grupo:"))
         layout_linha_02.addWidget(self.grupo_var)
@@ -278,9 +227,110 @@ class ConsultaApp(QWidget):
 
         self.setLayout(layout)
 
-        self.guias_abertas = []
-        self.guias_abertas_onde_usado = []
-        self.guias_abertas_saldo = []
+        self.setStyleSheet("""
+                    * {
+                        background-color: #363636;
+                    }
+
+                    QLabel, QCheckBox {
+                        color: #EEEEEE;
+                        font-size: 11px;
+                        font-weight: bold;
+                    }
+
+                    QLineEdit {
+                        background-color: #EEEEEE;
+                        border: 1px solid #262626;
+                        padding: 5px;
+                        border-radius: 8px;
+                    }
+                    
+                    QDateEdit, QComboBox {
+                        background-color: #EEEEEE;
+                        border: 1px solid #262626;
+                        margin-bottom: 20px;
+                        padding: 5px 10px;
+                        border-radius: 10px;
+                        height: 24px;
+                        font-size: 16px;
+                    }
+            
+                    QDateEdit::drop-down, QComboBox::drop-down {
+                        subcontrol-origin: padding;
+                        subcontrol-position: top right;
+                        width: 30px;
+                        border-left-width: 1px;
+                        border-left-color: darkgray;
+                        border-left-style: solid;
+                        border-top-right-radius: 3px;
+                        border-bottom-right-radius: 3px;
+                    }
+            
+                    QDateEdit::down-arrow, QComboBox::down-arrow {
+                        image: url(../resources/images/arrow.png);
+                        width: 10px;
+                        height: 10px;
+                    }   
+
+                    QPushButton {
+                        background-color: #0a79f8;
+                        color: #fff;
+                        padding: 5px 15px;
+                        border: 2px;
+                        border-radius: 8px;
+                        font-size: 11px;
+                        height: 20px;
+                        font-weight: bold;
+                        margin-top: 6px;
+                        margin-bottom: 6px;
+                    }
+
+                    QPushButton#PCP, QPushButton#compras {
+                        background-color: #DC5F00;
+                    }
+
+                    QPushButton#compras {
+                        background-color: #836FFF;
+                    }
+
+                    QPushButton:hover, QPushButton#PCP:hover, QPushButton#compras:hover {
+                        background-color: #fff;
+                        color: #0a79f8
+                    }
+
+                    QPushButton:pressed, QPushButton#PCP:pressed, QPushButton#compras:pressed {
+                        background-color: #6703c5;
+                        color: #fff;
+                    }
+
+                    QTableWidget {
+                        border: 1px solid #000000;
+                        background-color: #363636;
+                    }
+
+                    QTableWidget QHeaderView::section {
+                        background-color: #262626;
+                        color: #A7A6A6;
+                        padding: 5px;
+                        height: 18px;
+                    }
+
+                    QTableWidget QHeaderView::section:horizontal {
+                        border-top: 1px solid #333;
+                    }
+
+                    QTableWidget::item {
+                        background-color: #363636;
+                        color: #fff;
+                        font-weight: bold;
+                    }
+
+                    QTableWidget::item:selected {
+                        background-color: #000000;
+                        color: #EEEEEE;
+                        font-weight: bold;
+                    }
+                """)
 
     def setup_mssql(self):
         caminho_do_arquivo = (r"\\192.175.175.4\f\INTEGRANTES\ELIEZER\PROJETO SOLIDWORKS "
@@ -472,49 +522,29 @@ class ConsultaApp(QWidget):
 
     def limpar_campos(self):
         # Limpar os dados dos campos
-        self.codigo_var.clear()
-        self.descricao_var.clear()
-        self.descricao2_var.clear()
+        self.campo_codigo.clear()
+        self.campo_descricao.clear()
+        self.campo_contem_descricao.clear()
         self.tipo_var.clear()
         self.um_var.clear()
-        self.armazem_var.clear()
+        self.combobox_armazem.clear()
         self.grupo_var.clear()
         self.grupo_desc_var.clear()
         self.checkbox_bloqueado.setChecked(False)
 
-    def bloquear_campos_pesquisa(self):
-        # Bloquear campos de pesquisa
-        self.codigo_var.setEnabled(False)
-        self.descricao_var.setEnabled(False)
-        self.descricao2_var.setEnabled(False)
-        self.tipo_var.setEnabled(False)
-        self.um_var.setEnabled(False)
-        self.armazem_var.setEnabled(False)
-        self.grupo_var.setEnabled(False)
-        self.grupo_desc_var.setEnabled(False)
-
-        # Desativar os botões após o carregamento da tabela
-        self.btn_consultar.setEnabled(False)
-        self.btn_exportar_excel.setEnabled(False)
-        self.btn_consultar_estrutura.setEnabled(False)
-        self.btn_onde_e_usado.setEnabled(False)
-
-    def desbloquear_campos_pesquisa(self):
-        # Desbloquear campos de pesquisa
-        self.codigo_var.setEnabled(True)
-        self.descricao_var.setEnabled(True)
-        self.descricao2_var.setEnabled(True)
-        self.tipo_var.setEnabled(True)
-        self.um_var.setEnabled(True)
-        self.armazem_var.setEnabled(True)
-        self.grupo_var.setEnabled(True)
-        self.grupo_desc_var.setEnabled(True)
-
-        # Ativar o botões após o carregamento da tabela
-        self.btn_consultar.setEnabled(True)
-        self.btn_exportar_excel.setEnabled(True)
-        self.btn_consultar_estrutura.setEnabled(True)
-        self.btn_onde_e_usado.setEnabled(True)
+    def controle_campos_formulario(self, status):
+        self.campo_codigo.setEnabled(status)
+        self.campo_descricao.setEnabled(status)
+        self.campo_contem_descricao.setEnabled(status)
+        self.tipo_var.setEnabled(status)
+        self.um_var.setEnabled(status)
+        self.combobox_armazem.setEnabled(status)
+        self.grupo_var.setEnabled(status)
+        self.grupo_desc_var.setEnabled(status)
+        self.btn_consultar.setEnabled(status)
+        self.btn_exportar_excel.setEnabled(status)
+        self.btn_consultar_estrutura.setEnabled(status)
+        self.btn_onde_e_usado.setEnabled(status)
 
     def exibir_mensagem(self, title, message, icon_type):
         root = tk.Tk()
@@ -533,16 +563,18 @@ class ConsultaApp(QWidget):
         root.destroy()
 
     def query_consulta_tabela_produtos(self):
-        # Obter os valores dos campos de consulta
-        codigo = self.codigo_var.text().upper().strip()
-        descricao = self.descricao_var.text().upper().strip()
-        descricao2 = self.descricao2_var.text().upper().strip()
+
+        codigo = self.campo_codigo.text().upper().strip()
+        descricao = self.campo_descricao.text().upper().strip()
+        descricao2 = self.campo_contem_descricao.text().upper().strip()
         tipo = self.tipo_var.text().upper().strip()
         um = self.um_var.text().upper().strip()
-        armazem = self.armazem_var.text().upper().strip()
+        armazem = self.combobox_armazem.currentData()
         grupo = self.grupo_var.text().upper().strip()
         desc_grupo = self.grupo_desc_var.text().upper().strip()
         status_checkbox = self.checkbox_bloqueado.isChecked()
+
+        armazem = armazem if armazem is not None else ''
 
         if codigo == '' and descricao == '' and descricao2 == '' and tipo == '' and um == '' and armazem == '' and grupo == '' and desc_grupo == '':
             self.btn_consultar.setEnabled(False)
@@ -579,7 +611,7 @@ class ConsultaApp(QWidget):
             self.btn_consultar.setEnabled(True)
             return
 
-        self.bloquear_campos_pesquisa()
+        self.controle_campos_formulario(False)
 
         try:
             # Estabelecer a conexão com o banco de dados
@@ -630,7 +662,7 @@ class ConsultaApp(QWidget):
 
             self.tree.setSortingEnabled(True)  # Permitir ordenação
 
-            self.desbloquear_campos_pesquisa()
+            self.controle_campos_formulario(True)
 
         except pyodbc.Error as ex:
             print(f"Falha na consulta. Erro: {str(ex)}")
@@ -659,7 +691,7 @@ class ConsultaApp(QWidget):
 
     def abrir_nova_janela(self):
         if not self.nova_janela or not self.nova_janela.isVisible():
-            self.nova_janela = ConsultaApp()
+            self.nova_janela = EngenhariaApp()
             self.nova_janela.setGeometry(self.x() + 50, self.y() + 50, self.width(), self.height())
             self.nova_janela.show()
 
@@ -1124,8 +1156,8 @@ class ConsultaApp(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = ConsultaApp()
-    username, password, database, server = ConsultaApp().setup_mssql()
+    window = EngenhariaApp()
+    username, password, database, server = EngenhariaApp().setup_mssql()
     driver = '{SQL Server}'
 
     largura_janela = 1400  # Substitua pelo valor desejado

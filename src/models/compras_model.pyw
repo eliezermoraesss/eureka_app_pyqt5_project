@@ -26,8 +26,6 @@ class ComprasApp(QWidget):
         locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
         self.engine = None
-        self.metadata = MetaData()
-        self.nnr_table = Table('NNR010', self.metadata, autoload_with=self.engine, schema='dbo')
         self.combobox_armazem = QComboBox(self)
         self.combobox_armazem.setEditable(False)
         self.combobox_armazem.setObjectName('combobox-armazem')
