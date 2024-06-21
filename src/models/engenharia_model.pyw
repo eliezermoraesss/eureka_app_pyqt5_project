@@ -2,7 +2,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, \
     QTableWidgetItem, QHeaderView, QSizePolicy, QSpacerItem, QMessageBox, QFileDialog, QToolButton, QTabWidget, \
-    QItemDelegate, QAbstractItemView, QCheckBox, QMenu, QAction, QComboBox
+    QItemDelegate, QAbstractItemView, QCheckBox, QMenu, QAction, QComboBox, QStyle
 from PyQt5.QtGui import QFont, QIcon, QDesktopServices, QColor
 from PyQt5.QtCore import Qt, QUrl, QCoreApplication, pyqtSignal, QProcess
 import pyodbc
@@ -15,6 +15,8 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
 import locale
+
+from sqlalchemy import create_engine
 
 
 class EngenhariaApp(QWidget):
@@ -35,14 +37,21 @@ class EngenhariaApp(QWidget):
         fonte = "Segoe UI"
         tamanho_fonte = 10
 
+        self.altura_linha = 30
+        self.tamanho_fonte_tabela = 10
+        self.fonte_tabela = 'Segoe UI'
+
+        self.interromper_consulta_sql = False
+        self.tree = QTableWidget(self)
+        self.tree.setColumnCount(0)
+        self.tree.setRowCount(0)
+
         self.process = QProcess(self)
 
         self.tabWidget = QTabWidget(self)  # Adicione um QTabWidget ao layout principal
         self.tabWidget.setTabsClosable(True)  # Adicione essa linha para permitir o fechamento de guias
         self.tabWidget.tabCloseRequested.connect(self.fechar_guia)
         self.tabWidget.setVisible(False)  # Inicialmente, a guia está invisível
-
-        self.configurar_tabela()
 
         self.combobox_armazem = QComboBox(self)
         self.combobox_armazem.setEditable(False)
@@ -82,22 +91,27 @@ class EngenhariaApp(QWidget):
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont(fonte, tamanho_fonte))
+        self.add_clear_button(self.campo_codigo)
 
         self.campo_descricao = QLineEdit(self)
         self.campo_descricao.setFont(QFont(fonte, tamanho_fonte))
+        self.add_clear_button(self.campo_descricao)
 
         self.campo_contem_descricao = QLineEdit(self)
         self.campo_contem_descricao.setFont(QFont(fonte, tamanho_fonte))
+        self.add_clear_button(self.campo_contem_descricao)
 
         self.tipo_var = QLineEdit(self)
-        self.um_var = QLineEdit(self)
-        self.grupo_var = QLineEdit(self)
-        self.grupo_desc_var = QLineEdit(self)
-
         self.tipo_var.setFont(QFont(fonte, tamanho_fonte))
+        self.add_clear_button(self.tipo_var)
+
+        self.um_var = QLineEdit(self)
         self.um_var.setFont(QFont(fonte, tamanho_fonte))
+        self.add_clear_button(self.um_var)
+
+        self.grupo_var = QLineEdit(self)
         self.grupo_var.setFont(QFont(fonte, tamanho_fonte))
-        self.grupo_desc_var.setFont(QFont(fonte, tamanho_fonte))
+        self.add_clear_button(self.grupo_var)
 
         self.btn_consultar = QPushButton("Pesquisar", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
@@ -148,9 +162,6 @@ class EngenhariaApp(QWidget):
         self.btn_fechar.clicked.connect(self.fechar_janela)
         self.btn_fechar.setMinimumWidth(100)
 
-        # Configurar a tabela
-        self.configurar_tabela_tooltips()
-
         # Conectar o evento returnPressed dos campos de entrada ao método executar_consulta
         self.campo_codigo.returnPressed.connect(self.executar_consulta)
         self.campo_descricao.returnPressed.connect(self.executar_consulta)
@@ -158,7 +169,6 @@ class EngenhariaApp(QWidget):
         self.tipo_var.returnPressed.connect(self.executar_consulta)
         self.um_var.returnPressed.connect(self.executar_consulta)
         self.grupo_var.returnPressed.connect(self.executar_consulta)
-        self.grupo_desc_var.returnPressed.connect(self.executar_consulta)
 
         layout = QVBoxLayout()
         layout_linha_01 = QHBoxLayout()
@@ -167,35 +177,24 @@ class EngenhariaApp(QWidget):
 
         layout_linha_01.addWidget(QLabel("Código:"))
         layout_linha_01.addWidget(self.campo_codigo)
-        layout_linha_01.addWidget(self.criar_botao_limpar(self.campo_codigo))
 
         layout_linha_01.addWidget(QLabel("Descrição:"))
         layout_linha_01.addWidget(self.campo_descricao)
-        layout_linha_01.addWidget(self.criar_botao_limpar(self.campo_descricao))
 
         layout_linha_01.addWidget(QLabel("Contém na Descrição:"))
         layout_linha_01.addWidget(self.campo_contem_descricao)
-        layout_linha_01.addWidget(self.criar_botao_limpar(self.campo_contem_descricao))
 
         layout_linha_02.addWidget(QLabel("Tipo:"))
         layout_linha_02.addWidget(self.tipo_var)
-        layout_linha_02.addWidget(self.criar_botao_limpar(self.tipo_var))
 
         layout_linha_02.addWidget(QLabel("Unid. Medida:"))
         layout_linha_02.addWidget(self.um_var)
-        layout_linha_02.addWidget(self.criar_botao_limpar(self.um_var))
 
         layout_linha_02.addWidget(QLabel("Armazém:"))
         layout_linha_02.addWidget(self.combobox_armazem)
-        layout_linha_02.addWidget(self.criar_botao_limpar(self.combobox_armazem))
 
         layout_linha_02.addWidget(QLabel("Grupo:"))
         layout_linha_02.addWidget(self.grupo_var)
-        layout_linha_02.addWidget(self.criar_botao_limpar(self.grupo_var))
-
-        layout_linha_02.addWidget(QLabel("Desc. Grupo:"))
-        layout_linha_02.addWidget(self.grupo_desc_var)
-        layout_linha_02.addWidget(self.criar_botao_limpar(self.grupo_desc_var))
 
         self.checkbox_bloqueado = QCheckBox("Bloqueado?", self)
         layout_linha_02.addWidget(self.checkbox_bloqueado)
@@ -248,10 +247,9 @@ class EngenhariaApp(QWidget):
                     QDateEdit, QComboBox {
                         background-color: #EEEEEE;
                         border: 1px solid #262626;
-                        margin-bottom: 20px;
                         padding: 5px 10px;
                         border-radius: 10px;
-                        height: 24px;
+                        height: 20px;
                         font-size: 16px;
                     }
             
@@ -364,12 +362,16 @@ class EngenhariaApp(QWidget):
         script_path = os.path.join(script_dir, 'compras_model.pyw')
         self.process.start("python", [script_path])
 
-    def criar_botao_limpar(self, campo):
-        botao_limpar = QToolButton(self)
-        botao_limpar.setIcon(QIcon('clear_icon.png'))  # Substitua 'icone_limpar.png' pelo caminho do ícone desejado
-        botao_limpar.setCursor(Qt.PointingHandCursor)
-        botao_limpar.clicked.connect(lambda: campo.clear())
-        return botao_limpar
+    def add_clear_button(self, line_edit):
+        clear_icon = self.style().standardIcon(QStyle.SP_LineEditClearButton)
+
+        line_edit_height = line_edit.height()
+        pixmap = clear_icon.pixmap(line_edit_height - 4, line_edit_height - 4)
+        larger_clear_icon = QIcon(pixmap)
+
+        clear_action = QAction(larger_clear_icon, "Limpar", line_edit)
+        clear_action.triggered.connect(line_edit.clear)
+        line_edit.addAction(clear_action, QLineEdit.TrailingPosition)
 
     def exportar_excel(self):
 
@@ -414,34 +416,18 @@ class EngenhariaApp(QWidget):
             data.append(row_data)
         return data
 
-    def configurar_tabela(self):
-        self.tree = QTableWidget(self)
-        self.tree.setColumnCount(15)
-        self.tree.setHorizontalHeaderLabels(
-            ["CÓDIGO", "DESCRIÇÃO", "DESC. COMP.", "TIPO", "UM", "ARMAZÉM", "GRUPO", "DESC. GRUPO", "CC", "BLOQUEADO?",
-             "REV.", "DATA CADASTRO", "DATA ULT. REV.", "LOCALIZ.", ""])
+    def configurar_tabela(self, dataframe):
+        self.tree.setColumnCount(len(dataframe.columns))
+        self.tree.setHorizontalHeaderLabels(dataframe.columns)
         self.tree.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.tree.setEditTriggers(QTableWidget.NoEditTriggers)
         self.tree.setSelectionBehavior(QTableWidget.SelectRows)
         self.tree.setSelectionMode(QTableWidget.SingleSelection)
-
-        # Conectar o evento itemDoubleClicked ao método copiar_linha
         self.tree.itemDoubleClicked.connect(self.copiar_linha)
-
-        # Configurar a fonte da tabela
-        fonte_tabela = QFont("Segoe UI", 10)  # Substitua por sua fonte desejada e tamanho
-        self.tree.setFont(fonte_tabela)
-
-        # Ajustar a altura das linhas
-        altura_linha = 34  # Substitua pelo valor desejado
-        self.tree.verticalHeader().setDefaultSectionSize(altura_linha)
-
-        # Conectar o evento sectionClicked ao método ordenar_tabela
+        self.tree.setFont(QFont(self.fonte_tabela, self.tamanho_fonte_tabela))
+        self.tree.verticalHeader().setDefaultSectionSize(self.altura_linha)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
-
-        # Redimensionar a última coluna para preencher o espaço restante
         self.tree.horizontalHeader().setStretchLastSection(True)
-
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(lambda pos: self.showContextMenu(pos, self.tree))
 
@@ -481,28 +467,34 @@ class EngenhariaApp(QWidget):
 
             menu.exec_(table.viewport().mapToGlobal(position))
 
-    def configurar_tabela_tooltips(self):
-        headers = ["CÓDIGO", "DESCRIÇÃO", "DESC. COMP.", "TIPO", "UM", "ARMAZÉM", "GRUPO", "DESC. GRUPO", "CC",
-                   "BLOQUEADO?", "REV."]
-        tooltips = [
-            "Código do produto",
-            "Descrição do produto",
-            "Descrição completa do produto",
-            "Tipo de produto\n\nMC - Material de consumo\nMP - Matéria-prima\nPA - Produto Acabado\nPI - Produto "
-            "Intermediário\nSV - Serviço",
-            "Unidade de medida",
-            "Armazém padrão\n\n01 - Matéria-prima\n02 - Produto Intermediário\n03 - Produto Comercial\n04 - Produto "
-            "Acabado",
-            "Grupo do produto",
-            "Descrição do grupo do produto",
-            "Centro de custo",
-            "Indica se o produto está bloqueado",
-            "Revisão atual do produto"
-        ]
+    def configurar_tabela_tooltips(self, dataframe):
+        tooltips = {
+            "B1_COD": "Código do produto",
+            "B1_DESC": "Descrição do produto",
+            "B1_XDESC2": "Descrição completa do produto",
+            "B1_TIPO": "Tipo de produto\n\nMC - Material de consumo\nMP - Matéria-prima\nPA - Produto Acabado\nPI - "
+                       "Produto Intermediário\nSV - Serviço",
+            "B1_UM": "Unidade de medida",
+            "B1_LOCPAD": "Armazém padrão\n\n01 - Matéria-prima\n02 - Produto Intermediário\n03 - Produto "
+                         "Comercial\n04 - Produto Acabado",
+            "B1_GRUPO": "Grupo do produto",
+            "B1_ZZNOGRP": "Descrição do grupo do produto",
+            "B1_CC": "Centro de custo",
+            "B1_MSBLQL": "Indica se o produto está bloqueado",
+            "B1_REVATU": "Revisão atual do produto",
+            "B1_DATREF": "Data de referência",
+            "B1_UREV": "Unidade de revisão",
+            "B1_ZZLOCAL": "Localização do produto"
+        }
 
+        headers = dataframe.columns
+
+        # Adicione os cabeçalhos e os tooltips
         for i, header in enumerate(headers):
-            self.tree.setHorizontalHeaderItem(i, QTableWidgetItem(header))
-            self.tree.horizontalHeaderItem(i).setToolTip(tooltips[i])
+            item = QTableWidgetItem(header)
+            tooltip = tooltips.get(header)
+            item.setToolTip(tooltip)
+            self.tree.setHorizontalHeaderItem(i, item)
 
     def copiar_linha(self, item):
         # Verificar se um item foi clicado
@@ -529,7 +521,6 @@ class EngenhariaApp(QWidget):
         self.um_var.clear()
         self.combobox_armazem.clear()
         self.grupo_var.clear()
-        self.grupo_desc_var.clear()
         self.checkbox_bloqueado.setChecked(False)
 
     def controle_campos_formulario(self, status):
@@ -540,7 +531,6 @@ class EngenhariaApp(QWidget):
         self.um_var.setEnabled(status)
         self.combobox_armazem.setEnabled(status)
         self.grupo_var.setEnabled(status)
-        self.grupo_desc_var.setEnabled(status)
         self.btn_consultar.setEnabled(status)
         self.btn_exportar_excel.setEnabled(status)
         self.btn_consultar_estrutura.setEnabled(status)
@@ -571,12 +561,11 @@ class EngenhariaApp(QWidget):
         um = self.um_var.text().upper().strip()
         armazem = self.combobox_armazem.currentData()
         grupo = self.grupo_var.text().upper().strip()
-        desc_grupo = self.grupo_desc_var.text().upper().strip()
         status_checkbox = self.checkbox_bloqueado.isChecked()
 
         armazem = armazem if armazem is not None else ''
 
-        if codigo == '' and descricao == '' and descricao2 == '' and tipo == '' and um == '' and armazem == '' and grupo == '' and desc_grupo == '':
+        if codigo == '' and descricao == '' and descricao2 == '' and tipo == '' and um == '' and armazem == '' and grupo == '':
             self.btn_consultar.setEnabled(False)
             self.exibir_mensagem("ATENÇÃO!",
                                  "Os campos de pesquisa estão vazios.\nPreencha algum campo e tente "
@@ -594,13 +583,32 @@ class EngenhariaApp(QWidget):
         status_clause = f"AND B1_MSBLQL = '{status_bloqueado}'" if status_checkbox else ''
 
         query = f"""
-        SELECT B1_COD, B1_DESC, B1_XDESC2, B1_TIPO, B1_UM, B1_LOCPAD, B1_GRUPO, B1_ZZNOGRP, B1_CC, B1_MSBLQL, B1_REVATU, B1_DATREF, B1_UREV, B1_ZZLOCAL
-        FROM {database}.dbo.SB1010
-        WHERE B1_COD LIKE '{codigo}%' AND B1_DESC LIKE '{descricao}%' AND {descricao2_clauses}
-        AND B1_TIPO LIKE '{tipo}%' AND B1_UM LIKE '{um}%' AND B1_LOCPAD LIKE '{armazem}%' AND B1_GRUPO LIKE '{grupo}%' 
-        AND B1_ZZNOGRP LIKE '%{desc_grupo}%' {status_clause}
-        AND D_E_L_E_T_ <> '*'
-        ORDER BY B1_COD ASC
+        SELECT B1_COD AS "Código", 
+            B1_DESC AS "Descrição", 
+            B1_XDESC2 AS "Desc. Compl.", 
+            B1_TIPO AS "Tipo", 
+            B1_UM AS "Unid. Med", 
+            B1_LOCPAD AS "Armazém", 
+            B1_GRUPO AS "Grupo", 
+            B1_ZZNOGRP AS "ZZNOGRP", 
+            B1_CC AS "Centro Custo", 
+            B1_MSBLQL AS "Bloqueado?", 
+            B1_REVATU AS "Últ. Rev.", 
+            B1_DATREF AS "Cadastrado em:", 
+            B1_UREV AS "Data Últ. Rev.", 
+            B1_ZZLOCAL AS "Endereço"
+        FROM 
+            {database}.dbo.SB1010
+        WHERE 
+            B1_COD LIKE '{codigo}%' 
+            AND B1_DESC LIKE '{descricao}%' 
+            AND {descricao2_clauses}
+            AND B1_TIPO LIKE '{tipo}%' 
+            AND B1_UM LIKE '{um}%' 
+            AND B1_LOCPAD LIKE '{armazem}%' 
+            AND B1_GRUPO LIKE '{grupo}%' {status_clause}
+            AND D_E_L_E_T_ <> '*'
+            ORDER BY B1_COD ASC
         """
         return query
 
@@ -613,27 +621,32 @@ class EngenhariaApp(QWidget):
 
         self.controle_campos_formulario(False)
 
+        conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
+        self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
+
         try:
-            # Estabelecer a conexão com o banco de dados
-            conn = pyodbc.connect(
-                f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}')
+            dataframe = pd.read_sql(select_query, self.engine)
+            dataframe[''] = ''
 
-            # Criar um cursor para executar comandos SQL
-            cursor = conn.cursor()
+            if not dataframe.empty:
 
-            # Executar a consulta
-            cursor.execute(select_query)
+                self.configurar_tabela(dataframe)
+                self.configurar_tabela_tooltips(dataframe)
 
-            # Limpar a ordenação
-            self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
+                # Limpar a ordenação
+                self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
 
-            # Limpar a tabela
-            self.tree.setRowCount(0)
+                # Limpar a tabela
+                self.tree.setRowCount(0)
 
-            time.sleep(0.1)
+                time.sleep(0.1)
+            else:
+                self.exibir_mensagem("EUREKA® engenharia", 'Nada encontrado!', "info")
+                self.controle_campos_formulario(True)
+                return
 
             # Preencher a tabela com os resultados
-            for i, row in enumerate(cursor.fetchall()):
+            for i, row in dataframe.iterrows():
 
                 self.tree.setSortingEnabled(False)  # Permitir ordenação
                 # Inserir os valores formatados na tabela
@@ -668,8 +681,10 @@ class EngenhariaApp(QWidget):
             print(f"Falha na consulta. Erro: {str(ex)}")
 
         finally:
-            # Fechar a conexão com o banco de dados
-            conn.close()
+            if hasattr(self, 'engine'):
+                self.engine.dispose()
+                self.engine = None
+            self.interromper_consulta_sql = False
 
     def abrir_desenho(self, table):
         item_selecionado = table.currentItem()
