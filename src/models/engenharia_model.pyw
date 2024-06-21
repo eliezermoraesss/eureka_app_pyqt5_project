@@ -169,7 +169,7 @@ class ConsultaApp(QWidget):
         self.btn_consultar_estrutura.setEnabled(False)
 
         self.btn_onde_e_usado = QPushButton("Onde é usado?", self)
-        self.btn_onde_e_usado.clicked.connect(self.executar_consulta_onde_usado)
+        self.btn_onde_e_usado.clicked.connect(lambda: self.executar_consulta_onde_usado(self.tree))
         self.btn_onde_e_usado.setMinimumWidth(150)
         self.btn_onde_e_usado.setEnabled(False)
 
@@ -694,11 +694,11 @@ class ConsultaApp(QWidget):
 
             if codigo not in self.guias_abertas:
                 select_query_estrutura = f"""
-                    SELECT struct.G1_COMP AS CÓDIGO, prod.B1_DESC AS DESCRIÇÃO, struct.G1_QUANT AS "QTD.", struct.G1_XUM AS "UNID.", struct.G1_REVFIM AS "REVISÃO", 
+                    SELECT struct.G1_COMP AS "Código", prod.B1_DESC AS "Descrição", struct.G1_QUANT AS "QTD.", struct.G1_XUM AS "UNID.", struct.G1_REVFIM AS "REVISÃO", 
                     struct.G1_INI AS "INSERIDO EM:"
                     FROM {database}.dbo.SG1010 struct
                     INNER JOIN {database}.dbo.SB1010 prod
-                    ON struct.G1_COMP = prod.B1_COD
+                    ON struct.G1_COMP = prod.B1_COD AND prod.D_E_L_E_T_ <> '*'
                     WHERE G1_COD = '{codigo}' 
                     AND G1_REVFIM <> 'ZZZ' AND struct.D_E_L_E_T_ <> '*' 
                     AND G1_REVFIM = (SELECT MAX(G1_REVFIM) FROM {database}.dbo.SG1010 WHERE G1_COD = '{codigo}'AND G1_REVFIM <> 'ZZZ' AND D_E_L_E_T_ <> '*')
@@ -862,11 +862,18 @@ class ConsultaApp(QWidget):
 
             if codigo not in self.guias_abertas_onde_usado:
                 query_onde_usado = f"""
-                    SELECT STRUT.G1_COD AS "CÓDIGO", PROD.B1_DESC "DESCRIÇÃO" 
+                    SELECT STRUT.G1_COD AS "Código", PROD.B1_DESC "Descrição" 
                     FROM {database}.dbo.SG1010 STRUT 
                     INNER JOIN {database}.dbo.SB1010 PROD 
                     ON G1_COD = B1_COD WHERE G1_COMP = '{codigo}' 
-                    AND STRUT.D_E_L_E_T_ <> '*';
+                    AND STRUT.G1_REVFIM <> 'ZZZ' AND STRUT.D_E_L_E_T_ <> '*'
+                    AND STRUT.G1_REVFIM = (SELECT MAX(G1_REVFIM) 
+                                            FROM {database}.dbo.SG1010 
+                                            WHERE 
+                                                G1_COD = '{codigo}' 
+                                                AND G1_REVFIM <> 'ZZZ' 
+                                                AND STRUT.D_E_L_E_T_ <> '*');
+
                 """
                 self.guias_abertas_onde_usado.append(codigo)
                 try:
