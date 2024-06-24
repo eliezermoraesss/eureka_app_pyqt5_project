@@ -4,7 +4,7 @@ import sys
 import pyodbc
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, QMessageBox, \
-    QProgressBar, QSizePolicy, QTabWidget, QMenu
+    QProgressBar, QSizePolicy, QTabWidget, QMenu, QItemDelegate, QAbstractItemView
 from PyQt5.QtGui import QFont, QColor, QIcon, QDesktopServices
 from PyQt5.QtCore import Qt, QCoreApplication, QDate, QUrl, QProcess, pyqtSignal
 import pyperclip
@@ -15,6 +15,11 @@ import tkinter as tk
 from tkinter import messagebox
 from sqlalchemy import create_engine
 import os
+
+
+def ajustar_largura_coluna_descricao(tree_widget):
+    header = tree_widget.horizontalHeader()
+    header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
 
 
 class PcpApp(QWidget):
@@ -33,6 +38,7 @@ class PcpApp(QWidget):
         self.tree.setRowCount(0)
         self.process = QProcess(self)
         self.nova_janela = None
+
         self.tabWidget = QTabWidget(self)  # Adicione um QTabWidget ao layout principal
         self.tabWidget.setTabsClosable(True)  # Adicione essa linha para permitir o fechamento de guias
         self.tabWidget.tabCloseRequested.connect(self.fechar_guia)
@@ -227,6 +233,11 @@ class PcpApp(QWidget):
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
+        self.btn_consultar_estrutura = QPushButton("Consultar Estrutura", self)
+        self.btn_consultar_estrutura.clicked.connect(lambda: self.executar_consulta_estrutura(self.tree))
+        self.btn_consultar_estrutura.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.btn_consultar_estrutura.setEnabled(False)
+
         self.btn_abrir_compras = QPushButton("Compras", self)
         self.btn_abrir_compras.setObjectName("btn_compras")
         self.btn_abrir_compras.clicked.connect(self.abrir_modulo_compras)
@@ -324,6 +335,7 @@ class PcpApp(QWidget):
         layout_campos_linha_02.addStretch()
 
         self.layout_buttons.addWidget(self.btn_consultar)
+        self.layout_buttons.addWidget(self.btn_consultar_estrutura)
         self.layout_buttons.addWidget(self.btn_saldo_estoque)
         self.layout_buttons.addWidget(self.btn_onde_e_usado)
         self.layout_buttons.addWidget(self.btn_nova_janela)
@@ -369,10 +381,6 @@ class PcpApp(QWidget):
     def existe_guias_abertas(self):
         return self.tabWidget.count() > 0
 
-    def ajustar_largura_coluna_descricao(self, tree_widget):
-        header = tree_widget.horizontalHeader()
-        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
-
     def showContextMenu(self, position, table):
         indexes = table.selectedIndexes()
         if indexes:
@@ -389,6 +397,9 @@ class PcpApp(QWidget):
             context_menu_abrir_desenho = QAction('Abrir desenho', self)
             context_menu_abrir_desenho.triggered.connect(lambda: self.abrir_desenho(table))
 
+            context_menu_consultar_estrutura = QAction('Consultar estrutura', self)
+            context_menu_consultar_estrutura.triggered.connect(lambda: self.executar_consulta_estrutura(table))
+
             context_menu_consultar_onde_usado = QAction('Onde é usado?', self)
             context_menu_consultar_onde_usado.triggered.connect(lambda: self.executar_consulta_onde_usado(table))
 
@@ -399,6 +410,7 @@ class PcpApp(QWidget):
             context_menu_nova_janela.triggered.connect(lambda: self.abrir_nova_janela())
 
             menu.addAction(context_menu_abrir_desenho)
+            menu.addAction(context_menu_consultar_estrutura)
             menu.addAction(context_menu_consultar_onde_usado)
             menu.addAction(context_menu_saldo_estoque)
             menu.addAction(context_menu_nova_janela)
@@ -576,6 +588,7 @@ class PcpApp(QWidget):
         self.btn_abrir_desenho.setEnabled(status)
         self.btn_onde_e_usado.setEnabled(status)
         self.btn_saldo_estoque.setEnabled(status)
+        self.btn_consultar_estrutura.setEnabled(status)
 
     def exibir_mensagem(self, title, message, icon_type):
         root = tk.Tk()
@@ -820,6 +833,148 @@ class PcpApp(QWidget):
             self.engine.dispose()
         self.controle_campos_formulario(True)
 
+    def executar_consulta_estrutura(self, table):
+        item_selecionado = table.currentItem()
+        header = table.horizontalHeader()
+        codigo_col, descricao_col = None, None
+        codigo = None
+        descricao = None
+
+        for col in range(header.count()):
+            header_text = table.horizontalHeaderItem(col).text()
+            if header_text == 'Código':
+                codigo_col = col
+            elif header_text == 'Descrição':
+                descricao_col = col
+
+            if codigo_col is not None and descricao_col is not None:
+                codigo = table.item(item_selecionado.row(), codigo_col).text()
+                descricao = table.item(item_selecionado.row(), descricao_col).text()
+
+            if codigo not in self.guias_abertas and codigo is not None:
+                select_query_estrutura = f"""
+                    SELECT struct.G1_COMP AS "Código", prod.B1_DESC AS "Descrição", struct.G1_QUANT AS "QTD.", 
+                    struct.G1_XUM AS "UNID.", struct.G1_REVFIM AS "REVISÃO", 
+                    struct.G1_INI AS "INSERIDO EM:"
+                    FROM {database}.dbo.SG1010 struct
+                    INNER JOIN {database}.dbo.SB1010 prod
+                    ON struct.G1_COMP = prod.B1_COD AND prod.D_E_L_E_T_ <> '*'
+                    WHERE G1_COD = '{codigo}' 
+                    AND G1_REVFIM <> 'ZZZ' AND struct.D_E_L_E_T_ <> '*' 
+                    AND G1_REVFIM = (SELECT MAX(G1_REVFIM) FROM {database}.dbo.SG1010 WHERE G1_COD = '{codigo}' 
+                    AND G1_REVFIM <> 'ZZZ' AND D_E_L_E_T_ <> '*')
+                    ORDER BY B1_DESC ASC;
+                """
+
+                try:
+                    conn_estrutura = pyodbc.connect(
+                        f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}')
+
+                    cursor_estrutura = conn_estrutura.cursor()
+                    resultado = cursor_estrutura.execute(select_query_estrutura)
+
+                    nova_guia_estrutura = QWidget()
+                    layout_nova_guia_estrutura = QVBoxLayout()
+                    layout_cabecalho = QHBoxLayout()
+
+                    tree_estrutura = QTableWidget(nova_guia_estrutura)
+
+                    tree_estrutura.setContextMenuPolicy(Qt.CustomContextMenu)
+                    tree_estrutura.customContextMenuRequested.connect(
+                        lambda pos: self.showContextMenu(pos, tree_estrutura))
+
+                    tree_estrutura.setColumnCount(len(cursor_estrutura.description))
+                    tree_estrutura.setHorizontalHeaderLabels([desc[0] for desc in cursor_estrutura.description])
+
+                    # Tornar a tabela somente leitura
+                    tree_estrutura.setEditTriggers(QTableWidget.NoEditTriggers)
+
+                    # Configurar a fonte da tabela
+                    fonte_tabela = QFont("Segoe UI", 8)  # Substitua por sua fonte desejada e tamanho
+                    tree_estrutura.setFont(fonte_tabela)
+
+                    # Ajustar a altura das linhas
+                    altura_linha = 22  # Substitua pelo valor desejado
+                    tree_estrutura.verticalHeader().setDefaultSectionSize(altura_linha)
+
+                    for i, row in enumerate(resultado.fetchall()):
+                        tree_estrutura.insertRow(i)
+                        for j, value in enumerate(row):
+                            if j == 2:
+                                valor_formatado = "{:.2f}".format(float(value))
+                            elif j == 5:
+                                data_obj = datetime.strptime(value, "%Y%m%d")
+                                valor_formatado = data_obj.strftime("%d/%m/%Y")
+                            else:
+                                valor_formatado = str(value).strip()
+
+                            item = QTableWidgetItem(valor_formatado)
+                            item.setForeground(QColor("#EEEEEE"))  # Definir cor do texto da coluna quantidade
+
+                            if j != 0 and j != 1:
+                                item.setTextAlignment(Qt.AlignCenter)
+
+                            tree_estrutura.setItem(i, j, item)
+
+                    tree_estrutura.setSortingEnabled(True)
+
+                    # Ajustar automaticamente a largura da coluna "Descrição"
+                    ajustar_largura_coluna_descricao(tree_estrutura)
+
+                    layout_cabecalho.addWidget(QLabel(f"CONSULTA DE ESTRUTURA\n\n{codigo} - {descricao}"),
+                                               alignment=Qt.AlignLeft)
+                    layout_nova_guia_estrutura.addLayout(layout_cabecalho)
+                    layout_nova_guia_estrutura.addWidget(tree_estrutura)
+                    nova_guia_estrutura.setLayout(layout_nova_guia_estrutura)
+
+                    nova_guia_estrutura.setStyleSheet("""                                           
+                        * {
+                            background-color: #262626;
+                        }
+
+                        QLabel {
+                            color: #A7A6A6;
+                            font-size: 18px;
+                            font-weight: bold;
+                        }
+
+                        QTableWidget {
+                            border: 1px solid #000000;
+                        }
+
+                        QTableWidget QHeaderView::section {
+                            background-color: #575a5f;
+                            color: #fff;
+                            padding: 5px;
+                            height: 18px;
+                        }
+
+                        QTableWidget QHeaderView::section:horizontal {
+                            border-top: 1px solid #333;
+                        }
+
+                        QTableWidget::item:selected {
+                            background-color: #0066ff;
+                            color: #fff;
+                            font-weight: bold;
+                        }        
+                    """)
+
+                    if not self.existe_guias_abertas():
+                        # Se não houver guias abertas, adicione a guia ao layout principal
+                        self.layout().addWidget(self.tabWidget)
+                        self.tabWidget.setVisible(True)
+
+                    self.tabWidget.addTab(nova_guia_estrutura, f"{codigo}")
+
+                except pyodbc.Error as ex:
+                    print(f"Falha na consulta de estrutura. Erro: {str(ex)}")
+
+                finally:
+                    self.tabWidget.setCurrentIndex(self.tabWidget.indexOf(nova_guia_estrutura))
+                    self.guias_abertas.append(codigo)
+                    conn_estrutura.close()
+
     def executar_consulta_onde_usado(self, table):
         item_selecionado = table.currentItem()
         codigo, descricao = None, None
@@ -897,7 +1052,7 @@ class PcpApp(QWidget):
                     tabela_onde_usado.setSortingEnabled(True)
 
                     # Ajustar automaticamente a largura da coluna "Descrição"
-                    self.ajustar_largura_coluna_descricao(tabela_onde_usado)
+                    ajustar_largura_coluna_descricao(tabela_onde_usado)
 
                     layout_cabecalho.addWidget(QLabel(f'Onde é usado?\n\n{codigo} - {descricao}'),
                                                alignment=Qt.AlignLeft)
