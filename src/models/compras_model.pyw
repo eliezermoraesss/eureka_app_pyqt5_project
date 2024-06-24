@@ -808,7 +808,7 @@ class ComprasApp(QWidget):
 
                 dataframe.insert(0, 'Status PC', '')
                 dataframe[''] = ''
-                dataframe.insert(11, 'Dias restantes', '')
+                dataframe.insert(11, 'Dias em atraso', '')
 
                 data_atual = datetime.now()
 

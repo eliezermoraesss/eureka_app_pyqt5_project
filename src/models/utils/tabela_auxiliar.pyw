@@ -1,10 +1,8 @@
 import sys
-
-from PyQt5.QtSql import QSqlDatabase, QSqlQueryModel
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, \
     QTableWidgetItem, QHeaderView, QSizePolicy, QSpacerItem, QMessageBox, QFileDialog, QTabWidget, \
-    QItemDelegate, QAbstractItemView, QCheckBox, QMenu, QAction, QComboBox, QStyle, QDialog, QTableView
+    QItemDelegate, QAbstractItemView, QCheckBox, QMenu, QAction, QComboBox, QStyle
 from PyQt5.QtGui import QFont, QIcon, QDesktopServices, QColor
 from PyQt5.QtCore import Qt, QUrl, QCoreApplication, pyqtSignal, QProcess, pyqtSlot
 import pyodbc
@@ -154,7 +152,7 @@ class EngenhariaApp(QWidget):
         self.tabWidget.setVisible(False)  # Inicialmente, a guia está invisível
 
         self.combobox_armazem = QComboBox(self)
-        self.combobox_armazem.setEditable(False)
+        self.combobox_armazem.setEditable(True)
         self.combobox_armazem.setObjectName('combobox-armazem')
 
         self.combobox_armazem.addItem("", None)
@@ -648,7 +646,7 @@ class EngenhariaApp(QWidget):
             B1_UM AS "Unid. Med", 
             B1_LOCPAD AS "Armazém", 
             B1_GRUPO AS "Grupo", 
-            B1_ZZNOGRP AS "Desc. Grupo", 
+            B1_ZZNOGRP AS "ZZNOGRP", 
             B1_CC AS "Centro Custo", 
             B1_MSBLQL AS "Bloqueado?", 
             B1_REVATU AS "Últ. Rev.", 
@@ -1189,34 +1187,6 @@ class EngenhariaApp(QWidget):
                 finally:
                     self.tabWidget.setCurrentIndex(self.tabWidget.indexOf(nova_guia_saldo))
                     conn_saldo.close()
-
-
-class SearchWindow(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle('Search Results')
-        self.setGeometry(300, 300, 600, 400)
-
-        # Conectando ao banco de dados
-        self.db = QSqlDatabase.addDatabase('QODBC')
-        self.db.setDatabaseName('DRIVER={SQL Server};SERVER=server;DATABASE=database;UID=username;PWD=password')
-
-        if not self.db.open():
-            print("Failed to connect to database")
-            return
-
-        # Executando a query e exibindo os resultados
-        self.model = QSqlQueryModel()
-        self.model.setQuery(
-            "SELECT BM_GRUPO, BM_DESC FROM PROTHEUS12_R27.dbo.SBM010 WHERE D_E_L_E_T_ <> '*' ORDER BY BM_DESC ASC;")
-
-        self.view = QTableView()
-        self.view.setModel(self.model)
-        self.view.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-
-        layout = QVBoxLayout()
-        layout.addWidget(self.view)
-        self.setLayout(layout)
 
 
 if __name__ == "__main__":
