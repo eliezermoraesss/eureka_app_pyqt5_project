@@ -10,11 +10,48 @@ from PyQt5.QtCore import Qt, QDate, QProcess, pyqtSignal
 import pyperclip
 import pandas as pd
 import ctypes
-from datetime import date, datetime
+from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
-from sqlalchemy import create_engine, MetaData, Table
+from sqlalchemy import create_engine
 import os
+
+
+def exibir_mensagem(title, message, icon_type):
+    root = tk.Tk()
+    root.withdraw()
+    root.lift()  # Garante que a janela esteja na frente
+    root.title(title)
+    root.attributes('-topmost', True)
+
+    if icon_type == 'info':
+        messagebox.showinfo(title, message)
+    elif icon_type == 'warning':
+        messagebox.showwarning(title, message)
+    elif icon_type == 'error':
+        messagebox.showerror(title, message)
+
+    root.destroy()
+
+
+def ajustar_largura_coluna_descricao(tree_widget):
+    header = tree_widget.horizontalHeader()
+    header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+
+
+def add_today_button(date_edit):
+    calendar = date_edit.calendarWidget()
+    calendar.setGeometry(10, 10, 600, 400)
+    btn_today = QPushButton("Hoje", calendar)
+    largura, altura = 50, 20
+    btn_today.setGeometry(20, 5, largura, altura)
+    btn_today.clicked.connect(lambda: date_edit.setDate(QDate.currentDate()))
+
+
+def copiar_linha(item):
+    if item is not None:
+        valor_campo = item.text()
+        pyperclip.copy(str(valor_campo))
 
 
 class ComprasApp(QWidget):
@@ -85,10 +122,15 @@ class ComprasApp(QWidget):
         self.guias_abertas = []
         self.guias_abertas_onde_usado = []
         self.guias_abertas_saldo = []
+        self.guias_abertas_ultimos_fornecedores = []
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setMinimum(0)
         self.progress_bar.setMaximumWidth(400)
+
+        # self.checkbox_pedido_em_aberto = QCheckBox("PC EM ABERTO", self)
+        # self.checkbox_pedido_fechado = QCheckBox("PC FECHADO", self)
+        # self.checkbox_pedido_parcial = QCheckBox("PC PARCIAL", self)
 
         self.label_sc = QLabel("Solic. Compra:", self)
         self.label_sc.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -108,10 +150,7 @@ class ComprasApp(QWidget):
         self.label_data_fim = QLabel("Data final SC:", self)
         self.label_armazem = QLabel("Armazém:", self)
         self.label_fornecedor = QLabel("Fornecedor Razão Social:", self)
-        self.label_fornecedor.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        # self.label_fornecedor.setObjectName("fornecedor")
-        # self.label_nm_fantasia_forn = QLabel("Fornecedor Nome Fantasia:", self)
-        # self.label_nm_fantasia_forn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.label_nm_fantasia_forn = QLabel("Fornecedor Nome Fantasia:", self)
 
         self.campo_sc = QLineEdit(self)
         self.campo_sc.setFont(QFont(fonte_campos, tamanho_fonte_campos))
@@ -150,14 +189,19 @@ class ComprasApp(QWidget):
         self.add_clear_button(self.campo_OP)
 
         self.campo_razao_social_fornecedor = QLineEdit(self)
+        self.campo_razao_social_fornecedor.setObjectName("forn-raz")
         self.campo_razao_social_fornecedor.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_razao_social_fornecedor.setMaximumWidth(250)  # Ajuste conforme necessário
         self.campo_razao_social_fornecedor.setMaxLength(40)
         self.add_clear_button(self.campo_razao_social_fornecedor)
 
-        # self.campo_nm_fantasia_fornecedor = QLineEdit(self)
-        # self.campo_nm_fantasia_fornecedor.setFont(QFont(fonte_campos, tamanho_fonte_campos))
-        # self.campo_nm_fantasia_fornecedor.setMaxLength(40)
-        # self.add_clear_button(self.campo_nm_fantasia_fornecedor)
+        self.campo_nm_fantasia_fornecedor = QLineEdit(self)
+        self.campo_nm_fantasia_fornecedor.setObjectName("forn-fantasia")
+        self.campo_nm_fantasia_fornecedor.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_nm_fantasia_fornecedor.setMaximumWidth(250)  # Ajuste conforme necessário
+        self.campo_nm_fantasia_fornecedor.setMaxLength(40)
+        self.campo_nm_fantasia_fornecedor.setMaxLength(40)
+        self.add_clear_button(self.campo_nm_fantasia_fornecedor)
 
         self.campo_data_inicio = QDateEdit(self)
         self.campo_data_inicio.setFont(QFont(fonte_campos, tamanho_fonte_campos))
@@ -169,7 +213,7 @@ class ComprasApp(QWidget):
         intervalo_meses = 12
         data_inicio = data_atual.addMonths(-intervalo_meses)
         self.campo_data_inicio.setDate(data_inicio)
-        self.add_today_button(self.campo_data_inicio)
+        add_today_button(self.campo_data_inicio)
 
         self.campo_data_fim = QDateEdit(self)
         self.campo_data_fim.setFont(QFont("Segoe UI", 10))
@@ -177,7 +221,7 @@ class ComprasApp(QWidget):
         self.campo_data_fim.setCalendarPopup(True)
         self.campo_data_fim.setDisplayFormat("dd/MM/yyyy")
         self.campo_data_fim.setDate(QDate().currentDate())
-        self.add_today_button(self.campo_data_fim)
+        add_today_button(self.campo_data_fim)
 
         self.btn_consultar = QPushButton("Pesquisar", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
@@ -197,6 +241,11 @@ class ComprasApp(QWidget):
         self.btn_saldo_estoque.clicked.connect(lambda: self.executar_saldo_em_estoque(self.tree))
         self.btn_saldo_estoque.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.btn_saldo_estoque.setEnabled(False)
+
+        self.btn_ultimos_fornecedores = QPushButton("Fornecedores x Prod.", self)
+        self.btn_ultimos_fornecedores.clicked.connect(lambda: self.executar_ultimos_fornecedores(self.tree))
+        self.btn_ultimos_fornecedores.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.btn_ultimos_fornecedores.setEnabled(False)
 
         self.btn_limpar = QPushButton("Limpar", self)
         self.btn_limpar.clicked.connect(self.limpar_campos)
@@ -226,7 +275,7 @@ class ComprasApp(QWidget):
         self.campo_qp.returnPressed.connect(self.executar_consulta)
         self.campo_OP.returnPressed.connect(self.executar_consulta)
         self.campo_razao_social_fornecedor.returnPressed.connect(self.executar_consulta)
-        # self.campo_nm_fantasia_fornecedor.returnPressed.connect(self.executar_consulta)
+        self.campo_nm_fantasia_fornecedor.returnPressed.connect(self.executar_consulta)
 
         layout = QVBoxLayout()
         layout_campos_linha_01 = QHBoxLayout()
@@ -274,9 +323,9 @@ class ComprasApp(QWidget):
         container_fornecedor.addWidget(self.label_fornecedor)
         container_fornecedor.addWidget(self.campo_razao_social_fornecedor)
 
-        # container_nm_fantasia_forn = QVBoxLayout()
-        # container_nm_fantasia_forn.addWidget(self.label_nm_fantasia_forn)
-        # container_nm_fantasia_forn.addWidget(self.campo_nm_fantasia_fornecedor)
+        container_nm_fantasia_forn = QVBoxLayout()
+        container_nm_fantasia_forn.addWidget(self.label_nm_fantasia_forn)
+        container_nm_fantasia_forn.addWidget(self.campo_nm_fantasia_fornecedor)
 
         layout_campos_linha_01.addLayout(container_sc)
         layout_campos_linha_01.addLayout(container_pedido)
@@ -284,15 +333,19 @@ class ComprasApp(QWidget):
         layout_campos_linha_01.addLayout(container_qp)
         layout_campos_linha_01.addLayout(container_codigo)
         layout_campos_linha_01.addLayout(container_descricao_prod)
-        layout_campos_linha_01.addLayout(container_fornecedor)
-        # layout_campos_linha_02.addLayout(container_nm_fantasia_forn)
         layout_campos_linha_02.addLayout(container_data_ini)
         layout_campos_linha_02.addLayout(container_data_fim)
         layout_campos_linha_02.addLayout(container_combobox_armazem)
+        layout_campos_linha_02.addLayout(container_fornecedor)
+        layout_campos_linha_02.addLayout(container_nm_fantasia_forn)
+        # layout_campos_linha_02.addWidget(self.checkbox_pedido_em_aberto)
+        # layout_campos_linha_02.addWidget(self.checkbox_pedido_parcial)
+        # layout_campos_linha_02.addWidget(self.checkbox_pedido_fechado)
         layout_campos_linha_01.addStretch()
         layout_campos_linha_02.addStretch()
 
         self.layout_buttons.addWidget(self.btn_consultar)
+        self.layout_buttons.addWidget(self.btn_ultimos_fornecedores)
         self.layout_buttons.addWidget(self.btn_saldo_estoque)
         self.layout_buttons.addWidget(self.btn_onde_e_usado)
         self.layout_buttons.addWidget(self.btn_nova_janela)
@@ -314,7 +367,7 @@ class ComprasApp(QWidget):
                 background-color: #373A40;
             }
     
-            QLabel {
+            QLabel, QCheckBox {
                 color: #EEEEEE;
                 font-size: 12px;
                 font-weight: bold;
@@ -354,6 +407,16 @@ class ComprasApp(QWidget):
                 border-radius: 10px;
                 height: 24px;
                 font-size: 16px;
+            }
+            
+            QLineEdit#forn-raz, QLineEdit#forn-fantasia {
+                background-color: #FFFFFF;
+                border: 1px solid #262626;
+                padding: 5px 10px;
+                border-radius: 10px;
+                height: 24px;
+                font-size: 16px;
+                margin-bottom: 20px;
             }
     
             QPushButton {
@@ -450,7 +513,10 @@ class ComprasApp(QWidget):
                 try:
                     self.guias_abertas_onde_usado.remove(codigo_guia_fechada)
                 except ValueError:
-                    self.guias_abertas_saldo.remove(codigo_guia_fechada)
+                    try:
+                        self.guias_abertas_saldo.remove(codigo_guia_fechada)
+                    except ValueError:
+                        self.guias_abertas_ultimos_fornecedores.remove(codigo_guia_fechada)
 
             finally:
                 self.tabWidget.removeTab(index)
@@ -462,10 +528,6 @@ class ComprasApp(QWidget):
 
     def existe_guias_abertas(self):
         return self.tabWidget.count() > 0
-
-    def ajustar_largura_coluna_descricao(self, tree_widget):
-        header = tree_widget.horizontalHeader()
-        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
 
     def showContextMenu(self, position, table):
         indexes = table.selectedIndexes()
@@ -480,6 +542,9 @@ class ComprasApp(QWidget):
 
             menu = QMenu()
 
+            context_menu_ultimo_fornecedor = QAction('Fornecedores x Prod.', self)
+            context_menu_ultimo_fornecedor.triggered.connect(lambda: self.executar_ultimos_fornecedores(table))
+
             context_menu_consultar_onde_usado = QAction('Onde é usado?', self)
             context_menu_consultar_onde_usado.triggered.connect(lambda: self.executar_consulta_onde_usado(table))
 
@@ -489,6 +554,7 @@ class ComprasApp(QWidget):
             context_menu_nova_janela = QAction('Nova janela', self)
             context_menu_nova_janela.triggered.connect(lambda: self.abrir_nova_janela())
 
+            menu.addAction(context_menu_ultimo_fornecedor)
             menu.addAction(context_menu_consultar_onde_usado)
             menu.addAction(context_menu_saldo_estoque)
             menu.addAction(context_menu_nova_janela)
@@ -500,14 +566,6 @@ class ComprasApp(QWidget):
             self.nova_janela = ComprasApp()
             self.nova_janela.setGeometry(self.x() + 50, self.y() + 50, self.width(), self.height())
             self.nova_janela.show()
-
-    def add_today_button(self, date_edit):
-        calendar = date_edit.calendarWidget()
-        calendar.setGeometry(10, 10, 600, 400)
-        btn_today = QPushButton("Hoje", calendar)
-        largura, altura = 50, 20
-        btn_today.setGeometry(20, 5, largura, altura)
-        btn_today.clicked.connect(lambda: date_edit.setDate(QDate.currentDate()))
 
     def add_clear_button(self, line_edit):
         clear_icon = self.style().standardIcon(QStyle.SP_LineEditClearButton)
@@ -569,18 +627,13 @@ class ComprasApp(QWidget):
         self.tree.setEditTriggers(QTableWidget.NoEditTriggers)
         self.tree.setSelectionBehavior(QTableWidget.SelectRows)
         self.tree.setSelectionMode(QTableWidget.SingleSelection)
-        self.tree.itemDoubleClicked.connect(self.copiar_linha)
+        self.tree.itemDoubleClicked.connect(copiar_linha)
         self.tree.setFont(QFont(self.fonte_tabela, self.tamanho_fonte_tabela))
         self.tree.verticalHeader().setDefaultSectionSize(self.altura_linha)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
         self.tree.horizontalHeader().setStretchLastSection(True)
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(lambda pos: self.showContextMenu(pos, self.tree))
-
-    def copiar_linha(self, item):
-        if item is not None:
-            valor_campo = item.text()
-            pyperclip.copy(str(valor_campo))
 
     def ordenar_tabela(self, logical_index):
         # Obter o índice real da coluna (considerando a ordem de classificação)
@@ -601,6 +654,7 @@ class ComprasApp(QWidget):
         self.campo_nm_fantasia_fornecedor.clear()
         self.campo_qp.clear()
         self.campo_OP.clear()
+        # self.checkbox_pedido_em_aberto.setChecked(False)
 
     def controle_campos_formulario(self, status):
         self.campo_sc.setEnabled(status)
@@ -616,25 +670,10 @@ class ComprasApp(QWidget):
         self.btn_exportar_excel.setEnabled(status)
         self.btn_saldo_estoque.setEnabled(status)
         self.btn_onde_e_usado.setEnabled(status)
-
-    def exibir_mensagem(self, title, message, icon_type):
-        root = tk.Tk()
-        root.withdraw()
-        root.lift()  # Garante que a janela esteja na frente
-        root.title(title)
-        root.attributes('-topmost', True)
-
-        if icon_type == 'info':
-            messagebox.showinfo(title, message)
-        elif icon_type == 'warning':
-            messagebox.showwarning(title, message)
-        elif icon_type == 'error':
-            messagebox.showerror(title, message)
-
-        root.destroy()
+        self.btn_ultimos_fornecedores.setEnabled(status)
 
     def numero_linhas_consulta(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op,
-                               razao_social_fornecedor, descricao_produto, cod_armazem):
+                               razao_social_fornecedor, nome_fantasia_fornecedor, descricao_produto, cod_armazem):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -677,12 +716,13 @@ class ComprasApp(QWidget):
                 AND SC.C1_DESCRI LIKE '{descricao_produto}%'
                 AND SC.C1_OP LIKE '{numero_op}%' 
                 AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}%'
+                AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
                 AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data}
         """
-        return query  # AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
+        return query
 
     def query_consulta_followup(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op,
-                                razao_social_fornecedor, descricao_produto, cod_armazem):
+                                razao_social_fornecedor, nome_fantasia_fornecedor, descricao_produto, cod_armazem):
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -758,11 +798,12 @@ class ComprasApp(QWidget):
                 AND SC.C1_DESCRI LIKE '{descricao_produto}%'
                 AND SC.C1_OP LIKE '{numero_op}%' 
                 AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}%'
+                AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
                 AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data}
             ORDER BY 
                 PC.R_E_C_N_O_ DESC;
         """
-        return query  # AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
+        return query
 
     def executar_consulta(self):
 
@@ -772,7 +813,7 @@ class ComprasApp(QWidget):
         numero_op = self.campo_OP.text().upper().strip()
         codigo_produto = self.campo_codigo.text().upper().strip()
         razao_social_fornecedor = self.campo_razao_social_fornecedor.text().upper().strip()
-        # nome_fantasia_fornecedor = self.campo_nm_fantasia_fornecedor.text().upper().strip()
+        nome_fantasia_fornecedor = self.campo_nm_fantasia_fornecedor.text().upper().strip()
         descricao_produto = self.campo_descricao_prod.text().upper().strip()
 
         cod_armazem = self.combobox_armazem.currentData()
@@ -780,11 +821,11 @@ class ComprasApp(QWidget):
             cod_armazem = ''
 
         query_consulta_filtro = self.query_consulta_followup(numero_sc, numero_pedido, codigo_produto,
-                                                             numero_qp, numero_op, razao_social_fornecedor,
+                                                             numero_qp, numero_op, razao_social_fornecedor, nome_fantasia_fornecedor,
                                                              descricao_produto, cod_armazem)
 
         query_contagem_linhas = self.numero_linhas_consulta(numero_sc, numero_pedido, codigo_produto, numero_qp,
-                                                            numero_op, razao_social_fornecedor,
+                                                            numero_op, razao_social_fornecedor, nome_fantasia_fornecedor,
                                                             descricao_produto, cod_armazem)
 
         self.controle_campos_formulario(False)
@@ -819,7 +860,7 @@ class ComprasApp(QWidget):
                 self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
                 self.tree.setRowCount(0)
             else:
-                self.exibir_mensagem("EUREKA® Compras", 'Nada encontrado!', "info")
+                exibir_mensagem("EUREKA® Compras", 'Nada encontrado!', "info")
                 self.controle_campos_formulario(True)
                 return
 
@@ -906,7 +947,7 @@ class ComprasApp(QWidget):
             self.controle_campos_formulario(True)
 
         except Exception as ex:
-            self.exibir_mensagem('Erro ao consultar TOTVS', f'Erro: {str(ex)}', 'error')
+            exibir_mensagem('Erro ao consultar TOTVS', f'Erro: {str(ex)}', 'error')
 
         finally:
             # Fecha a conexão com o banco de dados se estiver aberta
@@ -1023,7 +1064,7 @@ class ComprasApp(QWidget):
                     tabela_onde_usado.setSortingEnabled(True)
 
                     # Ajustar automaticamente a largura da coluna "Descrição"
-                    self.ajustar_largura_coluna_descricao(tabela_onde_usado)
+                    ajustar_largura_coluna_descricao(tabela_onde_usado)
 
                     layout_cabecalho.addWidget(QLabel(f'Onde é usado?\n\n{codigo} - {descricao}'),
                                                alignment=Qt.AlignLeft)
@@ -1070,7 +1111,7 @@ class ComprasApp(QWidget):
                         self.tabWidget.setVisible(True)
 
                     self.tabWidget.addTab(nova_guia_estrutura, f"Onde é usado? - {codigo}")
-                    tabela_onde_usado.itemDoubleClicked.connect(self.copiar_linha)
+                    tabela_onde_usado.itemDoubleClicked.connect(copiar_linha)
 
                 except pyodbc.Error as ex:
                     print(f"Falha na consulta de estrutura. Erro: {str(ex)}")
@@ -1215,13 +1256,156 @@ class ComprasApp(QWidget):
                         self.tabWidget.setVisible(True)
 
                     self.tabWidget.addTab(nova_guia_saldo, f"Saldos em Estoque - {codigo}")
-                    tabela_saldo_estoque.itemDoubleClicked.connect(self.copiar_linha)
+                    tabela_saldo_estoque.itemDoubleClicked.connect(copiar_linha)
 
                 except pyodbc.Error as ex:
                     print(f"Falha na consulta de estrutura. Erro: {str(ex)}")
 
                 finally:
                     self.tabWidget.setCurrentIndex(self.tabWidget.indexOf(nova_guia_saldo))
+                    conn_saldo.close()
+
+    def executar_ultimos_fornecedores(self, table):
+        item_selecionado = table.currentItem()
+        codigo, descricao = None, None
+
+        if item_selecionado:
+            header = table.horizontalHeader()
+            codigo_col = None
+            descricao_col = None
+
+            for col in range(header.count()):
+                header_text = table.horizontalHeaderItem(col).text()
+                if header_text == 'Código':
+                    codigo_col = col
+                elif header_text == 'Descrição':
+                    descricao_col = col
+
+            if codigo_col is not None and descricao_col is not None:
+                codigo = table.item(item_selecionado.row(), codigo_col).text()
+                descricao = table.item(item_selecionado.row(), descricao_col).text()
+
+            if codigo not in self.guias_abertas_ultimos_fornecedores:
+                query = f"""
+                    SELECT 
+                        A5_FORNECE AS "Cód. Forn.", 
+                        A5_NOMEFOR AS "Razão Social",
+                        FORN.A2_NREDUZ AS "Nome Fantasia",
+                        A5_QUANT01 AS "Qtd. 1ª compra",
+                        A5_QUANT02 AS "Qtd. 2ª compra",
+                        A5_QUANT03 AS "Qtd. 3ª compra",
+                        A5_PRECO01 AS "Preço 1ª compra",
+                        A5_PRECO02 AS "Preço 2ª compra",
+                        A5_PRECO03 AS "Preço 3ª compra",
+                        A5_DTCOM01 AS "Data 1ª compra",
+                        A5_DTCOM02 AS "Data 2ª compra",
+                        A5_DTCOM03 AS "Data 3ª compra",
+                        A5_CODPRF AS "Cód. no fornecedor"
+                    FROM 
+                        {database}.dbo.SA5010 FP
+                    INNER JOIN
+                        {database}.dbo.SA2010 FORN
+                    ON
+                        FP.A5_FORNECE = FORN.A2_COD 
+                    WHERE 
+                        A5_PRODUTO LIKE '{codigo}%'
+                    ORDER BY FORN.A2_NREDUZ ASC;
+                """
+                self.guias_abertas_ultimos_fornecedores.append(codigo)
+                try:
+                    conn_saldo = pyodbc.connect(
+                        f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}')
+
+                    cursor = conn_saldo.cursor()
+                    cursor.execute(query)
+
+                    nova_guia_ult_forn = QWidget()
+                    layout_nova_guia_ult_forn = QVBoxLayout()
+                    layout_cabecalho = QHBoxLayout()
+
+                    tabela_ult_fornecedores = QTableWidget(nova_guia_ult_forn)
+
+                    tabela_ult_fornecedores.setColumnCount(len(cursor.description))
+                    tabela_ult_fornecedores.setHorizontalHeaderLabels(
+                        [desc[0] for desc in cursor.description])
+
+                    tabela_ult_fornecedores.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+
+                    # Tornar a tabela somente leitura
+                    tabela_ult_fornecedores.setEditTriggers(QTableWidget.NoEditTriggers)
+
+                    # Configurar a fonte da tabela1
+                    fonte_tabela = QFont("Segoe UI", 10)  # Substitua por sua fonte desejada e tamanho
+                    tabela_ult_fornecedores.setFont(fonte_tabela)
+
+                    # Ajustar a altura das linhas
+                    altura_linha = 20  # Substitua pelo valor desejado
+                    tabela_ult_fornecedores.verticalHeader().setDefaultSectionSize(altura_linha)
+
+                    for i, row in enumerate(cursor.fetchall()):
+                        tabela_ult_fornecedores.insertRow(i)
+                        for j, value in enumerate(row):
+
+                            valor_formatado = str(value).strip()
+                            item = QTableWidgetItem(valor_formatado)
+                            item.setTextAlignment(Qt.AlignCenter)
+                            tabela_ult_fornecedores.setItem(i, j, item)
+
+                    tabela_ult_fornecedores.setSortingEnabled(True)
+
+                    layout_cabecalho.addWidget(QLabel(f'Fornecedores x Produto\n\n{codigo} - {descricao}'),
+                                               alignment=Qt.AlignLeft)
+                    layout_nova_guia_ult_forn.addLayout(layout_cabecalho)
+
+                    layout_nova_guia_ult_forn.addWidget(tabela_ult_fornecedores)
+                    nova_guia_ult_forn.setLayout(layout_nova_guia_ult_forn)
+
+                    nova_guia_ult_forn.setStyleSheet("""                                           
+                        * {
+                            background-color: #262626;
+                        }
+
+                        QLabel {
+                            color: #A7A6A6;
+                            font-size: 18px;
+                            font-weight: bold;
+                        }
+
+                        QTableWidget {
+                            border: 1px solid #000000;
+                        }
+
+                        QTableWidget QHeaderView::section {
+                            background-color: #575a5f;
+                            color: #fff;
+                            padding: 5px;
+                            height: 18px;
+                        }
+
+                        QTableWidget QHeaderView::section:horizontal {
+                            border-top: 1px solid #333;
+                        }
+
+                        QTableWidget::item:selected {
+                            background-color: #0066ff;
+                            color: #fff;
+                            font-weight: bold;
+                        }        
+                    """)
+
+                    if not self.existe_guias_abertas():
+                        # Se não houver guias abertas, adicione a guia ao layout principal
+                        self.layout().addWidget(self.tabWidget)
+                        self.tabWidget.setVisible(True)
+
+                    self.tabWidget.addTab(nova_guia_ult_forn, f"Saldos em Estoque - {codigo}")
+                    tabela_ult_fornecedores.itemDoubleClicked.connect(copiar_linha)
+
+                except pyodbc.Error as ex:
+                    print(f"Falha na consulta de estrutura. Erro: {str(ex)}")
+
+                finally:
+                    self.tabWidget.setCurrentIndex(self.tabWidget.indexOf(nova_guia_ult_forn))
                     conn_saldo.close()
 
 

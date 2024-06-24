@@ -746,6 +746,7 @@ class PcpApp(QWidget):
         try:
             dataframe_line_number = pd.read_sql(query_contagem_linhas, self.engine)
             line_number = dataframe_line_number.iloc[0, 0]
+
             dataframe = pd.read_sql(query_consulta_op, self.engine)
 
             if not dataframe.empty:
