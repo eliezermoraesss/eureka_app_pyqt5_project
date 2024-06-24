@@ -19,6 +19,7 @@ import os
 
 class ComprasApp(QWidget):
     guia_fechada = pyqtSignal()
+
     def __init__(self):
         super().__init__()
 
@@ -851,6 +852,9 @@ class ComprasApp(QWidget):
                             elif row['Status Ped. Compra'] == 'E':
                                 item.setIcon(end_order)
                         else:
+                            if j in (4, 7, 8, 9, 13):
+                                value = locale.format_string("%.2f", value, grouping=True)
+
                             if j == 11 and row['Nota Fiscal Ent.'] is None:
                                 previsao_entrega_sem_formatacao = row['Previsão Entrega']
                                 if pd.notna(previsao_entrega_sem_formatacao):
