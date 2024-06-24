@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, \
-    QTableWidgetItem, QHeaderView, QSizePolicy, QSpacerItem, QMessageBox, QFileDialog, QToolButton, QTabWidget, \
+    QTableWidgetItem, QHeaderView, QSizePolicy, QSpacerItem, QMessageBox, QFileDialog, QTabWidget, \
     QItemDelegate, QAbstractItemView, QCheckBox, QMenu, QAction, QComboBox, QStyle
 from PyQt5.QtGui import QFont, QIcon, QDesktopServices, QColor
 from PyQt5.QtCore import Qt, QUrl, QCoreApplication, pyqtSignal, QProcess
@@ -15,8 +15,105 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
 import locale
-
 from sqlalchemy import create_engine
+
+
+def abrir_tabela_pesos():
+    os.startfile(r'\\192.175.175.4\f\INTEGRANTES\ELIEZER\DOCUMENTOS_UTEIS\TABELA_PESO.xlsx')
+
+
+def setup_mssql():
+    caminho_do_arquivo = (r"\\192.175.175.4\f\INTEGRANTES\ELIEZER\PROJETO SOLIDWORKS "
+                          r"TOTVS\libs-python\user-password-mssql\USER_PASSWORD_MSSQL_PROD.txt")
+    try:
+        with open(caminho_do_arquivo, 'r') as arquivo:
+            string_lida = arquivo.read()
+            username_txt, password_txt, database_txt, server_txt = string_lida.split(';')
+            return username_txt, password_txt, database_txt, server_txt
+
+    except FileNotFoundError:
+        ctypes.windll.user32.MessageBoxW(0,
+                                         f"Erro ao ler credenciais de acesso ao banco de dados MSSQL.\n\nBase de "
+                                         f"dados ERP TOTVS PROTHEUS.\n\nPor favor, informe ao desenvolvedor/TI "
+                                         f"sobre o erro exibido.\n\nTenha um bom dia! ツ",
+                                         "CADASTRO DE ESTRUTURA - TOTVS®", 16 | 0)
+        sys.exit()
+
+    except Exception as ex:
+        ctypes.windll.user32.MessageBoxW(0, f"Ocorreu um erro ao ler o arquivo: {ex}", "CADASTRO DE ESTRUTURA - TOTVS®",
+                                         16 | 0)
+        sys.exit()
+
+
+def copiar_linha(item):
+    # Verificar se um item foi clicado
+    if item is not None:
+        valor_campo = item.text()
+        pyperclip.copy(str(valor_campo))
+
+
+def exibir_mensagem(title, message, icon_type):
+    root = tk.Tk()
+    root.withdraw()
+    root.lift()  # Garante que a janela esteja na frente
+    root.title(title)
+    root.attributes('-topmost', True)
+
+    if icon_type == 'info':
+        messagebox.showinfo(title, message)
+    elif icon_type == 'warning':
+        messagebox.showwarning(title, message)
+    elif icon_type == 'error':
+        messagebox.showerror(title, message)
+
+    root.destroy()
+
+
+def alterar_quantidade_estrutura(codigo_pai, codigo_filho, quantidade):
+    query_alterar_quantidade_estrutura = f"""
+            UPDATE {database}.dbo.SG1010 
+            SET G1_QUANT = {quantidade} 
+            WHERE G1_COD = '{codigo_pai}' 
+            AND G1_COMP = '{codigo_filho}'
+            AND G1_REVFIM <> 'ZZZ' AND D_E_L_E_T_ <> '*'
+            AND G1_REVFIM = (SELECT MAX(G1_REVFIM) FROM {database}.dbo.SG1010 
+            WHERE G1_COD = '{codigo_pai}' 
+            AND G1_REVFIM <> 'ZZZ' 
+            AND D_E_L_E_T_ <> '*');
+        """
+    try:
+        with pyodbc.connect(
+                f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}') as conn:
+            cursor = conn.cursor()
+            cursor.execute(query_alterar_quantidade_estrutura)
+            conn.commit()
+
+    except Exception as ex:
+        ctypes.windll.user32.MessageBoxW(0, f"Falha na conexão com o TOTVS ou consulta. Erro: {str(ex)}",
+                                         "Erro de execução", 16 | 0)
+
+
+def handle_item_change(item, tree_estrutura, codigo_pai):
+    if item.column() == 2:
+        linha_selecionada = tree_estrutura.currentItem()
+
+        codigo_filho = tree_estrutura.item(linha_selecionada.row(), 0).text()
+        nova_quantidade = item.text()
+        nova_quantidade = nova_quantidade.replace(',', '.')
+
+        if nova_quantidade.replace('.', '', 1).isdigit():
+            alterar_quantidade_estrutura(codigo_pai, codigo_filho, float(nova_quantidade))
+        else:
+            ctypes.windll.user32.MessageBoxW(
+                0,
+                "QUANTIDADE INVÁLIDA\n\nOs valores devem ser números, não nulos, sem espaços em branco e maiores "
+                "que zero.\nPor favor, corrija tente novamente!",
+                "SMARTPLIC®", 48 | 0)
+
+
+def ajustar_largura_coluna_descricao(tree_widget):
+    header = tree_widget.horizontalHeader()
+    header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
 
 
 class EngenhariaApp(QWidget):
@@ -26,6 +123,7 @@ class EngenhariaApp(QWidget):
     def __init__(self):
         super().__init__()
 
+        self.engine = None
         self.setWindowTitle("EUREKA® ENGENHARIA - v2.0")
 
         locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
@@ -155,7 +253,7 @@ class EngenhariaApp(QWidget):
         self.btn_exportar_excel.setEnabled(False)  # Desativar inicialmente
 
         self.btn_calculo_peso = QPushButton("Tabela de pesos", self)
-        self.btn_calculo_peso.clicked.connect(self.abrir_tabela_pesos)
+        self.btn_calculo_peso.clicked.connect(abrir_tabela_pesos)
         self.btn_calculo_peso.setMinimumWidth(100)
 
         self.btn_fechar = QPushButton("Fechar", self)
@@ -330,28 +428,6 @@ class EngenhariaApp(QWidget):
                     }
                 """)
 
-    def setup_mssql(self):
-        caminho_do_arquivo = (r"\\192.175.175.4\f\INTEGRANTES\ELIEZER\PROJETO SOLIDWORKS "
-                              r"TOTVS\libs-python\user-password-mssql\USER_PASSWORD_MSSQL_PROD.txt")
-        try:
-            with open(caminho_do_arquivo, 'r') as arquivo:
-                string_lida = arquivo.read()
-                username, password, database, server = string_lida.split(';')
-                return username, password, database, server
-
-        except FileNotFoundError:
-            ctypes.windll.user32.MessageBoxW(0,
-                                             f"Erro ao ler credenciais de acesso ao banco de dados MSSQL.\n\nBase de "
-                                             f"dados ERP TOTVS PROTHEUS.\n\nPor favor, informe ao desenvolvedor/TI "
-                                             f"sobre o erro exibido.\n\nTenha um bom dia! ツ",
-                                             "CADASTRO DE ESTRUTURA - TOTVS®", 16 | 0)
-            sys.exit()
-
-        except Exception as e:
-            ctypes.windll.user32.MessageBoxW(0, f"Ocorreu um erro ao ler o arquivo:", "CADASTRO DE ESTRUTURA - TOTVS®",
-                                             16 | 0)
-            sys.exit()
-
     def abrir_modulo_pcp(self):
         script_dir = os.path.dirname(os.path.abspath(__file__))
         script_path = os.path.join(script_dir, 'pcp_model.pyw')
@@ -423,7 +499,7 @@ class EngenhariaApp(QWidget):
         self.tree.setEditTriggers(QTableWidget.NoEditTriggers)
         self.tree.setSelectionBehavior(QTableWidget.SelectRows)
         self.tree.setSelectionMode(QTableWidget.SingleSelection)
-        self.tree.itemDoubleClicked.connect(self.copiar_linha)
+        self.tree.itemDoubleClicked.connect(copiar_linha)
         self.tree.setFont(QFont(self.fonte_tabela, self.tamanho_fonte_tabela))
         self.tree.verticalHeader().setDefaultSectionSize(self.altura_linha)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
@@ -496,13 +572,7 @@ class EngenhariaApp(QWidget):
             item.setToolTip(tooltip)
             self.tree.setHorizontalHeaderItem(i, item)
 
-    def copiar_linha(self, item):
-        # Verificar se um item foi clicado
-        if item is not None:
-            valor_campo = item.text()
-            pyperclip.copy(str(valor_campo))
-
-    def ordenar_tabela(self, logicalIndex):
+    def ordenar_tabela(self, logical_index):
         # Obter o índice real da coluna (considerando a ordem de classificação)
         index = self.tree.horizontalHeader().sortIndicatorOrder()
 
@@ -510,7 +580,7 @@ class EngenhariaApp(QWidget):
         order = Qt.AscendingOrder if index == 0 else Qt.DescendingOrder
 
         # Ordenar a tabela pela coluna clicada
-        self.tree.sortItems(logicalIndex, order)
+        self.tree.sortItems(logical_index, order)
 
     def limpar_campos(self):
         # Limpar os dados dos campos
@@ -536,22 +606,6 @@ class EngenhariaApp(QWidget):
         self.btn_consultar_estrutura.setEnabled(status)
         self.btn_onde_e_usado.setEnabled(status)
 
-    def exibir_mensagem(self, title, message, icon_type):
-        root = tk.Tk()
-        root.withdraw()
-        root.lift()  # Garante que a janela esteja na frente
-        root.title(title)
-        root.attributes('-topmost', True)
-
-        if icon_type == 'info':
-            messagebox.showinfo(title, message)
-        elif icon_type == 'warning':
-            messagebox.showwarning(title, message)
-        elif icon_type == 'error':
-            messagebox.showerror(title, message)
-
-        root.destroy()
-
     def query_consulta_tabela_produtos(self):
 
         codigo = self.campo_codigo.text().upper().strip()
@@ -567,10 +621,10 @@ class EngenhariaApp(QWidget):
 
         if codigo == '' and descricao == '' and descricao2 == '' and tipo == '' and um == '' and armazem == '' and grupo == '':
             self.btn_consultar.setEnabled(False)
-            self.exibir_mensagem("ATENÇÃO!",
-                                 "Os campos de pesquisa estão vazios.\nPreencha algum campo e tente "
-                                 "novamente.\n\nツ\n\nSMARTPLIC®",
-                                 "info")
+            exibir_mensagem("ATENÇÃO!",
+                            "Os campos de pesquisa estão vazios.\nPreencha algum campo e tente "
+                            "novamente.\n\nツ\n\nSMARTPLIC®",
+                            "info")
             return True
 
         # Dividir descricao2 em partes usando o delimitador *
@@ -641,7 +695,7 @@ class EngenhariaApp(QWidget):
 
                 time.sleep(0.1)
             else:
-                self.exibir_mensagem("EUREKA® engenharia", 'Nada encontrado!', "info")
+                exibir_mensagem("EUREKA® engenharia", 'Nada encontrado!', "info")
                 self.controle_campos_formulario(True)
                 return
 
@@ -701,9 +755,6 @@ class EngenhariaApp(QWidget):
                 mensagem = f"Desenho não encontrado!\n\n:-("
                 QMessageBox.information(self, f"{codigo}", mensagem)
 
-    def abrir_tabela_pesos(self):
-        os.startfile(r'\\192.175.175.4\f\INTEGRANTES\ELIEZER\DOCUMENTOS_UTEIS\TABELA_PESO.xlsx')
-
     def abrir_nova_janela(self):
         if not self.nova_janela or not self.nova_janela.isVisible():
             self.nova_janela = EngenhariaApp()
@@ -740,10 +791,6 @@ class EngenhariaApp(QWidget):
     def existe_guias_abertas(self):
         return self.tabWidget.count() > 0
 
-    def ajustar_largura_coluna_descricao(self, tree_widget):
-        header = tree_widget.horizontalHeader()
-        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
-
     def executar_consulta_estrutura(self, table):
         item_selecionado = table.currentItem()
 
@@ -753,14 +800,16 @@ class EngenhariaApp(QWidget):
 
             if codigo not in self.guias_abertas:
                 select_query_estrutura = f"""
-                    SELECT struct.G1_COMP AS "Código", prod.B1_DESC AS "Descrição", struct.G1_QUANT AS "QTD.", struct.G1_XUM AS "UNID.", struct.G1_REVFIM AS "REVISÃO", 
+                    SELECT struct.G1_COMP AS "Código", prod.B1_DESC AS "Descrição", struct.G1_QUANT AS "QTD.", 
+                    struct.G1_XUM AS "UNID.", struct.G1_REVFIM AS "REVISÃO", 
                     struct.G1_INI AS "INSERIDO EM:"
                     FROM {database}.dbo.SG1010 struct
                     INNER JOIN {database}.dbo.SB1010 prod
                     ON struct.G1_COMP = prod.B1_COD AND prod.D_E_L_E_T_ <> '*'
                     WHERE G1_COD = '{codigo}' 
                     AND G1_REVFIM <> 'ZZZ' AND struct.D_E_L_E_T_ <> '*' 
-                    AND G1_REVFIM = (SELECT MAX(G1_REVFIM) FROM {database}.dbo.SG1010 WHERE G1_COD = '{codigo}'AND G1_REVFIM <> 'ZZZ' AND D_E_L_E_T_ <> '*')
+                    AND G1_REVFIM = (SELECT MAX(G1_REVFIM) FROM {database}.dbo.SG1010 WHERE G1_COD = '{codigo}' 
+                    AND G1_REVFIM <> 'ZZZ' AND D_E_L_E_T_ <> '*')
                     ORDER BY B1_DESC ASC;
                 """
 
@@ -778,7 +827,8 @@ class EngenhariaApp(QWidget):
                     tree_estrutura = QTableWidget(nova_guia_estrutura)
 
                     tree_estrutura.setContextMenuPolicy(Qt.CustomContextMenu)
-                    tree_estrutura.customContextMenuRequested.connect(lambda pos: self.showContextMenu(pos, tree_estrutura))
+                    tree_estrutura.customContextMenuRequested.connect(
+                        lambda pos: self.showContextMenu(pos, tree_estrutura))
 
                     tree_estrutura.setColumnCount(len(cursor_estrutura.description))
                     tree_estrutura.setHorizontalHeaderLabels([desc[0] for desc in cursor_estrutura.description])
@@ -821,7 +871,7 @@ class EngenhariaApp(QWidget):
                     tree_estrutura.setSortingEnabled(True)
 
                     # Ajustar automaticamente a largura da coluna "Descrição"
-                    self.ajustar_largura_coluna_descricao(tree_estrutura)
+                    ajustar_largura_coluna_descricao(tree_estrutura)
 
                     layout_cabecalho.addWidget(QLabel(f"CONSULTA DE ESTRUTURA\n\n{codigo} - {descricao_onde_usado}"),
                                                alignment=Qt.AlignLeft)
@@ -875,42 +925,9 @@ class EngenhariaApp(QWidget):
                 finally:
                     self.tabWidget.setCurrentIndex(self.tabWidget.indexOf(nova_guia_estrutura))
                     tree_estrutura.itemChanged.connect(
-                        lambda item: self.handle_item_change(item, tree_estrutura, codigo))
+                        lambda item: handle_item_change(item, tree_estrutura, codigo))
                     self.guias_abertas.append(codigo)
                     conn_estrutura.close()
-
-    def alterar_quantidade_estrutura(self, codigo_pai, codigo_filho, quantidade):
-        query_alterar_quantidade_estrutura = f"""UPDATE {database}.dbo.SG1010 SET G1_QUANT = {quantidade} WHERE G1_COD = '{codigo_pai}' AND G1_COMP = '{codigo_filho}'
-                AND G1_REVFIM <> 'ZZZ' AND D_E_L_E_T_ <> '*'
-                AND G1_REVFIM = (SELECT MAX(G1_REVFIM) FROM {database}.dbo.SG1010 WHERE G1_COD = '{codigo_pai}' AND G1_REVFIM <> 'ZZZ' AND D_E_L_E_T_ <> '*');
-            """
-        try:
-            with pyodbc.connect(
-                    f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}') as conn:
-                cursor = conn.cursor()
-                cursor.execute(query_alterar_quantidade_estrutura)
-                conn.commit()
-
-        except Exception as ex:
-            ctypes.windll.user32.MessageBoxW(0, f"Falha na conexão com o TOTVS ou consulta. Erro: {str(ex)}",
-                                             "Erro de execução", 16 | 0)
-
-    def handle_item_change(self, item, tree_estrutura, codigo_pai):
-        if item.column() == 2:
-            linha_selecionada = tree_estrutura.currentItem()
-
-            codigo_filho = tree_estrutura.item(linha_selecionada.row(), 0).text()
-            nova_quantidade = item.text()
-            nova_quantidade = nova_quantidade.replace(',', '.')
-
-            if nova_quantidade.replace('.', '', 1).isdigit():
-                self.alterar_quantidade_estrutura(codigo_pai, codigo_filho, float(nova_quantidade))
-            else:
-                ctypes.windll.user32.MessageBoxW(
-                    0,
-                    "QUANTIDADE INVÁLIDA\n\nOs valores devem ser números, não nulos, sem espaços em branco e maiores "
-                    "que zero.\nPor favor, corrija tente novamente!",
-                    "SMARTPLIC®", 48 | 0)
 
     def executar_consulta_onde_usado(self, table):
         item_selecionado = table.currentItem()
@@ -977,7 +994,7 @@ class EngenhariaApp(QWidget):
                     tabela_onde_usado.setSortingEnabled(True)
 
                     # Ajustar automaticamente a largura da coluna "Descrição"
-                    self.ajustar_largura_coluna_descricao(tabela_onde_usado)
+                    ajustar_largura_coluna_descricao(tabela_onde_usado)
 
                     layout_cabecalho.addWidget(QLabel(f'Onde é usado?\n\n{codigo} - {descricao_onde_usado}'),
                                                alignment=Qt.AlignLeft)
@@ -1024,7 +1041,7 @@ class EngenhariaApp(QWidget):
                         self.tabWidget.setVisible(True)
 
                     self.tabWidget.addTab(nova_guia_estrutura, f"Onde é usado? - {codigo}")
-                    tabela_onde_usado.itemDoubleClicked.connect(self.copiar_linha)
+                    tabela_onde_usado.itemDoubleClicked.connect(copiar_linha)
 
                 except pyodbc.Error as ex:
                     print(f"Falha na consulta de estrutura. Erro: {str(ex)}")
@@ -1081,7 +1098,8 @@ class EngenhariaApp(QWidget):
                         lambda pos: self.showContextMenu(pos, tabela_saldo_estoque))
 
                     tabela_saldo_estoque.setColumnCount(len(cursor_saldo_estoque.description))
-                    tabela_saldo_estoque.setHorizontalHeaderLabels([desc[0] for desc in cursor_saldo_estoque.description])
+                    tabela_saldo_estoque.setHorizontalHeaderLabels(
+                        [desc[0] for desc in cursor_saldo_estoque.description])
 
                     tabela_saldo_estoque.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
 
@@ -1159,7 +1177,7 @@ class EngenhariaApp(QWidget):
                         self.tabWidget.setVisible(True)
 
                     self.tabWidget.addTab(nova_guia_saldo, f"Saldos em Estoque - {codigo}")
-                    tabela_saldo_estoque.itemDoubleClicked.connect(self.copiar_linha)
+                    tabela_saldo_estoque.itemDoubleClicked.connect(copiar_linha)
 
                 except pyodbc.Error as ex:
                     print(f"Falha na consulta de estrutura. Erro: {str(ex)}")
@@ -1172,7 +1190,7 @@ class EngenhariaApp(QWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = EngenhariaApp()
-    username, password, database, server = EngenhariaApp().setup_mssql()
+    username, password, database, server = setup_mssql()
     driver = '{SQL Server}'
 
     largura_janela = 1400  # Substitua pelo valor desejado
