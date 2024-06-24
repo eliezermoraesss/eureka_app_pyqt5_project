@@ -594,6 +594,8 @@ class EngenhariaApp(QWidget):
         self.combobox_armazem.clear()
         self.grupo_var.clear()
         self.checkbox_bloqueado.setChecked(False)
+        self.tree.setColumnCount(0)
+        self.tree.setRowCount(0)
 
     def controle_campos_formulario(self, status):
         self.campo_codigo.setEnabled(status)

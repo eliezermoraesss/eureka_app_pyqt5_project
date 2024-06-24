@@ -654,6 +654,8 @@ class ComprasApp(QWidget):
         self.campo_nm_fantasia_fornecedor.clear()
         self.campo_qp.clear()
         self.campo_OP.clear()
+        self.tree.setColumnCount(0)
+        self.tree.setRowCount(0)
         # self.checkbox_pedido_em_aberto.setChecked(False)
 
     def controle_campos_formulario(self, status):

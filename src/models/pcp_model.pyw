@@ -423,6 +423,8 @@ class PcpApp(QWidget):
         self.campo_OP.clear()
         self.campo_descricao_prod.clear()
         self.campo_observacao.clear()
+        self.tree.setColumnCount(0)
+        self.tree.setRowCount(0)
 
     def abrir_desenho(self, table):
         item_selecionado = table.currentItem()
