@@ -22,6 +22,47 @@ def ajustar_largura_coluna_descricao(tree_widget):
     header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
 
 
+def exibir_mensagem(title, message, icon_type):
+    root = tk.Tk()
+    root.withdraw()
+    root.lift()  # Garante que a janela esteja na frente
+    root.title(title)
+    root.attributes('-topmost', True)
+
+    if icon_type == 'info':
+        messagebox.showinfo(title, message)
+    elif icon_type == 'warning':
+        messagebox.showwarning(title, message)
+    elif icon_type == 'error':
+        messagebox.showerror(title, message)
+
+    root.destroy()
+
+
+def validar_campos(codigo_produto, numero_qp, numero_op):
+
+    if len(codigo_produto) != 13 and not codigo_produto == '':
+        exibir_mensagem("ATENÇÃO!",
+                             "Produto não encontrado!\n\nCorrija e tente "
+                             f"novamente.\n\nツ\n\nSMARTPLIC®",
+                             "info")
+        return True
+
+    if len(numero_op) != 6 and not numero_op == '':
+        exibir_mensagem("ATENÇÃO!",
+                             "Ordem de Produção não encontrada!\n\nCorrija e tente "
+                             f"novamente.\n\nツ\n\nSMARTPLIC®",
+                             "info")
+        return True
+
+    if len(numero_qp.zfill(6)) != 6 and not numero_qp == '':
+        exibir_mensagem("ATENÇÃO!",
+                             "QP não encontrada!\n\nCorrija e tente "
+                             f"novamente.\n\nツ\n\nSMARTPLIC®",
+                             "info")
+        return True
+
+
 class PcpApp(QWidget):
     guia_fechada = pyqtSignal()
 
@@ -170,7 +211,9 @@ class PcpApp(QWidget):
         self.progress_bar.setMaximumWidth(400)
 
         self.label_codigo = QLabel("Código produto:", self)
-        self.label_descricao_prod = QLabel("Descrição produto:", self)
+        self.label_descricao_prod = QLabel("Descrição:", self)
+        self.label_contem_descricao_prod = QLabel("Contém na descrição:", self)
+        self.label_contem_descricao_prod.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.label_OP = QLabel("Número OP:", self)
         self.label_qp = QLabel("Número QP:", self)
         self.label_data_inicio = QLabel("Data inicial:", self)
@@ -190,6 +233,12 @@ class PcpApp(QWidget):
         self.campo_descricao_prod.setMaxLength(60)
         self.campo_descricao_prod.setFixedWidth(280)
         self.add_clear_button(self.campo_descricao_prod)
+
+        self.campo_contem_descricao_prod = QLineEdit(self)
+        self.campo_contem_descricao_prod.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_contem_descricao_prod.setMaxLength(60)
+        self.campo_contem_descricao_prod.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.add_clear_button(self.campo_contem_descricao_prod)
 
         self.campo_qp = QLineEdit(self)
         self.campo_qp.setFont(QFont(fonte_campos, tamanho_fonte_campos))
@@ -288,6 +337,7 @@ class PcpApp(QWidget):
         self.campo_qp.returnPressed.connect(self.executar_consulta)
         self.campo_OP.returnPressed.connect(self.executar_consulta)
         self.campo_descricao_prod.returnPressed.connect(self.executar_consulta)
+        self.campo_contem_descricao_prod.returnPressed.connect(self.executar_consulta)
         self.campo_observacao.returnPressed.connect(self.executar_consulta)
 
         layout = QVBoxLayout()
@@ -303,6 +353,10 @@ class PcpApp(QWidget):
         container_descricao_prod = QVBoxLayout()
         container_descricao_prod.addWidget(self.label_descricao_prod)
         container_descricao_prod.addWidget(self.campo_descricao_prod)
+
+        container_contem_descricao_prod = QVBoxLayout()
+        container_contem_descricao_prod.addWidget(self.label_contem_descricao_prod)
+        container_contem_descricao_prod.addWidget(self.campo_contem_descricao_prod)
 
         container_op = QVBoxLayout()
         container_op.addWidget(self.label_OP)
@@ -326,6 +380,7 @@ class PcpApp(QWidget):
 
         layout_campos_linha_01.addLayout(container_codigo)
         layout_campos_linha_01.addLayout(container_descricao_prod)
+        layout_campos_linha_01.addLayout(container_contem_descricao_prod)
         layout_campos_linha_01.addLayout(container_op)
         layout_campos_linha_01.addLayout(container_qp)
         layout_campos_linha_01.addLayout(container_observacao)
@@ -422,6 +477,7 @@ class PcpApp(QWidget):
         self.campo_qp.clear()
         self.campo_OP.clear()
         self.campo_descricao_prod.clear()
+        self.campo_contem_descricao_prod.clear()
         self.campo_observacao.clear()
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
@@ -592,24 +648,11 @@ class PcpApp(QWidget):
         self.btn_saldo_estoque.setEnabled(status)
         self.btn_consultar_estrutura.setEnabled(status)
 
-    def exibir_mensagem(self, title, message, icon_type):
-        root = tk.Tk()
-        root.withdraw()
-        root.lift()  # Garante que a janela esteja na frente
-        root.title(title)
-        root.attributes('-topmost', True)
-
-        if icon_type == 'info':
-            messagebox.showinfo(title, message)
-        elif icon_type == 'warning':
-            messagebox.showwarning(title, message)
-        elif icon_type == 'error':
-            messagebox.showerror(title, message)
-
-        root.destroy()
-
-    def numero_linhas_consulta(self, codigo_produto, numero_qp, numero_op, descricao_produto, observacao):
-
+    def numero_linhas_consulta(self, codigo_produto, numero_qp, numero_op, descricao_produto,
+                               contem_descricao, observacao):
+        palavras_contem_descricao = contem_descricao.split('*')
+        clausulas_contem_descricao = " AND ".join(
+            [f"prod.B1_DESC LIKE '%{palavra}%'" for palavra in palavras_contem_descricao])
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
 
@@ -630,14 +673,18 @@ class PcpApp(QWidget):
                         C2_ZZNUMQP LIKE '%{numero_qp}'
                         AND C2_PRODUTO LIKE '{codigo_produto}%'
                         AND prod.B1_DESC LIKE '{descricao_produto}%'
+                        AND {clausulas_contem_descricao}
                         AND C2_OBS LIKE '%{observacao}%'
                         AND C2_NUM LIKE '{numero_op}%' {filtro_data}
                         AND op.D_E_L_E_T_ <> '*'
                 """
         return query
 
-    def query_consulta_ordem_producao(self, codigo_produto, numero_qp, numero_op, descricao_produto, observacao):
-
+    def query_consulta_ordem_producao(self, codigo_produto, numero_qp, numero_op, descricao_produto,
+                                      contem_descricao, observacao):
+        palavras_contem_descricao = contem_descricao.split('*')
+        clausulas_contem_descricao = " AND ".join(
+            [f"prod.B1_DESC LIKE '%{palavra}%'" for palavra in palavras_contem_descricao])
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
 
@@ -672,6 +719,7 @@ class PcpApp(QWidget):
                 C2_ZZNUMQP LIKE '%{numero_qp}'
                 AND C2_PRODUTO LIKE '{codigo_produto}%'
                 AND prod.B1_DESC LIKE '{descricao_produto}%'
+                AND {clausulas_contem_descricao}
                 AND C2_OBS LIKE '%{observacao}%'
                 AND C2_NUM LIKE '{numero_op}%' {filtro_data}
                 AND op.D_E_L_E_T_ <> '*'
@@ -679,29 +727,6 @@ class PcpApp(QWidget):
                 op.R_E_C_N_O_ DESC;
         """
         return query
-
-    def validar_campos(self, codigo_produto, numero_qp, numero_op):
-
-        if len(codigo_produto) != 13 and not codigo_produto == '':
-            self.exibir_mensagem("ATENÇÃO!",
-                                 "Produto não encontrado!\n\nCorrija e tente "
-                                 f"novamente.\n\nツ\n\nSMARTPLIC®",
-                                 "info")
-            return True
-
-        if len(numero_op) != 6 and not numero_op == '':
-            self.exibir_mensagem("ATENÇÃO!",
-                                 "Ordem de Produção não encontrada!\n\nCorrija e tente "
-                                 f"novamente.\n\nツ\n\nSMARTPLIC®",
-                                 "info")
-            return True
-
-        if len(numero_qp.zfill(6)) != 6 and not numero_qp == '':
-            self.exibir_mensagem("ATENÇÃO!",
-                                 "QP não encontrada!\n\nCorrija e tente "
-                                 f"novamente.\n\nツ\n\nSMARTPLIC®",
-                                 "info")
-            return True
 
     def configurar_tabela_tooltips(self, dataframe):
         # Mapa de tooltips correspondentes às colunas da consulta SQL
@@ -725,22 +750,21 @@ class PcpApp(QWidget):
         numero_op = self.campo_OP.text().upper().strip()
         codigo_produto = self.campo_codigo.text().upper().strip()
         descricao_produto = self.campo_descricao_prod.text().upper().strip()
+        contem_descricao = self.campo_contem_descricao_prod.text().upper().strip()
         observacao = self.campo_observacao.text().upper().strip()
 
-        if self.validar_campos(codigo_produto, numero_qp, numero_op):
+        if validar_campos(codigo_produto, numero_qp, numero_op):
             self.btn_consultar.setEnabled(True)
             return
 
         numero_qp = numero_qp.zfill(6) if numero_qp != '' else numero_qp
 
-        query_consulta_op = self.query_consulta_ordem_producao(codigo_produto, numero_qp, numero_op, descricao_produto, observacao)
-        query_contagem_linhas = self.numero_linhas_consulta(codigo_produto, numero_qp, numero_op, descricao_produto, observacao)
+        query_consulta_op = self.query_consulta_ordem_producao(codigo_produto, numero_qp, numero_op,
+                                                               descricao_produto, contem_descricao, observacao)
+        query_contagem_linhas = self.numero_linhas_consulta(codigo_produto, numero_qp, numero_op,
+                                                            descricao_produto, contem_descricao, observacao)
 
         self.controle_campos_formulario(False)
-        line_number = None
-        label_line_number = QLabel(f"{line_number} itens localizados.", self)
-        self.layout_footer.removeWidget(label_line_number)
-        self.layout_footer.removeItem(self.layout_footer)
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
         self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
@@ -748,8 +772,11 @@ class PcpApp(QWidget):
         try:
             dataframe_line_number = pd.read_sql(query_contagem_linhas, self.engine)
             line_number = dataframe_line_number.iloc[0, 0]
-
             dataframe = pd.read_sql(query_consulta_op, self.engine)
+
+            label_line_number = QLabel(f"{line_number} itens localizados.", self)
+            self.layout_footer.removeWidget(label_line_number)
+            self.layout_footer.removeItem(self.layout_footer)
 
             if not dataframe.empty:
 
@@ -767,7 +794,7 @@ class PcpApp(QWidget):
                 self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
                 self.tree.setRowCount(0)
             else:
-                self.exibir_mensagem("EUREKA® PCP", 'Nada encontrado!', "info")
+                exibir_mensagem("EUREKA® PCP", 'Nada encontrado!', "info")
                 self.controle_campos_formulario(True)
                 return
 
@@ -818,7 +845,7 @@ class PcpApp(QWidget):
             self.controle_campos_formulario(True)
 
         except Exception as ex:
-            self.exibir_mensagem('Erro ao consultar tabela', f'Erro: {str(ex)}', 'error')
+            exibir_mensagem('Erro ao consultar tabela', f'Erro: {str(ex)}', 'error')
 
         finally:
             # Fecha a conexão com o banco de dados se estiver aberta
