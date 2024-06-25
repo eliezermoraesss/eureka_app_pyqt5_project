@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBox
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, \
     QComboBox, QProgressBar, QSizePolicy, QTabWidget, QMenu
 from PyQt5.QtGui import QFont, QIcon
-from PyQt5.QtCore import Qt, QDate, QProcess, pyqtSignal
+from PyQt5.QtCore import Qt, QDate, QProcess, pyqtSignal, QSize
 import pyperclip
 import pandas as pd
 import ctypes
@@ -124,7 +124,7 @@ class ComprasApp(QWidget):
         for key, value in armazens.items():
             self.combobox_armazem.addItem(key + ' - ' + value, key)
 
-        self.altura_linha = 30
+        self.altura_linha = 35
         self.tamanho_fonte_tabela = 10
         self.fonte_tabela = 'Segoe UI'
         fonte_campos = "Segoe UI"
@@ -459,10 +459,10 @@ class ComprasApp(QWidget):
             }
     
             QPushButton {
-                background-color: #3A0CA3;
+                background-color: #AF125A;
                 color: #eeeeee;
                 padding: 10px;
-                border: 2px solid #836FFF;
+                border: 2px solid #AF125A;
                 border-radius: 12px;
                 font-size: 12px;
                 height: 20px;
@@ -1067,10 +1067,12 @@ class ComprasApp(QWidget):
 
             # Construir caminhos relativos
             script_dir = os.path.dirname(os.path.abspath(__file__))
+            no_pc = os.path.join(script_dir, '..', 'resources', 'images', 'gray.png')
             no_order_path = os.path.join(script_dir, '..', 'resources', 'images', 'red.png')
             wait_order_path = os.path.join(script_dir, '..', 'resources', 'images', 'wait.png')
             end_order_path = os.path.join(script_dir, '..', 'resources', 'images', 'green.png')
 
+            no_pc = QIcon(no_pc)
             no_order = QIcon(no_order_path)
             wait_delivery = QIcon(wait_order_path)
             end_order = QIcon(end_order_path)
@@ -1085,14 +1087,18 @@ class ComprasApp(QWidget):
 
                 for j, value in enumerate(row):
                     if value is not None:
-                        if j == 0 and row['Status Ped. Compra'] is not None:
+                        if j == 0:
                             item = QTableWidgetItem()
-                            if row['Status Ped. Compra'].strip() == '' and row['Nota Fiscal Ent.'] is None:
-                                item.setIcon(no_order)
-                            elif row['Status Ped. Compra'].strip() == '' and row['Nota Fiscal Ent.'] is not None:
-                                item.setIcon(wait_delivery)
-                            elif row['Status Ped. Compra'] == 'E':
-                                item.setIcon(end_order)
+                            if row['Status Ped. Compra'] is not None:
+                                if row['Status Ped. Compra'].strip() == '' and row['Nota Fiscal Ent.'] is None:
+                                    item.setIcon(no_order)
+                                elif row['Status Ped. Compra'].strip() == '' and row['Nota Fiscal Ent.'] is not None:
+                                    item.setIcon(wait_delivery)
+                                elif row['Status Ped. Compra'] == 'E':
+                                    item.setIcon(end_order)
+                                item.setSizeHint(QSize(64, 64))
+                            elif row['Ped. Compra'] is None:
+                                item.setIcon(no_pc)
                         else:
                             if j in (4, 7, 8, 9, 13):
                                 value = locale.format_string("%.2f", value, grouping=True)
