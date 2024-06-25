@@ -55,6 +55,29 @@ def copiar_linha(item):
         pyperclip.copy(str(valor_campo))
 
 
+def setup_mssql():
+    caminho_do_arquivo = (r"\\192.175.175.4\f\INTEGRANTES\ELIEZER\PROJETO SOLIDWORKS "
+                          r"TOTVS\libs-python\user-password-mssql\USER_PASSWORD_MSSQL_PROD.txt")
+    try:
+        with open(caminho_do_arquivo, 'r') as arquivo:
+            string_lida = arquivo.read()
+            username_txt, password_txt, database_txt, server_txt = string_lida.split(';')
+            return username_txt, password_txt, database_txt, server_txt
+
+    except FileNotFoundError:
+        ctypes.windll.user32.MessageBoxW(0,
+                                         "Erro ao ler credenciais de acesso ao banco de dados MSSQL.\n\nBase de "
+                                         "dados ERP TOTVS PROTHEUS.\n\nPor favor, informe ao desenvolvedor/TI "
+                                         "sobre o erro exibido.\n\nTenha um bom dia! ツ",
+                                         "CADASTRO DE ESTRUTURA - TOTVS®", 16 | 0)
+        sys.exit()
+
+    except Exception as ex:
+        ctypes.windll.user32.MessageBoxW(0, f"Ocorreu um erro ao ler o arquivo: {ex}", "CADASTRO DE ESTRUTURA - TOTVS®",
+                                         16 | 0)
+        sys.exit()
+
+
 class ComprasApp(QWidget):
     guia_fechada = pyqtSignal()
 
@@ -139,8 +162,10 @@ class ComprasApp(QWidget):
         self.label_pedido.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.label_codigo = QLabel("Código produto:", self)
         self.label_codigo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.label_descricao_prod = QLabel("Descrição produto:", self)
+        self.label_descricao_prod = QLabel("Descrição:", self)
         self.label_descricao_prod.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.label_contem_descricao_prod = QLabel("Contém na descrição:", self)
+        self.label_contem_descricao_prod.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         # self.label_descricao_prod.setObjectName("descricao-produto")
 
         self.label_qp = QLabel("Número QP:", self)
@@ -176,6 +201,12 @@ class ComprasApp(QWidget):
         self.campo_descricao_prod.setMaxLength(60)
         self.campo_descricao_prod.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.add_clear_button(self.campo_descricao_prod)
+
+        self.campo_contem_descricao_prod = QLineEdit(self)
+        self.campo_contem_descricao_prod.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_contem_descricao_prod.setMaxLength(60)
+        self.campo_contem_descricao_prod.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.add_clear_button(self.campo_contem_descricao_prod)
 
         self.campo_qp = QLineEdit(self)
         self.campo_qp.setFont(QFont(fonte_campos, tamanho_fonte_campos))
@@ -273,6 +304,7 @@ class ComprasApp(QWidget):
         self.campo_pedido.returnPressed.connect(self.executar_consulta)
         self.campo_codigo.returnPressed.connect(self.executar_consulta)
         self.campo_descricao_prod.returnPressed.connect(self.executar_consulta)
+        self.campo_contem_descricao_prod.returnPressed.connect(self.executar_consulta)
         self.campo_qp.returnPressed.connect(self.executar_consulta)
         self.campo_OP.returnPressed.connect(self.executar_consulta)
         self.campo_razao_social_fornecedor.returnPressed.connect(self.executar_consulta)
@@ -299,6 +331,10 @@ class ComprasApp(QWidget):
         container_descricao_prod = QVBoxLayout()
         container_descricao_prod.addWidget(self.label_descricao_prod)
         container_descricao_prod.addWidget(self.campo_descricao_prod)
+
+        container_contem_descricao_prod = QVBoxLayout()
+        container_contem_descricao_prod.addWidget(self.label_contem_descricao_prod)
+        container_contem_descricao_prod.addWidget(self.campo_contem_descricao_prod)
 
         container_op = QVBoxLayout()
         container_op.addWidget(self.label_OP)
@@ -334,6 +370,7 @@ class ComprasApp(QWidget):
         layout_campos_linha_01.addLayout(container_qp)
         layout_campos_linha_01.addLayout(container_codigo)
         layout_campos_linha_01.addLayout(container_descricao_prod)
+        layout_campos_linha_01.addLayout(container_contem_descricao_prod)
         layout_campos_linha_02.addLayout(container_data_ini)
         layout_campos_linha_02.addLayout(container_data_fim)
         layout_campos_linha_02.addLayout(container_combobox_armazem)
@@ -372,6 +409,7 @@ class ComprasApp(QWidget):
                 color: #EEEEEE;
                 font-size: 12px;
                 font-weight: bold;
+                padding-left: 10px; 
             }
     
             QDateEdit, QComboBox {
@@ -421,11 +459,11 @@ class ComprasApp(QWidget):
             }
     
             QPushButton {
-                background-color: #836FFF;
-                color: #EEEEEE;
+                background-color: #3A0CA3;
+                color: #eeeeee;
                 padding: 10px;
-                border: 2px;
-                border-radius: 8px;
+                border: 2px solid #836FFF;
+                border-radius: 12px;
                 font-size: 12px;
                 height: 20px;
                 font-weight: bold;
@@ -437,8 +475,8 @@ class ComprasApp(QWidget):
             }
     
             QPushButton:hover, QPushButton:hover#btn_engenharia {
-                background-color: #E84545;
-                color: #fff
+                background-color: #EFF2F1;
+                color: #3A0CA3
             }
     
             QPushButton:pressed, QPushButton:pressed#btn_engenharia {
@@ -477,28 +515,6 @@ class ComprasApp(QWidget):
                 font-weight: bold;
             }
         """)
-
-    def setup_mssql(self):
-        caminho_do_arquivo = (r"\\192.175.175.4\f\INTEGRANTES\ELIEZER\PROJETO SOLIDWORKS "
-                              r"TOTVS\libs-python\user-password-mssql\USER_PASSWORD_MSSQL_PROD.txt")
-        try:
-            with open(caminho_do_arquivo, 'r') as arquivo:
-                string_lida = arquivo.read()
-                username, password, database, server = string_lida.split(';')
-                return username, password, database, server
-
-        except FileNotFoundError:
-            ctypes.windll.user32.MessageBoxW(0,
-                                             "Erro ao ler credenciais de acesso ao banco de dados MSSQL.\n\nBase de "
-                                             "dados ERP TOTVS PROTHEUS.\n\nPor favor, informe ao desenvolvedor/TI "
-                                             "sobre o erro exibido.\n\nTenha um bom dia! ツ",
-                                             "CADASTRO DE ESTRUTURA - TOTVS®", 16 | 0)
-            sys.exit()
-
-        except Exception as e:
-            ctypes.windll.user32.MessageBoxW(0, "Ocorreu um erro ao ler o arquivo:", "CADASTRO DE ESTRUTURA - TOTVS®",
-                                             16 | 0)
-            sys.exit()
 
     def fechar_guia(self, index):
         if index >= 0:
@@ -651,6 +667,7 @@ class ComprasApp(QWidget):
         self.campo_pedido.clear()
         self.campo_codigo.clear()
         self.campo_descricao_prod.clear()
+        self.campo_contem_descricao_prod.clear()
         self.campo_razao_social_fornecedor.clear()
         self.campo_nm_fantasia_fornecedor.clear()
         self.campo_qp.clear()
@@ -663,6 +680,7 @@ class ComprasApp(QWidget):
         self.campo_sc.setEnabled(status)
         self.campo_codigo.setEnabled(status)
         self.campo_descricao_prod.setEnabled(status)
+        self.campo_contem_descricao_prod.setEnabled(status)
         self.campo_razao_social_fornecedor.setEnabled(status)
         self.campo_qp.setEnabled(status)
         self.campo_OP.setEnabled(status)
@@ -676,7 +694,11 @@ class ComprasApp(QWidget):
         self.btn_ultimos_fornecedores.setEnabled(status)
 
     def numero_linhas_consulta(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op,
-                               razao_social_fornecedor, nome_fantasia_fornecedor, descricao_produto, cod_armazem):
+                               razao_social_fornecedor, nome_fantasia_fornecedor, descricao_produto, contem_descricao, cod_armazem):
+
+        palavras_contem_descricao = contem_descricao.split('*')
+        clausulas_contem_descricao = " AND ".join(
+            [f"SC.C1_DESCRI LIKE '%{palavra}%'" for palavra in palavras_contem_descricao])
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -756,6 +778,7 @@ class ComprasApp(QWidget):
                     AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
                     AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
                     AND SC.C1_DESCRI LIKE '{descricao_produto}%'
+                    AND {clausulas_contem_descricao}
                     AND SC.C1_OP LIKE '{numero_op}%' 
                     AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}%'
                     AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
@@ -816,6 +839,7 @@ class ComprasApp(QWidget):
                     AND SC.C1_ZZNUMQP LIKE '%{numero_pedido}'
                     AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
                     AND SC.C1_DESCRI LIKE '{descricao_produto}%'
+                    AND {clausulas_contem_descricao}
                     AND SC.C1_OP LIKE '{numero_op}%'
                     AND SC.C1_LOCAL LIKE '{cod_armazem}%'
                     AND SC.D_E_L_E_T_ <> '*' {filtro_data}
@@ -825,7 +849,11 @@ class ComprasApp(QWidget):
         return query
 
     def query_consulta_followup(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op,
-                                razao_social_fornecedor, nome_fantasia_fornecedor, descricao_produto, cod_armazem):
+                                razao_social_fornecedor, nome_fantasia_fornecedor, descricao_produto, contem_descricao, cod_armazem):
+
+        palavras_contem_descricao = contem_descricao.split('*')
+        clausulas_contem_descricao = " AND ".join(
+            [f"SC.C1_DESCRI LIKE '%{palavra}%'" for palavra in palavras_contem_descricao])
 
         data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
         data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
@@ -906,6 +934,7 @@ class ComprasApp(QWidget):
                 AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
                 AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
                 AND SC.C1_DESCRI LIKE '{descricao_produto}%'
+                AND {clausulas_contem_descricao}
                 AND SC.C1_OP LIKE '{numero_op}%' 
                 AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}%'
                 AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
@@ -966,6 +995,7 @@ class ComprasApp(QWidget):
                 AND SC.C1_ZZNUMQP LIKE '%{numero_pedido}'
                 AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
                 AND SC.C1_DESCRI LIKE '{descricao_produto}%'
+                AND {clausulas_contem_descricao}
                 AND SC.C1_OP LIKE '{numero_op}%'
                 AND SC.C1_LOCAL LIKE '{cod_armazem}%'
                 AND SC.D_E_L_E_T_ <> '*' {filtro_data}
@@ -983,6 +1013,7 @@ class ComprasApp(QWidget):
         razao_social_fornecedor = self.campo_razao_social_fornecedor.text().upper().strip()
         nome_fantasia_fornecedor = self.campo_nm_fantasia_fornecedor.text().upper().strip()
         descricao_produto = self.campo_descricao_prod.text().upper().strip()
+        contem_descricao = self.campo_contem_descricao_prod.text().upper().strip()
 
         cod_armazem = self.combobox_armazem.currentData()
         if cod_armazem is None:
@@ -991,12 +1022,12 @@ class ComprasApp(QWidget):
         query_consulta_filtro = self.query_consulta_followup(numero_sc, numero_pedido, codigo_produto,
                                                              numero_qp, numero_op, razao_social_fornecedor,
                                                              nome_fantasia_fornecedor,
-                                                             descricao_produto, cod_armazem)
+                                                             descricao_produto, contem_descricao, cod_armazem)
 
         query_contagem_linhas = self.numero_linhas_consulta(numero_sc, numero_pedido, codigo_produto, numero_qp,
                                                             numero_op, razao_social_fornecedor,
                                                             nome_fantasia_fornecedor,
-                                                            descricao_produto, cod_armazem)
+                                                            descricao_produto, contem_descricao, cod_armazem)
 
         self.controle_campos_formulario(False)
 
@@ -1586,7 +1617,7 @@ class ComprasApp(QWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = ComprasApp()
-    username, password, database, server = ComprasApp().setup_mssql()
+    username, password, database, server = setup_mssql()
     driver = '{SQL Server}'
 
     window.showMaximized()
