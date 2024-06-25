@@ -713,6 +713,7 @@ class ComprasApp(QWidget):
                     SC.C1_PRODUTO AS "Código",
                     SC.C1_DESCRI AS "Descrição",
                     SC.C1_UM AS "UM",
+                    PROD.B1_ZZLOCAL AS "Endereço:",
                     SC.C1_EMISSAO AS "Emissão SC",
                     PC.C7_EMISSAO AS "Emissão PC",
                     ITEM_NF.D1_EMISSAO AS "Emissão NF",
@@ -746,6 +747,9 @@ class ComprasApp(QWidget):
                 LEFT JOIN 
                     {database}.dbo.SYS_USR US
                     ON SC.C1_SOLICIT = US.USR_CODIGO AND US.D_E_L_E_T_ <> '*'
+                INNER JOIN 
+                    {database}.dbo.SB1010 PROD
+                    ON PROD.B1_COD = SC.C1_PRODUTO
                 WHERE 
                     SC.C1_PEDIDO LIKE '%{numero_pedido}%'
                     AND SC.C1_NUM LIKE '%{numero_sc}'
@@ -778,6 +782,7 @@ class ComprasApp(QWidget):
                     SC.C1_PRODUTO AS "Código",
                     SC.C1_DESCRI AS "Descrição",
                     SC.C1_UM AS "UM",
+                    PROD.B1_ZZLOCAL AS "Endereço:",
                     SC.C1_EMISSAO AS "Emissão SC",
                     NULL AS "Emissão PC",
                     NULL AS "Emissão NF",
@@ -802,6 +807,9 @@ class ComprasApp(QWidget):
                 LEFT JOIN 
                     {database}.dbo.SYS_USR US
                     ON SC.C1_SOLICIT = US.USR_CODIGO AND US.D_E_L_E_T_ <> '*'
+                INNER JOIN 
+                    {database}.dbo.SB1010 PROD
+                    ON PROD.B1_COD = SC.C1_PRODUTO
                 WHERE 
                     SC.C1_PEDIDO LIKE '      %'
                     AND SC.C1_NUM LIKE '%{numero_sc}'
@@ -850,6 +858,7 @@ class ComprasApp(QWidget):
                 SC.C1_PRODUTO AS "Código",
                 SC.C1_DESCRI AS "Descrição",
                 SC.C1_UM AS "UM",
+                PROD.B1_ZZLOCAL AS "Endereço:",
                 SC.C1_EMISSAO AS "Emissão SC",
                 PC.C7_EMISSAO AS "Emissão PC",
                 ITEM_NF.D1_EMISSAO AS "Emissão NF",
@@ -888,6 +897,9 @@ class ComprasApp(QWidget):
                 {database}.dbo.SYS_USR US
             ON
                 SC.C1_SOLICIT = US.USR_CODIGO AND US.D_E_L_E_T_ <> '*'
+            INNER JOIN 
+                {database}.dbo.SB1010 PROD
+                ON PROD.B1_COD = SC.C1_PRODUTO
             WHERE 
                 SC.C1_PEDIDO LIKE '%{numero_pedido}%'
                 AND SC.C1_NUM LIKE '%{numero_sc}'
@@ -920,6 +932,7 @@ class ComprasApp(QWidget):
                 SC.C1_PRODUTO AS "Código",
                 SC.C1_DESCRI AS "Descrição",
                 SC.C1_UM AS "UM",
+                PROD.B1_ZZLOCAL AS "Endereço:",
                 SC.C1_EMISSAO AS "Emissão SC",
                 NULL AS "Emissão PC",
                 NULL AS "Emissão NF",
@@ -944,6 +957,9 @@ class ComprasApp(QWidget):
             LEFT JOIN 
                 {database}.dbo.SYS_USR US
                 ON SC.C1_SOLICIT = US.USR_CODIGO AND US.D_E_L_E_T_ <> '*'
+            INNER JOIN 
+                {database}.dbo.SB1010 PROD
+                ON PROD.B1_COD = SC.C1_PRODUTO
             WHERE 
                 SC.C1_PEDIDO LIKE '      %'
                 AND SC.C1_NUM LIKE '%{numero_sc}'
@@ -1052,7 +1068,7 @@ class ComprasApp(QWidget):
 
                             if j in (7, 8, 9) and value == 'nan':
                                 value = '-'
-                            if j == 34 and pd.isna(value):
+                            if j == 35 and pd.isna(value):
                                 value = '-'
 
                             if j == 11 and row['Nota Fiscal Ent.'] is None:
@@ -1074,25 +1090,25 @@ class ComprasApp(QWidget):
                             elif j == 16 and value.strip() == '':
                                 value = '-'
 
-                            if j == 23 and value.strip() == 'MATA650':  # Indica na coluna 'Origem' se o item foi
+                            if j == 24 and value.strip() == 'MATA650':  # Indica na coluna 'Origem' se o item foi
                                 # empenhado ou será comprado
                                 value = 'Empenho'
-                            elif j == 23 and value.strip() == '':
+                            elif j == 24 and value.strip() == '':
                                 value = 'Compras'
 
-                            if j == 27 and value.strip() == 'N':  # Escreve sim ou não na coluna 'Importado?'
+                            if j == 28 and value.strip() == 'N':  # Escreve sim ou não na coluna 'Importado?'
                                 value = 'Não'
-                            elif j == 27 and value.strip() == '':
+                            elif j == 28 and value.strip() == '':
                                 value = 'Sim'
 
-                            if j in (10, 15, 20, 21, 22) and not value.isspace():  # Formatação das datas no formato
+                            if j in (10, 15, 21, 22, 23) and not value.isspace():  # Formatação das datas no formato
                                 # dd/mm/YYYY
                                 data_obj = datetime.strptime(value, "%Y%m%d")
                                 value = data_obj.strftime("%d/%m/%Y")
 
                             item = QTableWidgetItem(str(value).strip())
 
-                            if j not in (18, 24, 28, 29, 31, 32):  # Alinhamento a esquerda de colunas
+                            if j not in (18, 25, 29, 30, 32, 33):  # Alinhamento a esquerda de colunas
                                 item.setTextAlignment(Qt.AlignCenter)
 
                     self.tree.setItem(i, j, item)
