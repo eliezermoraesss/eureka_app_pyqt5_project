@@ -5,7 +5,7 @@ import numpy as np
 import pyodbc
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, \
-    QComboBox, QProgressBar, QSizePolicy, QTabWidget, QMenu
+    QComboBox, QProgressBar, QSizePolicy, QTabWidget, QMenu, QCheckBox
 from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtCore import Qt, QDate, QProcess, pyqtSignal, QSize
 import pyperclip
@@ -152,9 +152,7 @@ class ComprasApp(QWidget):
         self.progress_bar.setMinimum(0)
         self.progress_bar.setMaximumWidth(400)
 
-        # self.checkbox_pedido_em_aberto = QCheckBox("PC EM ABERTO", self)
-        # self.checkbox_pedido_fechado = QCheckBox("PC FECHADO", self)
-        # self.checkbox_pedido_parcial = QCheckBox("PC PARCIAL", self)
+        self.checkbox_exibir_somente_sc_com_pedido = QCheckBox("SOMENTE SC COM PEDIDO DE COMPRA", self)
 
         self.label_sc = QLabel("Solic. Compra:", self)
         self.label_sc.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -166,7 +164,6 @@ class ComprasApp(QWidget):
         self.label_descricao_prod.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.label_contem_descricao_prod = QLabel("Contém na descrição:", self)
         self.label_contem_descricao_prod.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        # self.label_descricao_prod.setObjectName("descricao-produto")
 
         self.label_qp = QLabel("Número QP:", self)
         self.label_qp.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -376,9 +373,7 @@ class ComprasApp(QWidget):
         layout_campos_linha_02.addLayout(container_combobox_armazem)
         layout_campos_linha_02.addLayout(container_fornecedor)
         layout_campos_linha_02.addLayout(container_nm_fantasia_forn)
-        # layout_campos_linha_02.addWidget(self.checkbox_pedido_em_aberto)
-        # layout_campos_linha_02.addWidget(self.checkbox_pedido_parcial)
-        # layout_campos_linha_02.addWidget(self.checkbox_pedido_fechado)
+        layout_campos_linha_02.addWidget(self.checkbox_exibir_somente_sc_com_pedido)
         layout_campos_linha_01.addStretch()
         layout_campos_linha_02.addStretch()
 
@@ -674,7 +669,7 @@ class ComprasApp(QWidget):
         self.campo_OP.clear()
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
-        # self.checkbox_pedido_em_aberto.setChecked(False)
+        self.checkbox_exibir_somente_sc_com_pedido.setChecked(False)
 
     def controle_campos_formulario(self, status):
         self.campo_sc.setEnabled(status)
@@ -694,7 +689,8 @@ class ComprasApp(QWidget):
         self.btn_ultimos_fornecedores.setEnabled(status)
 
     def numero_linhas_consulta(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op,
-                               razao_social_fornecedor, nome_fantasia_fornecedor, descricao_produto, contem_descricao, cod_armazem):
+                               razao_social_fornecedor, nome_fantasia_fornecedor, descricao_produto, contem_descricao,
+                               cod_armazem):
 
         palavras_contem_descricao = contem_descricao.split('*')
         clausulas_contem_descricao = " AND ".join(
@@ -849,7 +845,8 @@ class ComprasApp(QWidget):
         return query
 
     def query_consulta_followup(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op,
-                                razao_social_fornecedor, nome_fantasia_fornecedor, descricao_produto, contem_descricao, cod_armazem):
+                                razao_social_fornecedor, nome_fantasia_fornecedor, descricao_produto,
+                                contem_descricao, cod_armazem, checkbox_sc_somente_com_pedido):
 
         palavras_contem_descricao = contem_descricao.split('*')
         clausulas_contem_descricao = " AND ".join(
@@ -862,6 +859,80 @@ class ComprasApp(QWidget):
             filtro_data = f"AND C1_EMISSAO >= '{data_inicio_formatada}' AND C1_EMISSAO <= '{data_fim_formatada}'"
         else:
             filtro_data = ''
+
+        sc_com_pedido_compra = f"""
+            ORDER BY 
+                PC.R_E_C_N_O_ DESC;
+        """
+
+        sc_sem_pedido_compra = f"""
+        UNION ALL
+
+            SELECT 
+                SC.C1_ZZNUMQP AS "QP",
+                SC.C1_NUM AS "SC",
+                SC.C1_ITEM AS "Item SC",
+                SC.C1_QUANT AS "Qtd. SC",
+                NULL AS "Ped. Compra",
+                NULL AS "Item Ped.",
+                NULL AS "Qtd. Ped.",
+                NULL AS "Preço Unit. (R$)",
+                NULL AS "Sub-total (R$)",
+                NULL AS "Previsão Entrega",
+                NULL AS "Nota Fiscal Ent.",
+                NULL AS "Qtd. Entregue",
+                NULL AS "Qtd. Pendente",
+                NULL AS "Data Entrega",
+                NULL AS "Status Ped. Compra",
+                SC.C1_PRODUTO AS "Código",
+                SC.C1_DESCRI AS "Descrição",
+                SC.C1_UM AS "UM",
+                PROD.B1_ZZLOCAL AS "Endereço:",
+                SC.C1_EMISSAO AS "Emissão SC",
+                NULL AS "Emissão PC",
+                NULL AS "Emissão NF",
+                SC.C1_ORIGEM AS "Origem",
+                SC.C1_OBS AS "Observação",
+                SC.C1_LOCAL AS "Cod. Armazém",
+                ARM.NNR_DESCRI AS "Desc. Armazém",
+                SC.C1_IMPORT AS "Importado?",
+                NULL AS "Observações",
+                NULL AS "Observações item",
+                NULL AS "Cód. Forn.",
+                NULL AS "Raz. Soc. Forn.",
+                NULL AS "Nom. Fantasia Forn.",
+                US.USR_NOME AS "Solicitante",
+                NULL AS "Aberto em:",
+                SC.C1_OP AS "OP"
+            FROM 
+                {database}.dbo.SC1010 SC
+            LEFT JOIN
+                {database}.dbo.NNR010 ARM
+                ON SC.C1_LOCAL = ARM.NNR_CODIGO
+            LEFT JOIN 
+                {database}.dbo.SYS_USR US
+                ON SC.C1_SOLICIT = US.USR_CODIGO AND US.D_E_L_E_T_ <> '*'
+            INNER JOIN 
+                {database}.dbo.SB1010 PROD
+                ON PROD.B1_COD = SC.C1_PRODUTO
+            WHERE 
+                SC.C1_PEDIDO LIKE '      %'
+                AND SC.C1_NUM LIKE '%{numero_sc}'
+                AND SC.C1_ZZNUMQP LIKE '%{numero_pedido}'
+                AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
+                AND SC.C1_DESCRI LIKE '{descricao_produto}%'
+                AND {clausulas_contem_descricao}
+                AND SC.C1_OP LIKE '{numero_op}%'
+                AND SC.C1_LOCAL LIKE '{cod_armazem}%'
+                AND SC.D_E_L_E_T_ <> '*' {filtro_data}
+            ORDER BY 
+                "SC" DESC;
+            """
+        complemento_query = ""
+        if checkbox_sc_somente_com_pedido:
+            complemento_query = sc_com_pedido_compra
+        else:
+            complemento_query = sc_sem_pedido_compra
 
         query = f"""
             SELECT 
@@ -939,68 +1010,7 @@ class ComprasApp(QWidget):
                 AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}%'
                 AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
                 AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data}
-            
-            UNION ALL
-
-            SELECT 
-                SC.C1_ZZNUMQP AS "QP",
-                SC.C1_NUM AS "SC",
-                SC.C1_ITEM AS "Item SC",
-                SC.C1_QUANT AS "Qtd. SC",
-                NULL AS "Ped. Compra",
-                NULL AS "Item Ped.",
-                NULL AS "Qtd. Ped.",
-                NULL AS "Preço Unit. (R$)",
-                NULL AS "Sub-total (R$)",
-                NULL AS "Previsão Entrega",
-                NULL AS "Nota Fiscal Ent.",
-                NULL AS "Qtd. Entregue",
-                NULL AS "Qtd. Pendente",
-                NULL AS "Data Entrega",
-                NULL AS "Status Ped. Compra",
-                SC.C1_PRODUTO AS "Código",
-                SC.C1_DESCRI AS "Descrição",
-                SC.C1_UM AS "UM",
-                PROD.B1_ZZLOCAL AS "Endereço:",
-                SC.C1_EMISSAO AS "Emissão SC",
-                NULL AS "Emissão PC",
-                NULL AS "Emissão NF",
-                SC.C1_ORIGEM AS "Origem",
-                SC.C1_OBS AS "Observação",
-                SC.C1_LOCAL AS "Cod. Armazém",
-                ARM.NNR_DESCRI AS "Desc. Armazém",
-                SC.C1_IMPORT AS "Importado?",
-                NULL AS "Observações",
-                NULL AS "Observações item",
-                NULL AS "Cód. Forn.",
-                NULL AS "Raz. Soc. Forn.",
-                NULL AS "Nom. Fantasia Forn.",
-                US.USR_NOME AS "Solicitante",
-                NULL AS "Aberto em:",
-                SC.C1_OP AS "OP"
-            FROM 
-                {database}.dbo.SC1010 SC
-            LEFT JOIN
-                {database}.dbo.NNR010 ARM
-                ON SC.C1_LOCAL = ARM.NNR_CODIGO
-            LEFT JOIN 
-                {database}.dbo.SYS_USR US
-                ON SC.C1_SOLICIT = US.USR_CODIGO AND US.D_E_L_E_T_ <> '*'
-            INNER JOIN 
-                {database}.dbo.SB1010 PROD
-                ON PROD.B1_COD = SC.C1_PRODUTO
-            WHERE 
-                SC.C1_PEDIDO LIKE '      %'
-                AND SC.C1_NUM LIKE '%{numero_sc}'
-                AND SC.C1_ZZNUMQP LIKE '%{numero_pedido}'
-                AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
-                AND SC.C1_DESCRI LIKE '{descricao_produto}%'
-                AND {clausulas_contem_descricao}
-                AND SC.C1_OP LIKE '{numero_op}%'
-                AND SC.C1_LOCAL LIKE '{cod_armazem}%'
-                AND SC.D_E_L_E_T_ <> '*' {filtro_data}
-            ORDER BY 
-                "SC" DESC;
+            {complemento_query}
         """
         return query
 
@@ -1014,6 +1024,7 @@ class ComprasApp(QWidget):
         nome_fantasia_fornecedor = self.campo_nm_fantasia_fornecedor.text().upper().strip()
         descricao_produto = self.campo_descricao_prod.text().upper().strip()
         contem_descricao = self.campo_contem_descricao_prod.text().upper().strip()
+        checkbox_sc_somente_com_pedido = self.checkbox_exibir_somente_sc_com_pedido.isChecked()
 
         cod_armazem = self.combobox_armazem.currentData()
         if cod_armazem is None:
@@ -1022,7 +1033,8 @@ class ComprasApp(QWidget):
         query_consulta_filtro = self.query_consulta_followup(numero_sc, numero_pedido, codigo_produto,
                                                              numero_qp, numero_op, razao_social_fornecedor,
                                                              nome_fantasia_fornecedor,
-                                                             descricao_produto, contem_descricao, cod_armazem)
+                                                             descricao_produto, contem_descricao, cod_armazem,
+                                                             checkbox_sc_somente_com_pedido)
 
         query_contagem_linhas = self.numero_linhas_consulta(numero_sc, numero_pedido, codigo_produto, numero_qp,
                                                             numero_op, razao_social_fornecedor,
@@ -1171,8 +1183,8 @@ class ComprasApp(QWidget):
     def configurar_tabela_tooltips(self, dataframe):
         # Mapa de tooltips correspondentes às colunas da consulta SQL
         tooltip_map = {
-            "Status PC": "VERMELHO -> AGUARDANDO ENTREGA\n\nAZUL -> ENTREGA PARCIAL\n\nVERDE -> PEDIDO DE COMPRA "
-                         "ENCERRADO"
+            "Status PC": "CINZA - Solicitação sem Pedido de Compra\nVERMELHO - Aguardando entrega\nAZUL - Entrega "
+                         "parcial\nVERDE - Pedido de Compra encerrado"
         }
 
         # Obtenha os cabeçalhos das colunas do dataframe
