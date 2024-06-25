@@ -1,3 +1,4 @@
+import locale
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QToolButton, QStyle
@@ -19,6 +20,52 @@ from reportlab.lib import colors
 import os
 
 
+def exibir_mensagem(title, message, icon_type):
+    root = tk.Tk()
+    root.withdraw()
+    root.lift()  # Garante que a janela esteja na frente
+    root.title(title)
+    root.attributes('-topmost', True)
+
+    if icon_type == 'info':
+        messagebox.showinfo(title, message)
+    elif icon_type == 'warning':
+        messagebox.showwarning(title, message)
+    elif icon_type == 'error':
+        messagebox.showerror(title, message)
+
+    root.destroy()
+
+
+def copiar_linha(item):
+    if item is not None:
+        valor_campo = item.text()
+        pyperclip.copy(str(valor_campo))
+
+
+def setup_mssql():
+    caminho_do_arquivo = (r"\\192.175.175.4\f\INTEGRANTES\ELIEZER\PROJETO SOLIDWORKS "
+                          r"TOTVS\libs-python\user-password-mssql\USER_PASSWORD_MSSQL_PROD.txt")
+    try:
+        with open(caminho_do_arquivo, 'r') as arquivo:
+            string_lida = arquivo.read()
+            username_txt, password_txt, database_txt, server_txt = string_lida.split(';')
+            return username_txt, password_txt, database_txt, server_txt
+
+    except FileNotFoundError:
+        ctypes.windll.user32.MessageBoxW(0,
+                                         "Erro ao ler credenciais de acesso ao banco de dados MSSQL.\n\nBase de "
+                                         "dados ERP TOTVS PROTHEUS.\n\nPor favor, informe ao desenvolvedor/TI "
+                                         "sobre o erro exibido.\n\nTenha um bom dia! ツ",
+                                         "CADASTRO DE ESTRUTURA - TOTVS®", 16 | 0)
+        sys.exit()
+
+    except Exception as ex:
+        ctypes.windll.user32.MessageBoxW(0, f"Ocorreu um erro ao ler o arquivo: {ex}", "CADASTRO DE ESTRUTURA - TOTVS®",
+                                         16 | 0)
+        sys.exit()
+
+
 class ComercialApp(QWidget):
     def __init__(self):
         super().__init__()
@@ -28,6 +75,7 @@ class ComercialApp(QWidget):
         self.tree.setRowCount(0)
 
         self.setWindowTitle("EUREKA® COMERCIAL - v0.1")
+        locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
         self.setAutoFillBackground(True)
         palette = self.palette()
@@ -135,47 +183,21 @@ class ComercialApp(QWidget):
 
         layout = QVBoxLayout()
         layout_linha_01 = QHBoxLayout()
-        layout_linha_02 = QHBoxLayout()
-        layout_linha_03 = QHBoxLayout()
+        layout_footer = QHBoxLayout()
 
-        #layout_linha_01.addWidget(QLabel("Digite o código da máquina/equipamento: "))
+        layout_linha_01.addWidget(self.campo_codigo)
+        layout_linha_01.addWidget(self.criar_botao_limpar(self.campo_codigo))
 
-        layout_linha_02.addWidget(self.campo_codigo)
-        layout_linha_02.addWidget(self.criar_botao_limpar(self.campo_codigo))
-
-        layout_linha_02.addWidget(self.btn_consultar)
-        layout_linha_02.addWidget(self.btn_exportar_excel)
-        layout_linha_02.addWidget(self.btn_exportar_pdf)
-        layout_linha_02.addWidget(self.btn_fechar)
-        layout_linha_02.addStretch()
+        layout_linha_01.addWidget(self.btn_consultar)
+        layout_linha_01.addWidget(self.btn_exportar_excel)
+        layout_linha_01.addWidget(self.btn_exportar_pdf)
+        layout_linha_01.addWidget(self.btn_fechar)
+        layout_linha_01.addStretch()
 
         layout.addLayout(layout_linha_01)
-        layout.addLayout(layout_linha_02)
-        layout.addLayout(layout_linha_03)
         layout.addWidget(self.tree)
+        layout.addLayout(layout_footer)
         self.setLayout(layout)
-
-    def setup_mssql(self):
-        caminho_do_arquivo = (r"\\192.175.175.4\f\INTEGRANTES\ELIEZER\PROJETO SOLIDWORKS "
-                              r"TOTVS\libs-python\user-password-mssql\USER_PASSWORD_MSSQL_PROD.txt")
-        try:
-            with open(caminho_do_arquivo, 'r') as arquivo:
-                string_lida = arquivo.read()
-                username, password, database, server = string_lida.split(';')
-                return username, password, database, server
-
-        except FileNotFoundError:
-            ctypes.windll.user32.MessageBoxW(0,
-                                             "Erro ao ler credenciais de acesso ao banco de dados MSSQL.\n\nBase de "
-                                             "dados ERP TOTVS PROTHEUS.\n\nPor favor, informe ao desenvolvedor/TI "
-                                             "sobre o erro exibido.\n\nTenha um bom dia! ツ",
-                                             "CADASTRO DE ESTRUTURA - TOTVS®", 16 | 0)
-            sys.exit()
-
-        except Exception as e:
-            ctypes.windll.user32.MessageBoxW(0, "Ocorreu um erro ao ler o arquivo:", "CADASTRO DE ESTRUTURA - TOTVS®",
-                                             16 | 0)
-            sys.exit()
 
     def criar_botao_limpar(self, campo):
         botao_limpar = QToolButton(self)
@@ -348,7 +370,7 @@ class ComercialApp(QWidget):
         self.tree.setEditTriggers(QTableWidget.NoEditTriggers)
         self.tree.setSelectionBehavior(QTableWidget.SelectRows)
         self.tree.setSelectionMode(QTableWidget.SingleSelection)
-        self.tree.itemDoubleClicked.connect(self.copiar_linha)
+        self.tree.itemDoubleClicked.connect(copiar_linha)
         fonte_tabela = QFont("Segoe UI", 10)
         self.tree.setFont(fonte_tabela)
         altura_linha = 40
@@ -356,12 +378,7 @@ class ComercialApp(QWidget):
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
         self.tree.horizontalHeader().setStretchLastSection(True)
 
-    def copiar_linha(self, item):
-        if item is not None:
-            valor_campo = item.text()
-            pyperclip.copy(str(valor_campo))
-
-    def ordenar_tabela(self, logicalIndex):
+    def ordenar_tabela(self, logical_index):
         # Obter o índice real da coluna (considerando a ordem de classificação)
         index = self.tree.horizontalHeader().sortIndicatorOrder()
 
@@ -369,7 +386,7 @@ class ComercialApp(QWidget):
         order = Qt.AscendingOrder if index == 0 else Qt.DescendingOrder
 
         # Ordenar a tabela pela coluna clicada
-        self.tree.sortItems(logicalIndex, order)
+        self.tree.sortItems(logical_index, order)
 
     def limpar_campos(self):
         self.campo_codigo.clear()
@@ -386,28 +403,12 @@ class ComercialApp(QWidget):
         self.btn_exportar_excel.setEnabled(True)
         self.btn_exportar_pdf.setEnabled(True)
 
-    def exibir_mensagem(self, title, message, icon_type):
-        root = tk.Tk()
-        root.withdraw()
-        root.lift()  # Garante que a janela esteja na frente
-        root.title(title)
-        root.attributes('-topmost', True)
-
-        if icon_type == 'info':
-            messagebox.showinfo(title, message)
-        elif icon_type == 'warning':
-            messagebox.showwarning(title, message)
-        elif icon_type == 'error':
-            messagebox.showerror(title, message)
-
-        root.destroy()
-
     def verificar_query(self):
         codigo = self.campo_codigo.text().upper().strip()
 
         if codigo == '':
             self.btn_consultar.setEnabled(False)
-            self.exibir_mensagem("ATENÇÃO!",
+            exibir_mensagem("ATENÇÃO!",
                                  "Os campos de pesquisa estão vazios.\nPreencha algum campo e tente "
                                  "novamente.\n\nツ\n\nSMARTPLIC®",
                                  "info")
@@ -495,6 +496,8 @@ class ComercialApp(QWidget):
                 self.tree.setSortingEnabled(False)
                 self.tree.insertRow(i)
                 for j, value in enumerate(row):
+                    if j in (2, 7, 8):
+                        value = locale.format_string("%.2f", value, grouping=True)
                     if j == 4 and not value.isspace():
                         data_obj = datetime.strptime(value, "%Y%m%d")
                         value = data_obj.strftime("%d/%m/%Y")
@@ -525,7 +528,7 @@ class ComercialApp(QWidget):
             self.desbloquear_campos_pesquisa()
 
         except pyodbc.Error as ex:
-            self.exibir_mensagem('Erro ao consultar tabela', f'Erro: {str(ex)}', 'error')
+            exibir_mensagem('Erro ao consultar tabela', f'Erro: {str(ex)}', 'error')
 
         finally:
             # Fecha a conexão com o banco de dados se estiver aberta
@@ -539,19 +542,9 @@ class ComercialApp(QWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = ComercialApp()
-    username, password, database, server = ComercialApp().setup_mssql()
+    username, password, database, server = setup_mssql()
     driver = '{SQL Server}'
 
-    largura_janela = 1400  # Substitua pelo valor desejado
-    altura_janela = 700  # Substitua pelo valor desejado
-
-    largura_tela = app.primaryScreen().size().width()
-    altura_tela = app.primaryScreen().size().height()
-
-    pos_x = (largura_tela - largura_janela) // 2
-    pos_y = (altura_tela - altura_janela) // 2
-
-    window.setGeometry(pos_x, pos_y, largura_janela, altura_janela)
-    window.show()
+    window.showMaximized()
 
     sys.exit(app.exec_())
