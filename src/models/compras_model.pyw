@@ -1,6 +1,7 @@
 import locale
 import sys
 
+import numpy as np
 import pyodbc
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, \
@@ -992,7 +993,7 @@ class ComprasApp(QWidget):
             dataframe = pd.read_sql(query_consulta_filtro, self.engine)
 
             label_line_number = QLabel(f"{line_number} itens localizados.", self)
-            self.layout_footer.removeItem(self.layout_footer)
+            self.layout_footer.removeWidget(label_line_number)
 
             if not dataframe.empty:
 
@@ -1048,6 +1049,11 @@ class ComprasApp(QWidget):
                         else:
                             if j in (4, 7, 8, 9, 13):
                                 value = locale.format_string("%.2f", value, grouping=True)
+
+                            if j in (7, 8, 9) and value == 'nan':
+                                value = '-'
+                            if j == 34 and pd.isna(value):
+                                value = '-'
 
                             if j == 11 and row['Nota Fiscal Ent.'] is None:
                                 previsao_entrega_sem_formatacao = row['Previsão Entrega']
