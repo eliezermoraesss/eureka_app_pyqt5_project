@@ -207,8 +207,12 @@ class ComercialApp(QWidget):
         return botao_limpar
 
     def exportar_excel(self):
-        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
-                                                   f'{self.campo_codigo.text().upper().strip()}_MP.xlsx',
+        desktop_path = os.path.join(os.path.expanduser("~"), 'Desktop')
+
+        now = datetime.now()
+        default_filename = f'COMERCIAL-report_{now.today().strftime('%Y-%m-%d_%H%M%S')}.xlsx'
+
+        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como', os.path.join(desktop_path, default_filename),
                                                    'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
 
         if file_path:
@@ -508,7 +512,7 @@ class ComercialApp(QWidget):
 
                     item = QTableWidgetItem(str(value).strip())
 
-                    if j >= 2 and j < 7:
+                    if 2 <= j < 7:
                         item.setTextAlignment(Qt.AlignCenter)
                     elif j == 7 or j == 8:
                         item.setTextAlignment(Qt.AlignRight)
