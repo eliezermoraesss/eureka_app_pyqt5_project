@@ -519,7 +519,7 @@ class ComercialApp(QWidget):
 
                     self.tree.setItem(i, j, item)
 
-                QCoreApplication.processEvents()
+                # QCoreApplication.processEvents()
 
             self.tree.setSortingEnabled(True)
             self.desbloquear_campos_pesquisa()
