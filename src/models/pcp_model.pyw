@@ -63,6 +63,19 @@ def validar_campos(codigo_produto, numero_qp, numero_op):
         return True
 
 
+def numero_linhas_consulta(query_consulta):
+
+    order_by_a_remover = "ORDER BY op.R_E_C_N_O_ DESC;"
+    query_sem_order_by = query_consulta.replace(order_by_a_remover, "")
+
+    query = f"""
+                SELECT 
+                    COUNT(*) AS total_records
+                FROM ({query_sem_order_by}) AS combined_results;
+            """
+    return query
+
+
 class PcpApp(QWidget):
     guia_fechada = pyqtSignal()
 
@@ -206,7 +219,7 @@ class PcpApp(QWidget):
             }
         """)
 
-        self.label_codigo = QLabel("Código produto:", self)
+        self.label_codigo = QLabel("Código:", self)
         self.label_descricao_prod = QLabel("Descrição:", self)
         self.label_contem_descricao_prod = QLabel("Contém na descrição:", self)
         self.label_contem_descricao_prod.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -646,40 +659,21 @@ class PcpApp(QWidget):
         self.btn_saldo_estoque.setEnabled(status)
         self.btn_consultar_estrutura.setEnabled(status)
 
-    def numero_linhas_consulta(self, codigo_produto, numero_qp, numero_op, descricao_produto,
-                               contem_descricao, observacao):
-        palavras_contem_descricao = contem_descricao.split('*')
-        clausulas_contem_descricao = " AND ".join(
-            [f"prod.B1_DESC LIKE '%{palavra}%'" for palavra in palavras_contem_descricao])
-        data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
-        data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
+    def query_consulta_ordem_producao(self):
 
-        filtro_data = f"AND C2_EMISSAO >= '{data_inicio_formatada}' AND C2_EMISSAO <= '{data_fim_formatada}'" if data_fim_formatada != '' and data_fim_formatada != '' else ''
+        numero_qp = self.campo_qp.text().upper().strip()
+        numero_op = self.campo_OP.text().upper().strip()
+        codigo_produto = self.campo_codigo.text().upper().strip()
+        descricao_produto = self.campo_descricao_prod.text().upper().strip()
+        contem_descricao = self.campo_contem_descricao_prod.text().upper().strip()
+        observacao = self.campo_observacao.text().upper().strip()
 
-        query = f"""
-                    SELECT 
-                        COUNT(*)
-                    FROM 
-                        {database}.dbo.SC2010 op
-                    LEFT JOIN 
-                        SB1010 prod ON C2_PRODUTO = B1_COD
-                    LEFT JOIN 
-                        {database}.dbo.SYS_USR users
-                    ON 
-                        users.USR_CNLOGON = op.C2_XMAQUIN AND users.D_E_L_E_T_ <> '*'
-                    WHERE 
-                        C2_ZZNUMQP LIKE '%{numero_qp}'
-                        AND C2_PRODUTO LIKE '{codigo_produto}%'
-                        AND prod.B1_DESC LIKE '{descricao_produto}%'
-                        AND {clausulas_contem_descricao}
-                        AND C2_OBS LIKE '%{observacao}%'
-                        AND C2_NUM LIKE '{numero_op}%' {filtro_data}
-                        AND op.D_E_L_E_T_ <> '*'
-                """
-        return query
+        if validar_campos(codigo_produto, numero_qp, numero_op):
+            self.btn_consultar.setEnabled(True)
+            return
 
-    def query_consulta_ordem_producao(self, codigo_produto, numero_qp, numero_op, descricao_produto,
-                                      contem_descricao, observacao):
+        numero_qp = numero_qp.zfill(6) if numero_qp != '' else numero_qp
+
         palavras_contem_descricao = contem_descricao.split('*')
         clausulas_contem_descricao = " AND ".join(
             [f"prod.B1_DESC LIKE '%{palavra}%'" for palavra in palavras_contem_descricao])
@@ -721,8 +715,7 @@ class PcpApp(QWidget):
                 AND C2_OBS LIKE '%{observacao}%'
                 AND C2_NUM LIKE '{numero_op}%' {filtro_data}
                 AND op.D_E_L_E_T_ <> '*'
-            ORDER BY 
-                op.R_E_C_N_O_ DESC;
+            ORDER BY op.R_E_C_N_O_ DESC;
         """
         return query
 
@@ -743,24 +736,9 @@ class PcpApp(QWidget):
             self.tree.setHorizontalHeaderItem(i, item)
 
     def executar_consulta(self):
+        query_consulta_op = self.query_consulta_ordem_producao()
+        query_contagem_linhas = numero_linhas_consulta(query_consulta_op)
 
-        numero_qp = self.campo_qp.text().upper().strip()
-        numero_op = self.campo_OP.text().upper().strip()
-        codigo_produto = self.campo_codigo.text().upper().strip()
-        descricao_produto = self.campo_descricao_prod.text().upper().strip()
-        contem_descricao = self.campo_contem_descricao_prod.text().upper().strip()
-        observacao = self.campo_observacao.text().upper().strip()
-
-        if validar_campos(codigo_produto, numero_qp, numero_op):
-            self.btn_consultar.setEnabled(True)
-            return
-
-        numero_qp = numero_qp.zfill(6) if numero_qp != '' else numero_qp
-
-        query_consulta_op = self.query_consulta_ordem_producao(codigo_produto, numero_qp, numero_op,
-                                                               descricao_produto, contem_descricao, observacao)
-        query_contagem_linhas = self.numero_linhas_consulta(codigo_produto, numero_qp, numero_op,
-                                                            descricao_produto, contem_descricao, observacao)
         self.label_line_number.hide()
         self.controle_campos_formulario(False)
 

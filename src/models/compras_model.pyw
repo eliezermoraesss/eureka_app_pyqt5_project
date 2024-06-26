@@ -80,17 +80,17 @@ def numero_linhas_consulta(query_consulta):
     order_by_sc_somente_com_pedido = f"""ORDER BY PC.R_E_C_N_O_ DESC;"""
     order_by_sc_sem_e_com_pedido = f"""ORDER BY "SC" DESC;"""
 
-    query_modificada = ""
+    query_sem_order_by = ""
     if order_by_sc_somente_com_pedido in query_consulta:
-        query_modificada = query_consulta.replace(order_by_sc_somente_com_pedido, "")
+        query_sem_order_by = query_consulta.replace(order_by_sc_somente_com_pedido, "")
     elif order_by_sc_sem_e_com_pedido in query_consulta:
-        query_modificada = query_consulta.replace(order_by_sc_sem_e_com_pedido, "")
+        query_sem_order_by = query_consulta.replace(order_by_sc_sem_e_com_pedido, "")
 
     query = f"""
         SELECT 
             COUNT(*) AS total_records
         FROM 
-            ({query_modificada}
+            ({query_sem_order_by}
             )
         AS combined_results;
     """
@@ -177,7 +177,7 @@ class ComprasApp(QWidget):
         self.label_sc.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.label_pedido = QLabel("Ped. de Compra:", self)
         self.label_pedido.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.label_codigo = QLabel("Código produto:", self)
+        self.label_codigo = QLabel("Código:", self)
         self.label_codigo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.label_descricao_prod = QLabel("Descrição:", self)
         self.label_descricao_prod.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
