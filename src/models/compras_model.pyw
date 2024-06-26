@@ -1,11 +1,9 @@
 import locale
 import sys
-
-import numpy as np
 import pyodbc
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, \
-    QComboBox, QProgressBar, QSizePolicy, QTabWidget, QMenu, QCheckBox
+    QComboBox, QSizePolicy, QTabWidget, QMenu, QCheckBox
 from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtCore import Qt, QDate, QProcess, pyqtSignal, QSize
 import pyperclip
@@ -148,6 +146,7 @@ class ComprasApp(QWidget):
         self.altura_linha = 35
         self.tamanho_fonte_tabela = 10
         self.fonte_tabela = 'Segoe UI'
+
         fonte_campos = "Segoe UI"
         tamanho_fonte_campos = 16
 
@@ -169,9 +168,8 @@ class ComprasApp(QWidget):
         self.guias_abertas_saldo = []
         self.guias_abertas_ultimos_fornecedores = []
 
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setMinimum(0)
-        self.progress_bar.setMaximumWidth(400)
+        self.label_line_number = QLabel("", self)
+        self.label_line_number.setVisible(False)
 
         self.checkbox_exibir_somente_sc_com_pedido = QCheckBox("Somente Solicitações com Pedido de Compra", self)
 
@@ -304,6 +302,7 @@ class ComprasApp(QWidget):
         self.btn_parar_consulta = QPushButton("Parar consulta")
         self.btn_parar_consulta.clicked.connect(self.parar_consulta)
         self.btn_parar_consulta.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.btn_parar_consulta.setVisible(False)
 
         self.btn_nova_janela = QPushButton("Nova Janela", self)
         self.btn_nova_janela.clicked.connect(self.abrir_nova_janela)
@@ -399,6 +398,7 @@ class ComprasApp(QWidget):
         layout_campos_linha_02.addStretch()
 
         self.layout_buttons.addWidget(self.btn_consultar)
+        self.layout_buttons.addWidget(self.btn_parar_consulta)
         self.layout_buttons.addWidget(self.btn_ultimos_fornecedores)
         self.layout_buttons.addWidget(self.btn_saldo_estoque)
         self.layout_buttons.addWidget(self.btn_onde_e_usado)
@@ -408,6 +408,8 @@ class ComprasApp(QWidget):
         self.layout_buttons.addWidget(self.btn_abrir_engenharia)
         self.layout_buttons.addWidget(self.btn_fechar)
         self.layout_buttons.addStretch()
+
+        self.layout_footer.addWidget(self.label_line_number)
 
         layout.addLayout(layout_campos_linha_01)
         layout.addLayout(layout_campos_linha_02)
@@ -487,6 +489,7 @@ class ComprasApp(QWidget):
             }
             
             QPushButton#btn_engenharia {
+                border: 2px solid #0a79f8;
                 background-color: #0a79f8;
             }
     
@@ -691,6 +694,7 @@ class ComprasApp(QWidget):
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
         self.checkbox_exibir_somente_sc_com_pedido.setChecked(False)
+        self.label_line_number.hide()
 
     def controle_campos_formulario(self, status):
         self.campo_sc.setEnabled(status)
@@ -905,9 +909,9 @@ class ComprasApp(QWidget):
     def executar_consulta(self):
 
         query_consulta_filtro = self.query_consulta_followup()
-
         query_contagem_linhas = numero_linhas_consulta(query_consulta_filtro)
 
+        self.label_line_number.hide()
         self.controle_campos_formulario(False)
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
@@ -918,15 +922,10 @@ class ComprasApp(QWidget):
             line_number = dataframe_line_number.iloc[0, 0]
             dataframe = pd.read_sql(query_consulta_filtro, self.engine)
 
-            label_line_number = QLabel(f"{line_number} itens localizados.", self)
-            self.layout_footer.removeWidget(label_line_number)
-
             if not dataframe.empty:
 
-                self.layout_footer.addWidget(label_line_number)
-                self.progress_bar.setMaximum(line_number)
-                self.layout_footer.addWidget(self.progress_bar)
-                # self.layout_buttons.addWidget(self.btn_parar_consulta)
+                self.label_line_number.setText(f"Foram encontrados {line_number} itens")
+                self.label_line_number.show()
 
                 dataframe.insert(0, 'Status PC', '')
                 dataframe[''] = ''
@@ -946,8 +945,8 @@ class ComprasApp(QWidget):
 
             # Construir caminhos relativos
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            no_pc = os.path.join(script_dir, '..', 'resources', 'images', 'gray.png')
-            no_order_path = os.path.join(script_dir, '..', 'resources', 'images', 'red.png')
+            no_pc = os.path.join(script_dir, '..', 'resources', 'images', 'red.png')
+            no_order_path = os.path.join(script_dir, '..', 'resources', 'images', 'gray.png')
             wait_order_path = os.path.join(script_dir, '..', 'resources', 'images', 'wait.png')
             end_order_path = os.path.join(script_dir, '..', 'resources', 'images', 'green.png')
 
@@ -1026,14 +1025,13 @@ class ComprasApp(QWidget):
 
                             if j not in (18, 25, 29, 30, 32, 33):  # Alinhamento a esquerda de colunas
                                 item.setTextAlignment(Qt.AlignCenter)
+                    else:
+                        item = QTableWidgetItem('')
 
                     self.tree.setItem(i, j, item)
 
-                self.progress_bar.setValue(i + 1)
                 # QCoreApplication.processEvents()
 
-            # self.layout_buttons.removeWidget(self.btn_parar_consulta)
-            # self.btn_parar_consulta.setParent(None)
             self.tree.setSortingEnabled(True)
             self.controle_campos_formulario(True)
 
