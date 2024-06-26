@@ -169,6 +169,7 @@ class ComprasApp(QWidget):
         self.guias_abertas_ultimos_fornecedores = []
 
         self.label_line_number = QLabel("", self)
+        self.label_line_number.setObjectName("label-line-number")
         self.label_line_number.setVisible(False)
 
         self.checkbox_exibir_somente_sc_com_pedido = QCheckBox("Somente Solicitações com Pedido de Compra", self)
@@ -409,7 +410,9 @@ class ComprasApp(QWidget):
         self.layout_buttons.addWidget(self.btn_fechar)
         self.layout_buttons.addStretch()
 
+        self.layout_footer.addStretch(1)
         self.layout_footer.addWidget(self.label_line_number)
+        self.layout_footer.addStretch(1)
 
         layout.addLayout(layout_campos_linha_01)
         layout.addLayout(layout_campos_linha_02)
@@ -424,14 +427,19 @@ class ComprasApp(QWidget):
             }
     
             QLabel, QCheckBox {
-                color: #EEEEEE;
+                color: #DFE0E2;
                 font-size: 12px;
                 font-weight: bold;
                 padding-left: 10px; 
             }
+            
+            QLabel#label-line-number {
+                font-size: 14px;
+                font-weight: regular;
+            }
     
             QDateEdit, QComboBox {
-                background-color: #FFFFFF;
+                background-color: #DFE0E2;
                 border: 1px solid #262626;
                 margin-bottom: 20px;
                 padding: 5px 10px;
@@ -458,7 +466,7 @@ class ComprasApp(QWidget):
             }
     
             QLineEdit {
-                background-color: #FFFFFF;
+                background-color: #DFE0E2;
                 border: 1px solid #262626;
                 padding: 5px 10px;
                 border-radius: 10px;
@@ -467,7 +475,7 @@ class ComprasApp(QWidget):
             }
             
             QLineEdit#forn-raz, QLineEdit#forn-fantasia {
-                background-color: #FFFFFF;
+                background-color: #DFE0E2;
                 border: 1px solid #262626;
                 padding: 5px 10px;
                 border-radius: 10px;
@@ -924,7 +932,12 @@ class ComprasApp(QWidget):
 
             if not dataframe.empty:
 
-                self.label_line_number.setText(f"Foram encontrados {line_number} itens")
+                if line_number > 1:
+                    message = f"Foram encontrados {line_number} resultados"
+                else:
+                    message = f"Foi encontrado {line_number} resultado"
+
+                self.label_line_number.setText(f"{message}")
                 self.label_line_number.show()
 
                 dataframe.insert(0, 'Status PC', '')

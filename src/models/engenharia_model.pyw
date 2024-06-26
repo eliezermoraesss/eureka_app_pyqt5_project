@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButto
     QTableWidgetItem, QHeaderView, QSizePolicy, QSpacerItem, QMessageBox, QFileDialog, QTabWidget, \
     QItemDelegate, QAbstractItemView, QCheckBox, QMenu, QAction, QComboBox, QStyle, QDialog, QTableView
 from PyQt5.QtGui import QFont, QIcon, QDesktopServices, QColor
-from PyQt5.QtCore import Qt, QUrl, QCoreApplication, pyqtSignal, QProcess, pyqtSlot
+from PyQt5.QtCore import Qt, QUrl, QCoreApplication, pyqtSignal, QProcess
 import pyodbc
 import pyperclip
 import os
@@ -116,6 +116,18 @@ def handle_item_change(item, tree_estrutura, codigo_pai):
 def ajustar_largura_coluna_descricao(tree_widget):
     header = tree_widget.horizontalHeader()
     header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+
+
+def numero_linhas_consulta(query_consulta):
+    order_by_a_remover = "ORDER BY B1_COD ASC"
+    query_sem_order_by = query_consulta.replace(order_by_a_remover, "")
+
+    query = f"""
+                SELECT 
+                    COUNT(*) AS total_records
+                FROM ({query_sem_order_by}) AS combined_results;
+            """
+    return query
 
 
 class EngenhariaApp(QWidget):
@@ -274,6 +286,11 @@ class EngenhariaApp(QWidget):
         layout_linha_01 = QHBoxLayout()
         layout_linha_02 = QHBoxLayout()
         layout_linha_03 = QHBoxLayout()
+        self.layout_footer = QHBoxLayout()
+
+        self.label_line_number = QLabel("", self)
+        self.label_line_number.setObjectName("label-line-number")
+        self.label_line_number.setVisible(False)
 
         layout_linha_01.addWidget(QLabel("Código:"))
         layout_linha_01.addWidget(self.campo_codigo)
@@ -300,7 +317,6 @@ class EngenhariaApp(QWidget):
         layout_linha_02.addWidget(self.checkbox_bloqueado)
 
         layout_linha_03.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
-
         layout_linha_03.addWidget(self.btn_consultar)
         layout_linha_03.addWidget(self.btn_consultar_estrutura)
         layout_linha_03.addWidget(self.btn_onde_e_usado)
@@ -312,18 +328,18 @@ class EngenhariaApp(QWidget):
         layout_linha_03.addWidget(self.btn_abrir_pcp)
         layout_linha_03.addWidget(self.btn_abrir_compras)
         layout_linha_03.addWidget(self.btn_fechar)
-
-        # Adicione um espaçador esticável para centralizar os botões
         layout_linha_03.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
+
+        self.layout_footer.addStretch(1)
+        self.layout_footer.addWidget(self.label_line_number)
+        self.layout_footer.addStretch(1)
 
         layout.addLayout(layout_linha_01)
         layout.addLayout(layout_linha_02)
         layout.addLayout(layout_linha_03)
-
         layout.addWidget(self.tree)
-
-        layout.addWidget(self.tabWidget)  # Adicione o QTabWidget ao layout principal
-
+        layout.addLayout(self.layout_footer)
+        layout.addWidget(self.tabWidget)
         self.setLayout(layout)
 
         self.setStyleSheet("""
@@ -336,16 +352,21 @@ class EngenhariaApp(QWidget):
                         font-size: 11px;
                         font-weight: bold;
                     }
+                    
+                    QLabel#label-line-number {
+                        font-size: 14px;
+                        font-weight: regular;
+                    }
 
                     QLineEdit {
-                        background-color: #EEEEEE;
+                        background-color: #DFE0E2;
                         border: 1px solid #262626;
                         padding: 5px;
                         border-radius: 8px;
                     }
                     
                     QDateEdit, QComboBox {
-                        background-color: #EEEEEE;
+                        background-color: #DFE0E2;
                         border: 1px solid #262626;
                         padding: 5px 10px;
                         border-radius: 10px;
@@ -469,7 +490,6 @@ class EngenhariaApp(QWidget):
             writer = pd.ExcelWriter(file_path, engine='xlsxwriter')
             df.to_excel(writer, sheet_name='Dados', index=False)
 
-            workbook = writer.book
             worksheet = writer.sheets['Dados']
 
             for i, col in enumerate(df.columns):
@@ -596,6 +616,7 @@ class EngenhariaApp(QWidget):
         self.checkbox_bloqueado.setChecked(False)
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
+        self.label_line_number.hide()
 
     def controle_campos_formulario(self, status):
         self.campo_codigo.setEnabled(status)
@@ -673,22 +694,34 @@ class EngenhariaApp(QWidget):
         return query
 
     def executar_consulta(self):
-        select_query = self.query_consulta_tabela_produtos()
+        query_consulta = self.query_consulta_tabela_produtos()
+        query_contagem_linhas = numero_linhas_consulta(query_consulta)
 
-        if isinstance(select_query, bool) and select_query:
+        if isinstance(query_consulta, bool) and query_consulta:
             self.btn_consultar.setEnabled(True)
             return
 
+        self.label_line_number.hide()
         self.controle_campos_formulario(False)
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
         self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
 
         try:
-            dataframe = pd.read_sql(select_query, self.engine)
+            dataframe_line_number = pd.read_sql(query_contagem_linhas, self.engine)
+            line_number = dataframe_line_number.iloc[0, 0]
+            dataframe = pd.read_sql(query_consulta, self.engine)
             dataframe[''] = ''
 
             if not dataframe.empty:
+
+                if line_number > 1:
+                    message = f"Foram encontrados {line_number} resultados"
+                else:
+                    message = f"Foi encontrado {line_number} resultado"
+
+                self.label_line_number.setText(f"{message}")
+                self.label_line_number.show()
 
                 self.configurar_tabela(dataframe)
                 self.configurar_tabela_tooltips(dataframe)

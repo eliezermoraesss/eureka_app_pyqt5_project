@@ -115,14 +115,19 @@ class PcpApp(QWidget):
             }
 
             QLabel {
-                color: #EEEEEE;
+                color: #DFE0E2;
                 font-size: 12px;
                 font-weight: bold;
                 padding-left: 3px;
             }
             
+            QLabel#label-line-number {
+                font-size: 14px;
+                font-weight: regular;
+            }
+            
             QDateEdit {
-                background-color: #FFFFFF;
+                background-color: #DFE0E2;
                 border: 1px solid #262626;
                 margin-bottom: 20px;
                 padding: 5px 10px;
@@ -149,7 +154,7 @@ class PcpApp(QWidget):
             }
 
             QLineEdit {
-                background-color: #FFFFFF;
+                background-color: #DFE0E2;
                 border: 1px solid #262626;
                 padding: 5px 10px;
                 border-radius: 10px;
@@ -752,7 +757,12 @@ class PcpApp(QWidget):
 
             if not dataframe.empty:
 
-                self.label_line_number.setText(f"Foram encontrados {line_number} itens")
+                if line_number > 1:
+                    message = f"Foram encontrados {line_number} resultados"
+                else:
+                    message = f"Foi encontrado {line_number} resultado"
+
+                self.label_line_number.setText(f"{message}")
                 self.label_line_number.show()
 
                 dataframe.insert(0, 'Status OP', '')
