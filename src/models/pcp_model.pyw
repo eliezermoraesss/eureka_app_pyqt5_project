@@ -4,7 +4,7 @@ import sys
 import pyodbc
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, QMessageBox, \
-    QProgressBar, QSizePolicy, QTabWidget, QMenu, QItemDelegate, QAbstractItemView
+    QSizePolicy, QTabWidget, QMenu
 from PyQt5.QtGui import QFont, QColor, QIcon, QDesktopServices
 from PyQt5.QtCore import Qt, QCoreApplication, QDate, QUrl, QProcess, pyqtSignal
 import pyperclip
@@ -206,10 +206,6 @@ class PcpApp(QWidget):
             }
         """)
 
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setMinimum(0)
-        self.progress_bar.setMaximumWidth(400)
-
         self.label_codigo = QLabel("Código produto:", self)
         self.label_descricao_prod = QLabel("Descrição:", self)
         self.label_contem_descricao_prod = QLabel("Contém na descrição:", self)
@@ -310,10 +306,6 @@ class PcpApp(QWidget):
         self.btn_limpar = QPushButton("Limpar", self)
         self.btn_limpar.clicked.connect(self.limpar_campos)
         self.btn_limpar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-
-        self.btn_parar_consulta = QPushButton("Parar consulta")
-        self.btn_parar_consulta.clicked.connect(self.parar_consulta)
-        self.btn_parar_consulta.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.btn_nova_janela = QPushButton("Nova Janela", self)
         self.btn_nova_janela.clicked.connect(self.abrir_nova_janela)
@@ -774,16 +766,7 @@ class PcpApp(QWidget):
             line_number = dataframe_line_number.iloc[0, 0]
             dataframe = pd.read_sql(query_consulta_op, self.engine)
 
-            label_line_number = QLabel(f"{line_number} itens localizados.", self)
-            self.layout_footer.removeWidget(label_line_number)
-            self.layout_footer.removeItem(self.layout_footer)
-
             if not dataframe.empty:
-
-                self.layout_footer.addWidget(label_line_number)
-                self.progress_bar.setMaximum(line_number)
-                self.layout_footer.addWidget(self.progress_bar)
-                # self.layout_buttons.addWidget(self.btn_parar_consulta)
 
                 dataframe.insert(0, 'Status OP', '')
                 dataframe[''] = ''
@@ -836,11 +819,8 @@ class PcpApp(QWidget):
 
                     self.tree.setItem(i, j, item)
 
-                self.progress_bar.setValue(i + 1)
                 # QCoreApplication.processEvents()
 
-            # self.layout_buttons.removeWidget(self.btn_parar_consulta)
-            # self.btn_parar_consulta.setParent(None)
             self.tree.setSortingEnabled(True)
             self.controle_campos_formulario(True)
 
@@ -856,12 +836,6 @@ class PcpApp(QWidget):
 
     def fechar_janela(self):
         self.close()
-
-    def parar_consulta(self):
-        self.interromper_consulta_sql = True
-        if hasattr(self, 'engine') and self.engine is not None:
-            self.engine.dispose()
-        self.controle_campos_formulario(True)
 
     def executar_consulta_estrutura(self, table):
         item_selecionado = table.currentItem()
