@@ -78,6 +78,27 @@ def setup_mssql():
         sys.exit()
 
 
+def numero_linhas_consulta(query_consulta):
+    order_by_sc_somente_com_pedido = f"""ORDER BY PC.R_E_C_N_O_ DESC;"""
+    order_by_sc_sem_e_com_pedido = f"""ORDER BY "SC" DESC;"""
+
+    query_modificada = ""
+    if order_by_sc_somente_com_pedido in query_consulta:
+        query_modificada = query_consulta.replace(order_by_sc_somente_com_pedido, "")
+    elif order_by_sc_sem_e_com_pedido in query_consulta:
+        query_modificada = query_consulta.replace(order_by_sc_sem_e_com_pedido, "")
+
+    query = f"""
+        SELECT 
+            COUNT(*) AS total_records
+        FROM 
+            ({query_modificada}
+            )
+        AS combined_results;
+    """
+    return query
+
+
 class ComprasApp(QWidget):
     guia_fechada = pyqtSignal()
 
@@ -152,7 +173,7 @@ class ComprasApp(QWidget):
         self.progress_bar.setMinimum(0)
         self.progress_bar.setMaximumWidth(400)
 
-        self.checkbox_exibir_somente_sc_com_pedido = QCheckBox("SOMENTE SC COM PEDIDO DE COMPRA", self)
+        self.checkbox_exibir_somente_sc_com_pedido = QCheckBox("Somente Solicitações com Pedido de Compra", self)
 
         self.label_sc = QLabel("Solic. Compra:", self)
         self.label_sc.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -688,165 +709,22 @@ class ComprasApp(QWidget):
         self.btn_onde_e_usado.setEnabled(status)
         self.btn_ultimos_fornecedores.setEnabled(status)
 
-    def numero_linhas_consulta(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op,
-                               razao_social_fornecedor, nome_fantasia_fornecedor, descricao_produto, contem_descricao,
-                               cod_armazem):
+    def query_consulta_followup(self):
 
-        palavras_contem_descricao = contem_descricao.split('*')
-        clausulas_contem_descricao = " AND ".join(
-            [f"SC.C1_DESCRI LIKE '%{palavra}%'" for palavra in palavras_contem_descricao])
+        numero_sc = self.campo_sc.text().upper().strip()
+        numero_pedido = self.campo_pedido.text().upper().strip()
+        numero_qp = self.campo_qp.text().upper().strip()
+        numero_op = self.campo_OP.text().upper().strip()
+        codigo_produto = self.campo_codigo.text().upper().strip()
+        razao_social_fornecedor = self.campo_razao_social_fornecedor.text().upper().strip()
+        nome_fantasia_fornecedor = self.campo_nm_fantasia_fornecedor.text().upper().strip()
+        descricao_produto = self.campo_descricao_prod.text().upper().strip()
+        contem_descricao = self.campo_contem_descricao_prod.text().upper().strip()
+        checkbox_sc_somente_com_pedido = self.checkbox_exibir_somente_sc_com_pedido.isChecked()
 
-        data_inicio_formatada = self.campo_data_inicio.date().toString("yyyyMMdd")
-        data_fim_formatada = self.campo_data_fim.date().toString("yyyyMMdd")
-
-        if data_fim_formatada != '' and data_fim_formatada != '':
-            filtro_data = f"AND C1_EMISSAO >= '{data_inicio_formatada}' AND C1_EMISSAO <= '{data_fim_formatada}'"
-        else:
-            filtro_data = ''
-
-        query = f"""
-            SELECT 
-                COUNT(*) AS total_records
-            FROM 
-                (
-                SELECT 
-                    SC.C1_ZZNUMQP AS "QP",
-                    SC.C1_NUM AS "SC",
-                    SC.C1_ITEM AS "Item SC",
-                    SC.C1_QUANT AS "Qtd. SC",
-                    SC.C1_PEDIDO AS "Ped. Compra",
-                    SC.C1_ITEMPED AS "Item Ped.",
-                    PC.C7_QUANT AS "Qtd. Ped.",
-                    PC.C7_PRECO AS "Preço Unit. (R$)",
-                    PC.C7_TOTAL AS "Sub-total (R$)",
-                    PC.C7_DATPRF AS "Previsão Entrega",
-                    ITEM_NF.D1_DOC AS "Nota Fiscal Ent.",
-                    ITEM_NF.D1_QUANT AS "Qtd. Entregue",
-                    CASE 
-                        WHEN ITEM_NF.D1_QUANT IS NULL THEN SC.C1_QUJE 
-                        ELSE SC.C1_QUJE - ITEM_NF.D1_QUANT 
-                    END AS "Qtd. Pendente",
-                    ITEM_NF.D1_DTDIGIT AS "Data Entrega",
-                    PC.C7_ENCER AS "Status Ped. Compra",
-                    SC.C1_PRODUTO AS "Código",
-                    SC.C1_DESCRI AS "Descrição",
-                    SC.C1_UM AS "UM",
-                    PROD.B1_ZZLOCAL AS "Endereço:",
-                    SC.C1_EMISSAO AS "Emissão SC",
-                    PC.C7_EMISSAO AS "Emissão PC",
-                    ITEM_NF.D1_EMISSAO AS "Emissão NF",
-                    SC.C1_ORIGEM AS "Origem",
-                    SC.C1_OBS AS "Observação",
-                    SC.C1_LOCAL AS "Cod. Armazém",
-                    ARM.NNR_DESCRI AS "Desc. Armazém",
-                    SC.C1_IMPORT AS "Importado?",
-                    PC.C7_OBS AS "Observações",
-                    PC.C7_OBSM AS "Observações item",
-                    FORN.A2_COD AS "Cód. Forn.",
-                    FORN.A2_NOME AS "Raz. Soc. Forn.",
-                    FORN.A2_NREDUZ AS "Nom. Fantasia Forn.",
-                    US.USR_NOME AS "Solicitante",
-                    PC.S_T_A_M_P_ AS "Aberto em:",
-                    SC.C1_OP AS "OP"
-                FROM 
-                    {database}.dbo.SC1010 SC
-                LEFT JOIN 
-                    {database}.dbo.SD1010 ITEM_NF
-                    ON SC.C1_PEDIDO = ITEM_NF.D1_PEDIDO AND SC.C1_ITEMPED = ITEM_NF.D1_ITEMPC
-                LEFT JOIN
-                    {database}.dbo.SC7010 PC
-                    ON SC.C1_PEDIDO = PC.C7_NUM AND SC.C1_ITEMPED = PC.C7_ITEM AND SC.C1_ZZNUMQP = PC.C7_ZZNUMQP
-                LEFT JOIN
-                    {database}.dbo.SA2010 FORN
-                    ON FORN.A2_COD = SC.C1_FORNECE
-                LEFT JOIN
-                    {database}.dbo.NNR010 ARM
-                    ON SC.C1_LOCAL = ARM.NNR_CODIGO
-                LEFT JOIN 
-                    {database}.dbo.SYS_USR US
-                    ON SC.C1_SOLICIT = US.USR_CODIGO AND US.D_E_L_E_T_ <> '*'
-                INNER JOIN 
-                    {database}.dbo.SB1010 PROD
-                    ON PROD.B1_COD = SC.C1_PRODUTO
-                WHERE 
-                    SC.C1_PEDIDO LIKE '%{numero_pedido}%'
-                    AND SC.C1_NUM LIKE '%{numero_sc}'
-                    AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
-                    AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
-                    AND SC.C1_DESCRI LIKE '{descricao_produto}%'
-                    AND {clausulas_contem_descricao}
-                    AND SC.C1_OP LIKE '{numero_op}%' 
-                    AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}%'
-                    AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
-                    AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data}
-                
-                UNION ALL
-                
-                SELECT 
-                    SC.C1_ZZNUMQP AS "QP",
-                    SC.C1_NUM AS "SC",
-                    SC.C1_ITEM AS "Item SC",
-                    SC.C1_QUANT AS "Qtd. SC",
-                    NULL AS "Ped. Compra",
-                    NULL AS "Item Ped.",
-                    NULL AS "Qtd. Ped.",
-                    NULL AS "Preço Unit. (R$)",
-                    NULL AS "Sub-total (R$)",
-                    NULL AS "Previsão Entrega",
-                    NULL AS "Nota Fiscal Ent.",
-                    NULL AS "Qtd. Entregue",
-                    NULL AS "Qtd. Pendente",
-                    NULL AS "Data Entrega",
-                    NULL AS "Status Ped. Compra",
-                    SC.C1_PRODUTO AS "Código",
-                    SC.C1_DESCRI AS "Descrição",
-                    SC.C1_UM AS "UM",
-                    PROD.B1_ZZLOCAL AS "Endereço:",
-                    SC.C1_EMISSAO AS "Emissão SC",
-                    NULL AS "Emissão PC",
-                    NULL AS "Emissão NF",
-                    SC.C1_ORIGEM AS "Origem",
-                    SC.C1_OBS AS "Observação",
-                    SC.C1_LOCAL AS "Cod. Armazém",
-                    ARM.NNR_DESCRI AS "Desc. Armazém",
-                    SC.C1_IMPORT AS "Importado?",
-                    NULL AS "Observações",
-                    NULL AS "Observações item",
-                    NULL AS "Cód. Forn.",
-                    NULL AS "Raz. Soc. Forn.",
-                    NULL AS "Nom. Fantasia Forn.",
-                    US.USR_NOME AS "Solicitante",
-                    NULL AS "Aberto em:",
-                    SC.C1_OP AS "OP"
-                FROM 
-                    {database}.dbo.SC1010 SC
-                LEFT JOIN
-                    {database}.dbo.NNR010 ARM
-                    ON SC.C1_LOCAL = ARM.NNR_CODIGO
-                LEFT JOIN 
-                    {database}.dbo.SYS_USR US
-                    ON SC.C1_SOLICIT = US.USR_CODIGO AND US.D_E_L_E_T_ <> '*'
-                INNER JOIN 
-                    {database}.dbo.SB1010 PROD
-                    ON PROD.B1_COD = SC.C1_PRODUTO
-                WHERE 
-                    SC.C1_PEDIDO LIKE '      %'
-                    AND SC.C1_NUM LIKE '%{numero_sc}'
-                    AND SC.C1_ZZNUMQP LIKE '%{numero_pedido}'
-                    AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
-                    AND SC.C1_DESCRI LIKE '{descricao_produto}%'
-                    AND {clausulas_contem_descricao}
-                    AND SC.C1_OP LIKE '{numero_op}%'
-                    AND SC.C1_LOCAL LIKE '{cod_armazem}%'
-                    AND SC.D_E_L_E_T_ <> '*' {filtro_data}
-                )
-            AS combined_results;
-        """
-        return query
-
-    def query_consulta_followup(self, numero_sc, numero_pedido, codigo_produto, numero_qp, numero_op,
-                                razao_social_fornecedor, nome_fantasia_fornecedor, descricao_produto,
-                                contem_descricao, cod_armazem, checkbox_sc_somente_com_pedido):
+        cod_armazem = self.combobox_armazem.currentData()
+        if cod_armazem is None:
+            cod_armazem = ''
 
         palavras_contem_descricao = contem_descricao.split('*')
         clausulas_contem_descricao = " AND ".join(
@@ -939,9 +817,7 @@ class ComprasApp(QWidget):
                     AND SC.C1_OP LIKE '{numero_op}%' 
                     AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}%'
                     AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
-                    AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data}
-                ORDER BY 
-                    PC.R_E_C_N_O_ DESC;
+                    AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data} ORDER BY PC.R_E_C_N_O_ DESC;
             """
 
         solic_sem_pedido_where = f"""
@@ -1018,9 +894,7 @@ class ComprasApp(QWidget):
                     AND {clausulas_contem_descricao}
                     AND SC.C1_OP LIKE '{numero_op}%'
                     AND SC.C1_LOCAL LIKE '{cod_armazem}%'
-                    AND SC.D_E_L_E_T_ <> '*' {filtro_data}
-                ORDER BY 
-                    "SC" DESC;
+                    AND SC.D_E_L_E_T_ <> '*' {filtro_data} ORDER BY "SC" DESC;
             """
 
         if checkbox_sc_somente_com_pedido:
@@ -1029,31 +903,10 @@ class ComprasApp(QWidget):
             return common_select + solic_sem_pedido_where
 
     def executar_consulta(self):
-        numero_sc = self.campo_sc.text().upper().strip()
-        numero_pedido = self.campo_pedido.text().upper().strip()
-        numero_qp = self.campo_qp.text().upper().strip()
-        numero_op = self.campo_OP.text().upper().strip()
-        codigo_produto = self.campo_codigo.text().upper().strip()
-        razao_social_fornecedor = self.campo_razao_social_fornecedor.text().upper().strip()
-        nome_fantasia_fornecedor = self.campo_nm_fantasia_fornecedor.text().upper().strip()
-        descricao_produto = self.campo_descricao_prod.text().upper().strip()
-        contem_descricao = self.campo_contem_descricao_prod.text().upper().strip()
-        checkbox_sc_somente_com_pedido = self.checkbox_exibir_somente_sc_com_pedido.isChecked()
 
-        cod_armazem = self.combobox_armazem.currentData()
-        if cod_armazem is None:
-            cod_armazem = ''
+        query_consulta_filtro = self.query_consulta_followup()
 
-        query_consulta_filtro = self.query_consulta_followup(numero_sc, numero_pedido, codigo_produto,
-                                                             numero_qp, numero_op, razao_social_fornecedor,
-                                                             nome_fantasia_fornecedor,
-                                                             descricao_produto, contem_descricao, cod_armazem,
-                                                             checkbox_sc_somente_com_pedido)
-
-        query_contagem_linhas = self.numero_linhas_consulta(numero_sc, numero_pedido, codigo_produto, numero_qp,
-                                                            numero_op, razao_social_fornecedor,
-                                                            nome_fantasia_fornecedor,
-                                                            descricao_produto, contem_descricao, cod_armazem)
+        query_contagem_linhas = numero_linhas_consulta(query_consulta_filtro)
 
         self.controle_campos_formulario(False)
 
