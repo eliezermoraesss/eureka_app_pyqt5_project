@@ -291,7 +291,7 @@ class ComprasApp(QWidget):
         self.btn_saldo_estoque.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.btn_saldo_estoque.setEnabled(False)
 
-        self.btn_ultimos_fornecedores = QPushButton("Fornecedores x Prod.", self)
+        self.btn_ultimos_fornecedores = QPushButton("Fornecedores", self)
         self.btn_ultimos_fornecedores.clicked.connect(lambda: self.executar_ultimos_fornecedores(self.tree))
         self.btn_ultimos_fornecedores.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.btn_ultimos_fornecedores.setEnabled(False)
@@ -586,7 +586,7 @@ class ComprasApp(QWidget):
 
             menu = QMenu()
 
-            context_menu_ultimo_fornecedor = QAction('Fornecedores x Prod.', self)
+            context_menu_ultimo_fornecedor = QAction('Fornecedores', self)
             context_menu_ultimo_fornecedor.triggered.connect(lambda: self.executar_ultimos_fornecedores(table))
 
             context_menu_consultar_onde_usado = QAction('Onde é usado?', self)
@@ -1454,7 +1454,7 @@ class ComprasApp(QWidget):
 
                     tabela_ult_fornecedores.setSortingEnabled(True)
 
-                    layout_cabecalho.addWidget(QLabel(f'Fornecedores x Produto\n\n{codigo} - {descricao}'),
+                    layout_cabecalho.addWidget(QLabel(f'Fornecedores\n\n{codigo} - {descricao}'),
                                                alignment=Qt.AlignLeft)
                     layout_nova_guia_ult_forn.addLayout(layout_cabecalho)
 

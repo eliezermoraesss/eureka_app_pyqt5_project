@@ -286,6 +286,7 @@ class EngenhariaApp(QWidget):
         layout_linha_01 = QHBoxLayout()
         layout_linha_02 = QHBoxLayout()
         layout_linha_03 = QHBoxLayout()
+        layout_linha_04 = QHBoxLayout()
         self.layout_footer = QHBoxLayout()
 
         self.label_line_number = QLabel("", self)
@@ -330,6 +331,10 @@ class EngenhariaApp(QWidget):
         layout_linha_03.addWidget(self.btn_fechar)
         layout_linha_03.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
+        layout_linha_04.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
+
+        layout_linha_04.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
+
         self.layout_footer.addStretch(1)
         self.layout_footer.addWidget(self.label_line_number)
         self.layout_footer.addStretch(1)
@@ -337,6 +342,7 @@ class EngenhariaApp(QWidget):
         layout.addLayout(layout_linha_01)
         layout.addLayout(layout_linha_02)
         layout.addLayout(layout_linha_03)
+        layout.addLayout(layout_linha_04)
         layout.addWidget(self.tree)
         layout.addLayout(self.layout_footer)
         layout.addWidget(self.tabWidget)
@@ -424,7 +430,7 @@ class EngenhariaApp(QWidget):
 
                     QTableWidget {
                         border: 1px solid #000000;
-                        background-color: #686D76;
+                        background-color: #363636;
                     }
 
                     QTableWidget QHeaderView::section {
