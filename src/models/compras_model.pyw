@@ -479,7 +479,7 @@ class ComprasApp(QWidget):
             QPushButton {
                 background-color: #AF125A;
                 color: #eeeeee;
-                padding: 10px;
+                padding: 7px 10px;
                 border: 2px solid #AF125A;
                 border-radius: 12px;
                 font-size: 12px;

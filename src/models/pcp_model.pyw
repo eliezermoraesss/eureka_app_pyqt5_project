@@ -147,7 +147,7 @@ class PcpApp(QWidget):
             QPushButton {
                 background-color: #DC5F00;
                 color: #EEEEEE;
-                padding: 10px;
+                padding: 7px 10px;
                 border: 2px;
                 border-radius: 8px;
                 font-size: 12px;
@@ -217,6 +217,8 @@ class PcpApp(QWidget):
         self.label_data_fim = QLabel("Data final:", self)
         self.label_data_fim.setObjectName("data-fim")
         self.label_campo_observacao = QLabel("Observação:", self)
+        self.label_line_number = QLabel("", self)
+        self.label_line_number.setVisible(False)
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont(fonte_campos, tamanho_fonte_campos))
@@ -257,6 +259,7 @@ class PcpApp(QWidget):
         data_atual = QDate.currentDate()
         intervalo_meses = 12
         data_inicio = data_atual.addMonths(-intervalo_meses)
+
         self.campo_data_inicio.setDate(data_inicio)
         self.add_today_button(self.campo_data_inicio)
 
@@ -394,6 +397,8 @@ class PcpApp(QWidget):
         self.layout_buttons.addWidget(self.btn_fechar)
         self.layout_buttons.addStretch()
 
+        self.layout_footer.addWidget(self.label_line_number)
+
         layout.addLayout(layout_campos_linha_01)
         layout.addLayout(layout_campos_linha_02)
         layout.addLayout(self.layout_buttons)
@@ -473,6 +478,7 @@ class PcpApp(QWidget):
         self.campo_observacao.clear()
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
+        self.label_line_number.hide()
 
     def abrir_desenho(self, table):
         item_selecionado = table.currentItem()
@@ -755,7 +761,7 @@ class PcpApp(QWidget):
                                                                descricao_produto, contem_descricao, observacao)
         query_contagem_linhas = self.numero_linhas_consulta(codigo_produto, numero_qp, numero_op,
                                                             descricao_produto, contem_descricao, observacao)
-
+        self.label_line_number.hide()
         self.controle_campos_formulario(False)
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
@@ -767,6 +773,9 @@ class PcpApp(QWidget):
             dataframe = pd.read_sql(query_consulta_op, self.engine)
 
             if not dataframe.empty:
+
+                self.label_line_number.setText(f"Foram encontrados {line_number} itens")
+                self.label_line_number.show()
 
                 dataframe.insert(0, 'Status OP', '')
                 dataframe[''] = ''
@@ -796,26 +805,30 @@ class PcpApp(QWidget):
                 self.tree.setSortingEnabled(False)
                 self.tree.insertRow(i)
                 for j, value in enumerate(row):
-                    if j == 0:
-                        item = QTableWidgetItem()
-                        if row['Fechamento'].strip() == '':
-                            item.setIcon(open_icon)
-                        else:
-                            item.setIcon(closed_icon)
-                        item.setTextAlignment(Qt.AlignCenter)
-                    else:
-                        if j == 14 and value == 'S':
-                            value = 'Sim'
-                        elif j == 14 and value != 'S':
-                            value = 'Não'
-                        if 9 <= j <= 11 and not value.isspace():
-                            data_obj = datetime.strptime(value, "%Y%m%d")
-                            value = data_obj.strftime("%d/%m/%Y")
-
-                        item = QTableWidgetItem(str(value).strip())
-
-                        if j not in (6, 12, 15):
+                    if value is not None:
+                        if j == 0:
+                            item = QTableWidgetItem()
+                            if row['Fechamento'].strip() == '':
+                                item.setIcon(open_icon)
+                            else:
+                                item.setIcon(closed_icon)
                             item.setTextAlignment(Qt.AlignCenter)
+                        else:
+                            if j == 14 and value == 'S':
+                                value = 'Sim'
+                            elif j == 14 and value != 'S':
+                                value = 'Não'
+                            if 9 <= j <= 11 and not value.isspace():
+                                data_obj = datetime.strptime(value, "%Y%m%d")
+                                value = data_obj.strftime("%d/%m/%Y")
+
+                            item = QTableWidgetItem(str(value).strip())
+
+                            if j not in (6, 12, 15):
+                                item.setTextAlignment(Qt.AlignCenter)
+
+                    else:
+                        item = QTableWidgetItem('')
 
                     self.tree.setItem(i, j, item)
 
