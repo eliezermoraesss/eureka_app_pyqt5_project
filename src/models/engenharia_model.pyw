@@ -208,9 +208,9 @@ class EngenhariaApp(QWidget):
         logo_enaplic_path = os.path.join(script_dir, '..', 'resources', 'images', 'logo_enaplic.jpg')
         self.logo_label = QLabel(self)
         self.logo_label.setObjectName('logo-enaplic')
-        pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(300)
+        pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(400)
         self.logo_label.setPixmap(pixmap_logo)
-        self.logo_label.setAlignment(Qt.AlignLeft)
+        self.logo_label.setAlignment(Qt.AlignCenter)
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont(fonte, tamanho_fonte))
@@ -288,14 +288,12 @@ class EngenhariaApp(QWidget):
         self.btn_fechar.setMinimumWidth(100)
 
         layout = QVBoxLayout()
-        layout_header = QHBoxLayout()
         layout_campos_01 = QHBoxLayout()
         layout_campos_02 = QHBoxLayout()
         layout_button_03 = QHBoxLayout()
         layout_button_04 = QHBoxLayout()
-        self.layout_footer = QHBoxLayout()
-
-        layout_header.addWidget(self.logo_label)
+        self.layout_footer_label = QHBoxLayout()
+        layout_footer_logo = QHBoxLayout()
 
         layout_campos_01.addWidget(QLabel("Código:"))
         layout_campos_01.addWidget(self.campo_codigo)
@@ -332,17 +330,19 @@ class EngenhariaApp(QWidget):
 
         layout_button_04.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
-        self.layout_footer.addStretch(1)
-        self.layout_footer.addWidget(self.label_line_number)
-        self.layout_footer.addStretch(1)
+        self.layout_footer_label.addStretch(1)
+        self.layout_footer_label.addWidget(self.label_line_number)
+        self.layout_footer_label.addStretch(1)
+        
+        layout_footer_logo.addWidget(self.logo_label)
 
-        layout.addLayout(layout_header)
         layout.addLayout(layout_campos_01)
         layout.addLayout(layout_campos_02)
         layout.addLayout(layout_button_03)
         layout.addLayout(layout_button_04)
         layout.addWidget(self.tree)
-        layout.addLayout(self.layout_footer)
+        layout.addLayout(self.layout_footer_label)
+        layout.addLayout(layout_footer_logo)
         self.setLayout(layout)
 
         self.campo_codigo.returnPressed.connect(self.executar_consulta)
@@ -361,6 +361,10 @@ class EngenhariaApp(QWidget):
                         color: #EEEEEE;
                         font-size: 11px;
                         font-weight: bold;
+                    }
+                    
+                    QLabel#logo-enaplic {
+                        margin: 5px 0;
                     }
                     
                     QLabel#label-line-number {

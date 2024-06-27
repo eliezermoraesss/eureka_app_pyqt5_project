@@ -4,7 +4,7 @@ import pyodbc
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, \
     QComboBox, QSizePolicy, QTabWidget, QMenu, QCheckBox
-from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtGui import QFont, QIcon, QPixmap
 from PyQt5.QtCore import Qt, QDate, QProcess, pyqtSignal, QSize
 import pyperclip
 import pandas as pd
@@ -142,6 +142,14 @@ class ComprasApp(QWidget):
 
         for key, value in armazens.items():
             self.combobox_armazem.addItem(key + ' - ' + value, key)
+
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        logo_enaplic_path = os.path.join(script_dir, '..', 'resources', 'images', 'logo_enaplic.jpg')
+        self.logo_label = QLabel(self)
+        self.logo_label.setObjectName('logo-enaplic')
+        pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(400)
+        self.logo_label.setPixmap(pixmap_logo)
+        self.logo_label.setAlignment(Qt.AlignCenter)
 
         self.altura_linha = 35
         self.tamanho_fonte_tabela = 10
@@ -329,10 +337,11 @@ class ComprasApp(QWidget):
         self.campo_nm_fantasia_fornecedor.returnPressed.connect(self.executar_consulta)
 
         layout = QVBoxLayout()
-        layout_campos_linha_01 = QHBoxLayout()
-        layout_campos_linha_02 = QHBoxLayout()
+        layout_campos_01 = QHBoxLayout()
+        layout_campos_02 = QHBoxLayout()
         self.layout_buttons = QHBoxLayout()
-        self.layout_footer = QHBoxLayout()
+        self.layout_footer_label = QHBoxLayout()
+        layout_footer_logo = QHBoxLayout()
 
         container_sc = QVBoxLayout()
         container_sc.addWidget(self.label_sc)
@@ -382,21 +391,21 @@ class ComprasApp(QWidget):
         container_nm_fantasia_forn.addWidget(self.label_nm_fantasia_forn)
         container_nm_fantasia_forn.addWidget(self.campo_nm_fantasia_fornecedor)
 
-        layout_campos_linha_01.addLayout(container_sc)
-        layout_campos_linha_01.addLayout(container_pedido)
-        layout_campos_linha_01.addLayout(container_op)
-        layout_campos_linha_01.addLayout(container_qp)
-        layout_campos_linha_01.addLayout(container_codigo)
-        layout_campos_linha_01.addLayout(container_descricao_prod)
-        layout_campos_linha_01.addLayout(container_contem_descricao_prod)
-        layout_campos_linha_02.addLayout(container_data_ini)
-        layout_campos_linha_02.addLayout(container_data_fim)
-        layout_campos_linha_02.addLayout(container_combobox_armazem)
-        layout_campos_linha_02.addLayout(container_fornecedor)
-        layout_campos_linha_02.addLayout(container_nm_fantasia_forn)
-        layout_campos_linha_02.addWidget(self.checkbox_exibir_somente_sc_com_pedido)
-        layout_campos_linha_01.addStretch()
-        layout_campos_linha_02.addStretch()
+        layout_campos_01.addLayout(container_sc)
+        layout_campos_01.addLayout(container_pedido)
+        layout_campos_01.addLayout(container_op)
+        layout_campos_01.addLayout(container_qp)
+        layout_campos_01.addLayout(container_codigo)
+        layout_campos_01.addLayout(container_descricao_prod)
+        layout_campos_01.addLayout(container_contem_descricao_prod)
+        layout_campos_02.addLayout(container_data_ini)
+        layout_campos_02.addLayout(container_data_fim)
+        layout_campos_02.addLayout(container_combobox_armazem)
+        layout_campos_02.addLayout(container_fornecedor)
+        layout_campos_02.addLayout(container_nm_fantasia_forn)
+        layout_campos_02.addWidget(self.checkbox_exibir_somente_sc_com_pedido)
+        layout_campos_01.addStretch()
+        layout_campos_02.addStretch()
 
         self.layout_buttons.addWidget(self.btn_consultar)
         self.layout_buttons.addWidget(self.btn_parar_consulta)
@@ -410,15 +419,18 @@ class ComprasApp(QWidget):
         self.layout_buttons.addWidget(self.btn_fechar)
         self.layout_buttons.addStretch()
 
-        self.layout_footer.addStretch(1)
-        self.layout_footer.addWidget(self.label_line_number)
-        self.layout_footer.addStretch(1)
+        self.layout_footer_label.addStretch(1)
+        self.layout_footer_label.addWidget(self.label_line_number)
+        self.layout_footer_label.addStretch(1)
 
-        layout.addLayout(layout_campos_linha_01)
-        layout.addLayout(layout_campos_linha_02)
+        layout_footer_logo.addWidget(self.logo_label)
+
+        layout.addLayout(layout_campos_01)
+        layout.addLayout(layout_campos_02)
         layout.addLayout(self.layout_buttons)
         layout.addWidget(self.tree)
-        layout.addLayout(self.layout_footer)
+        layout.addLayout(self.layout_footer_label)
+        layout.addLayout(layout_footer_logo)
         self.setLayout(layout)
 
         self.setStyleSheet("""
