@@ -262,16 +262,16 @@ class ComercialApp(QWidget):
 
             worksheet.write('K3', 'TOTAL MP')
             worksheet.write_formula('L3', '=SUMIF(G:G, "MATÉRIA-PRIMA", I:I)', accounting_format)
-            
+
             worksheet.write('K4', 'TOTAL PROD. COMER. IMPORT. DIR.')
             worksheet.write_formula('L4', '=SUMIF(G:G, "PROD. COMER. IMPORT. DIRETO", I:I)', accounting_format)
-            
+
             worksheet.write('K5', 'TOTAL MAT. PRIMA IMPORTADA')
             worksheet.write_formula('L5', '=SUMIF(G:G, "MAT. PRIMA IMPORT. DIRETO", I:I)', accounting_format)
-            
+
             worksheet.write('K6', 'TOTAL TRAT. SUPERF.')
             worksheet.write_formula('L6', '=SUMIF(G:G, "TRAT. SUPERFICIAL", I:I)', accounting_format)
-            
+
             worksheet.write('M3', 'TOTAL (kg)')
             worksheet.write_formula('N3', '=SUMIF(D:D, "KG", C:C)')
 
@@ -283,7 +283,7 @@ class ComercialApp(QWidget):
                 worksheet.set_column(i, i, max_len + 2)
 
             writer.close()
-            
+
             os.startfile(file_path)
 
     def obter_dados_tabela(self):
@@ -312,8 +312,8 @@ class ComercialApp(QWidget):
 
         # Caminho para salvar o PDF
         file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
-                                                    f'{self.campo_codigo.text().upper().strip()}_MP.pdf',
-                                                    'Arquivos PDF (*.pdf);;Todos os arquivos (*)')
+                                                   f'{self.campo_codigo.text().upper().strip()}_MP.pdf',
+                                                   'Arquivos PDF (*.pdf);;Todos os arquivos (*)')
 
         if not file_path:
             return
@@ -409,9 +409,9 @@ class ComercialApp(QWidget):
         if codigo == '':
             self.btn_consultar.setEnabled(False)
             exibir_mensagem("ATENÇÃO!",
-                                 "Os campos de pesquisa estão vazios.\nPreencha algum campo e tente "
-                                 "novamente.\n\nツ\n\nSMARTPLIC®",
-                                 "info")
+                            "Os campos de pesquisa estão vazios.\nPreencha algum campo e tente "
+                            "novamente.\n\nツ\n\nSMARTPLIC®",
+                            "info")
             return True
 
         query = f"""
@@ -484,11 +484,11 @@ class ComercialApp(QWidget):
             # Converter para float com duas casas decimais
             columns_to_convert = ['QUANT.', 'VALOR UNIT. (R$)', 'SUB-TOTAL (R$)']
             consolidated_dataframe[columns_to_convert] = (consolidated_dataframe[columns_to_convert]
-                        .map(lambda x: round(float(x), 2)))
+                                                          .map(lambda x: round(float(x), 2)))
             consolidated_dataframe[''] = ''
-            
+
             self.configurar_tabela(consolidated_dataframe)
-            
+
             self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
             self.tree.setRowCount(0)
 
@@ -496,8 +496,8 @@ class ComercialApp(QWidget):
                 self.tree.setSortingEnabled(False)
                 self.tree.insertRow(i)
                 for j, value in enumerate(row):
-                    if j in (2, 7, 8):
-                        value = locale.format_string("%.2f", value, grouping=True)
+                    # if j in (2, 7, 8):
+                    # value = locale.format_string("%.2f", value, grouping=True)
                     if j == 4 and not value.isspace():
                         data_obj = datetime.strptime(value, "%Y%m%d")
                         value = data_obj.strftime("%d/%m/%Y")
