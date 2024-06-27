@@ -3,7 +3,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QToolButton, QStyle
 from PyQt5.QtGui import QFont, QColor, QPixmap
-from PyQt5.QtCore import Qt, QCoreApplication, QSize
+from PyQt5.QtCore import Qt, QSize
 import pyodbc
 import pyperclip
 import pandas as pd
@@ -18,6 +18,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, 
 from reportlab.lib.units import inch, mm
 from reportlab.lib import colors
 import os
+import xlwings as xw
 
 
 def exibir_mensagem(title, message, icon_type):
@@ -64,6 +65,15 @@ def setup_mssql():
         ctypes.windll.user32.MessageBoxW(0, f"Ocorreu um erro ao ler o arquivo: {ex}", "CADASTRO DE ESTRUTURA - TOTVS®",
                                          16 | 0)
         sys.exit()
+
+
+def recalculate_excel_formulas(file_path):
+    app_excel = xw.App(visible=False)
+    wb = xw.Book(file_path)
+    wb.app.calculate()  # Recalcular todas as fórmulas
+    wb.save()
+    wb.close()
+    app_excel.quit()
 
 
 class ComercialApp(QWidget):
@@ -195,7 +205,7 @@ class ComercialApp(QWidget):
         layout_footer_logo = QHBoxLayout()
 
         layout_linha_01.addWidget(self.campo_codigo)
-        layout_linha_01.addWidget(self.criar_botao_limpar(self.campo_codigo))
+        layout_linha_01.addWidget(self.criar_botao_limpar())
 
         layout_linha_01.addWidget(self.btn_consultar)
         layout_linha_01.addWidget(self.btn_exportar_excel)
@@ -212,13 +222,11 @@ class ComercialApp(QWidget):
 
         self.setLayout(layout)
 
-    def criar_botao_limpar(self, campo):
+    def criar_botao_limpar(self):
         botao_limpar = QToolButton(self)
         botao_limpar.setIcon(self.style().standardIcon(QStyle.SP_DialogCloseButton))  # Ícone integrado do Qt
         botao_limpar.setCursor(Qt.PointingHandCursor)
-        botao_limpar.clicked.connect(lambda: campo.clear())
-
-        # Definindo o tamanho do ícone
+        botao_limpar.clicked.connect(self.limpar_campos)
         botao_limpar.setIconSize(QSize(32, 32))
 
         # Estilizando o botão usando QSS
@@ -245,7 +253,7 @@ class ComercialApp(QWidget):
         desktop_path = os.path.join(os.path.expanduser("~"), 'Desktop')
 
         now = datetime.now()
-        default_filename = f'COMERCIAL-report_{now.today().strftime('%Y-%m-%d_%H%M%S')}.xlsx'
+        default_filename = f'COMERCIAL-report_{now.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
 
         file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como', os.path.join(desktop_path, default_filename),
                                                    'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
@@ -263,39 +271,45 @@ class ComercialApp(QWidget):
             df.to_excel(writer, sheet_name='Dados', index=False)
 
             workbook = writer.book
-            worksheet = writer.sheets['Dados']
+            worksheet_dados = writer.sheets['Dados']
 
-            # Definindo um formato contábil
-            accounting_format = workbook.add_format(
-                {'num_format': '[$R$-pt-BR] #,##0.00'})
-
-            # Adicionar fórmulas
-            worksheet.write('K2', 'TOTAL COMERCIAL')
-            worksheet.write_formula('L2', '=SUMIF(G:G, "COMERCIAL", I:I)', accounting_format)
-
-            worksheet.write('K3', 'TOTAL MP')
-            worksheet.write_formula('L3', '=SUMIF(G:G, "MATÉRIA-PRIMA", I:I)', accounting_format)
-
-            worksheet.write('K4', 'TOTAL PROD. COMER. IMPORT. DIR.')
-            worksheet.write_formula('L4', '=SUMIF(G:G, "PROD. COMER. IMPORT. DIRETO", I:I)', accounting_format)
-
-            worksheet.write('K5', 'TOTAL MAT. PRIMA IMPORTADA')
-            worksheet.write_formula('L5', '=SUMIF(G:G, "MAT. PRIMA IMPORT. DIRETO", I:I)', accounting_format)
-
-            worksheet.write('K6', 'TOTAL TRAT. SUPERF.')
-            worksheet.write_formula('L6', '=SUMIF(G:G, "TRAT. SUPERFICIAL", I:I)', accounting_format)
-
-            worksheet.write('M3', 'TOTAL (kg)')
-            worksheet.write_formula('N3', '=SUMIF(D:D, "KG", C:C)')
-
-            worksheet.write('K8', 'TOTAL GERAL')
-            worksheet.write_formula('L8', '=SUBTOTAL(9, L2:L6)', accounting_format)
-
+            # Ajustar largura das colunas na planilha 'Dados'
             for i, col in enumerate(df.columns):
                 max_len = df[col].astype(str).map(len).max()
-                worksheet.set_column(i, i, max_len + 2)
+                worksheet_dados.set_column(i, i, max_len + 2)
+
+            # Calcular a última linha da planilha 'Dados'
+            last_row = len(df) + 3  # +1 for header, +1 for the extra line we want to skip
+
+            # Definindo um formato contábil
+            accounting_format = workbook.add_format({'num_format': '[$R$-pt-BR] #,##0.00'})
+
+            # Adicionar fórmulas na planilha 'Dados' na última linha + 1
+            worksheet_dados.write(f'A{last_row}', 'TOTAL COMERCIAL')
+            worksheet_dados.write_formula(f'B{last_row}', f'=SUMIF(G2:G{last_row - 2}, "COMERCIAL", I2:I{last_row - 2})', accounting_format)
+
+            worksheet_dados.write(f'A{last_row + 1}', 'TOTAL MP')
+            worksheet_dados.write_formula(f'B{last_row + 1}', f'=SUMIF(G2:G{last_row - 2}, "MATÉRIA-PRIMA", I2:I{last_row - 2})', accounting_format)
+
+            worksheet_dados.write(f'A{last_row + 2}', 'TOTAL PROD. COMER. IMPORT. DIR.')
+            worksheet_dados.write_formula(f'B{last_row + 2}', f'=SUMIF(G2:G{last_row - 2}, "PROD. COMER. IMPORT. DIRETO", I2:I{last_row - 2})', accounting_format)
+
+            worksheet_dados.write(f'A{last_row + 3}', 'TOTAL MAT. PRIMA IMPORTADA')
+            worksheet_dados.write_formula(f'B{last_row + 3}',f'=SUMIF(G2:G{last_row - 2}, "MAT. PRIMA IMPORT. DIRETO", I2:I{last_row - 2})', accounting_format)
+
+            worksheet_dados.write(f'A{last_row + 4}', 'TOTAL TRAT. SUPERF.')
+            worksheet_dados.write_formula(f'B{last_row + 4}', f'=SUMIF(G2:G{last_row - 2}, "TRAT. SUPERFICIAL", I2:I{last_row - 2})', accounting_format)
+
+            worksheet_dados.write(f'C{last_row + 1}', 'TOTAL (kg)')
+            worksheet_dados.write_formula(f'C{last_row + 1}', f'=SUMIF(D2:D{last_row - 2}, "KG", C2:C{last_row - 2})')
+
+            worksheet_dados.write(f'A{last_row + 6}', 'TOTAL GERAL')
+            worksheet_dados.write_formula(f'B{last_row + 6}', f'=SUBTOTAL(9, B{last_row}:B{last_row + 4})',
+                                          accounting_format)
 
             writer.close()
+
+            recalculate_excel_formulas(file_path)
 
             os.startfile(file_path)
 
@@ -314,31 +328,34 @@ class ComercialApp(QWidget):
         return data
 
     def exportar_pdf(self):
-        # Obter dados da tabela
-        data = self.obter_dados_tabela()
-        column_headers = [self.tree.horizontalHeaderItem(i).text() for i in range(self.tree.columnCount())]
-        df = pd.DataFrame(data, columns=column_headers)
 
-        # Converter as colunas 'QUANT.', 'VALOR UNIT. (R$)' e 'SUB-TOTAL (R$)' para números
-        numeric_columns = ['QUANT.', 'VALOR UNIT. (R$)', 'SUB-TOTAL (R$)']
-        df[numeric_columns] = df[numeric_columns].apply(pd.to_numeric, errors='coerce')
-
-        # Caminho para salvar o PDF
-        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
-                                                   f'{self.campo_codigo.text().upper().strip()}_MP.pdf',
-                                                   'Arquivos PDF (*.pdf);;Todos os arquivos (*)')
+        # Obter caminho do arquivo Excel gerado anteriormente
+        file_path, _ = QFileDialog.getOpenFileName(self, 'Selecionar arquivo Excel', os.path.expanduser("~"),
+                                                   'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
 
         if not file_path:
             return
 
+        # Ler dados do Excel
+        dataframe_tabela = pd.read_excel(file_path, sheet_name='Dados')
+
+        # Caminho para salvar o PDF
+        pdf_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
+                                                  f'{self.campo_codigo.text().upper().strip()}_MP.pdf',
+                                                  'Arquivos PDF (*.pdf);;Todos os arquivos (*)')
+
+        if not pdf_path:
+            return
+
         # Criação do documento PDF
-        doc = SimpleDocTemplate(file_path, pagesize=A4)
+        doc = SimpleDocTemplate(pdf_path, pagesize=A4)
         elements = []
 
         # Adicionar logo
-        logo_path = "path/to/logo.png"  # Atualize com o caminho correto do logo
-        if os.path.exists(logo_path):
-            logo = Image(logo_path, 2 * inch, 2 * inch)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        logo_enaplic_path = os.path.join(script_dir, '..', 'resources', 'images', 'logo_enaplic.jpg')
+        if os.path.exists(logo_enaplic_path):
+            logo = Image(logo_enaplic_path, 2 * inch, 2 * inch)
             elements.append(logo)
 
         # Adicionar título e data/hora
@@ -350,9 +367,16 @@ class ComercialApp(QWidget):
         elements.append(date_time)
         elements.append(Paragraph("<br/><br/>", styles['Normal']))  # Espaço entre título e tabela
 
-        # Adicionar tabela
-        data_for_table = [column_headers] + df.values.tolist()
-        table = Table(data_for_table)
+        # Dados da tabela
+        column_headers = list(dataframe_tabela.columns)
+        data_for_table = [column_headers] + dataframe_tabela.values.tolist()
+
+        # Dados da tabela Valores
+        column_headers_costs = list(dataframe_valores_sem_formula.columns)
+        data_for_table_costs = [column_headers_costs] + dataframe_valores_sem_formula.values.tolist()
+
+        max_width = 540  # Largura máxima da tabela em pontos
+        col_widths = [max_width / len(column_headers)] * len(column_headers)
 
         # Estilo da tabela
         style = TableStyle([
@@ -364,8 +388,25 @@ class ComercialApp(QWidget):
             ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
             ('GRID', (0, 0), (-1, -1), 1, colors.black)
         ])
+
+        table = Table(data_for_table, colWidths=col_widths)
         table.setStyle(style)
         elements.append(table)
+
+        summary_table = Table(data_for_table_costs, colWidths=[270, 270])
+
+        summary_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+
+        elements.append(Paragraph("<br/><br/>", styles['Normal']))  # Espaço entre tabela e sumário
+        elements.append(summary_table)
 
         # Função para adicionar rodapé com paginação
         def add_page_number(canvas, doc):
@@ -374,7 +415,7 @@ class ComercialApp(QWidget):
             canvas.drawRightString(200 * mm, 15 * mm, text)
 
         doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
-        os.startfile(file_path)
+        os.startfile(pdf_path)
 
     def configurar_tabela(self, dataframe):
         self.tree.setColumnCount(len(dataframe.columns))
@@ -403,6 +444,8 @@ class ComercialApp(QWidget):
 
     def limpar_campos(self):
         self.campo_codigo.clear()
+        self.tree.setColumnCount(0)
+        self.tree.setRowCount(0)
 
     def bloquear_campos_pesquisa(self):
         self.campo_codigo.setEnabled(False)
