@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButto
     QTableWidget, \
     QTableWidgetItem, QHeaderView, QSizePolicy, QSpacerItem, QMessageBox, QFileDialog, QTabWidget, \
     QItemDelegate, QAbstractItemView, QCheckBox, QMenu, QAction, QComboBox, QStyle, QDialog, QTableView
-from PyQt5.QtGui import QFont, QIcon, QDesktopServices, QColor
+from PyQt5.QtGui import QFont, QIcon, QDesktopServices, QColor, QPixmap
 from PyQt5.QtCore import Qt, QUrl, QCoreApplication, pyqtSignal, QProcess
 import pyodbc
 import pyperclip
@@ -168,7 +168,6 @@ class EngenhariaApp(QWidget):
         self.combobox_armazem = QComboBox(self)
         self.combobox_armazem.setEditable(False)
         self.combobox_armazem.setObjectName('combobox-armazem')
-
         self.combobox_armazem.addItem("", None)
 
         armazens = {
@@ -201,6 +200,18 @@ class EngenhariaApp(QWidget):
         for key, value in armazens.items():
             self.combobox_armazem.addItem(key + ' - ' + value, key)
 
+        self.label_line_number = QLabel("", self)
+        self.label_line_number.setObjectName("label-line-number")
+        self.label_line_number.setVisible(False)
+
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        logo_enaplic_path = os.path.join(script_dir, '..', 'resources', 'images', 'logo_enaplic.jpg')
+        self.logo_label = QLabel(self)
+        self.logo_label.setObjectName('logo-enaplic')
+        pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(300)
+        self.logo_label.setPixmap(pixmap_logo)
+        self.logo_label.setAlignment(Qt.AlignLeft)
+
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont(fonte, tamanho_fonte))
         self.add_clear_button(self.campo_codigo)
@@ -213,17 +224,19 @@ class EngenhariaApp(QWidget):
         self.campo_contem_descricao.setFont(QFont(fonte, tamanho_fonte))
         self.add_clear_button(self.campo_contem_descricao)
 
-        self.tipo_var = QLineEdit(self)
-        self.tipo_var.setFont(QFont(fonte, tamanho_fonte))
-        self.add_clear_button(self.tipo_var)
+        self.campo_tipo = QLineEdit(self)
+        self.campo_tipo.setFont(QFont(fonte, tamanho_fonte))
+        self.add_clear_button(self.campo_tipo)
 
-        self.um_var = QLineEdit(self)
-        self.um_var.setFont(QFont(fonte, tamanho_fonte))
-        self.add_clear_button(self.um_var)
+        self.campo_um = QLineEdit(self)
+        self.campo_um.setFont(QFont(fonte, tamanho_fonte))
+        self.add_clear_button(self.campo_um)
 
-        self.grupo_var = QLineEdit(self)
-        self.grupo_var.setFont(QFont(fonte, tamanho_fonte))
-        self.add_clear_button(self.grupo_var)
+        self.campo_grupo = QLineEdit(self)
+        self.campo_grupo.setFont(QFont(fonte, tamanho_fonte))
+        self.add_clear_button(self.campo_grupo)
+
+        self.checkbox_bloqueado = QCheckBox("Bloqueado?", self)
 
         self.btn_consultar = QPushButton("Pesquisar", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
@@ -274,79 +287,70 @@ class EngenhariaApp(QWidget):
         self.btn_fechar.clicked.connect(self.fechar_janela)
         self.btn_fechar.setMinimumWidth(100)
 
-        # Conectar o evento returnPressed dos campos de entrada ao método executar_consulta
-        self.campo_codigo.returnPressed.connect(self.executar_consulta)
-        self.campo_descricao.returnPressed.connect(self.executar_consulta)
-        self.campo_contem_descricao.returnPressed.connect(self.executar_consulta)
-        self.tipo_var.returnPressed.connect(self.executar_consulta)
-        self.um_var.returnPressed.connect(self.executar_consulta)
-        self.grupo_var.returnPressed.connect(self.executar_consulta)
-
         layout = QVBoxLayout()
-        layout_linha_01 = QHBoxLayout()
-        layout_linha_02 = QHBoxLayout()
-        layout_linha_03 = QHBoxLayout()
-        layout_linha_04 = QHBoxLayout()
+        layout_header = QHBoxLayout()
+        layout_campos_01 = QHBoxLayout()
+        layout_campos_02 = QHBoxLayout()
+        layout_button_03 = QHBoxLayout()
+        layout_button_04 = QHBoxLayout()
         self.layout_footer = QHBoxLayout()
 
-        self.label_line_number = QLabel("", self)
-        self.label_line_number.setObjectName("label-line-number")
-        self.label_line_number.setVisible(False)
+        layout_header.addWidget(self.logo_label)
 
-        layout_linha_01.addWidget(QLabel("Código:"))
-        layout_linha_01.addWidget(self.campo_codigo)
+        layout_campos_01.addWidget(QLabel("Código:"))
+        layout_campos_01.addWidget(self.campo_codigo)
+        layout_campos_01.addWidget(QLabel("Descrição:"))
+        layout_campos_01.addWidget(self.campo_descricao)
+        layout_campos_01.addWidget(QLabel("Contém na Descrição:"))
+        layout_campos_01.addWidget(self.campo_contem_descricao)
 
-        layout_linha_01.addWidget(QLabel("Descrição:"))
-        layout_linha_01.addWidget(self.campo_descricao)
+        layout_campos_02.addWidget(QLabel("Tipo:"))
+        layout_campos_02.addWidget(self.campo_tipo)
+        layout_campos_02.addWidget(QLabel("Unid. Medida:"))
+        layout_campos_02.addWidget(self.campo_um)
+        layout_campos_02.addWidget(QLabel("Armazém:"))
+        layout_campos_02.addWidget(self.combobox_armazem)
+        layout_campos_02.addWidget(QLabel("Grupo:"))
+        layout_campos_02.addWidget(self.campo_grupo)
+        layout_campos_02.addWidget(self.checkbox_bloqueado)
 
-        layout_linha_01.addWidget(QLabel("Contém na Descrição:"))
-        layout_linha_01.addWidget(self.campo_contem_descricao)
+        layout_button_03.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        layout_button_03.addWidget(self.btn_consultar)
+        layout_button_03.addWidget(self.btn_consultar_estrutura)
+        layout_button_03.addWidget(self.btn_onde_e_usado)
+        layout_button_03.addWidget(self.btn_limpar)
+        layout_button_03.addWidget(self.btn_nova_janela)
+        layout_button_03.addWidget(self.btn_abrir_desenho)
+        layout_button_03.addWidget(self.btn_exportar_excel)
+        layout_button_03.addWidget(self.btn_calculo_peso)
+        layout_button_03.addWidget(self.btn_abrir_pcp)
+        layout_button_03.addWidget(self.btn_abrir_compras)
+        layout_button_03.addWidget(self.btn_fechar)
+        layout_button_03.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
-        layout_linha_02.addWidget(QLabel("Tipo:"))
-        layout_linha_02.addWidget(self.tipo_var)
+        layout_button_04.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
-        layout_linha_02.addWidget(QLabel("Unid. Medida:"))
-        layout_linha_02.addWidget(self.um_var)
-
-        layout_linha_02.addWidget(QLabel("Armazém:"))
-        layout_linha_02.addWidget(self.combobox_armazem)
-
-        layout_linha_02.addWidget(QLabel("Grupo:"))
-        layout_linha_02.addWidget(self.grupo_var)
-
-        self.checkbox_bloqueado = QCheckBox("Bloqueado?", self)
-        layout_linha_02.addWidget(self.checkbox_bloqueado)
-
-        layout_linha_03.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        layout_linha_03.addWidget(self.btn_consultar)
-        layout_linha_03.addWidget(self.btn_consultar_estrutura)
-        layout_linha_03.addWidget(self.btn_onde_e_usado)
-        layout_linha_03.addWidget(self.btn_limpar)
-        layout_linha_03.addWidget(self.btn_nova_janela)
-        layout_linha_03.addWidget(self.btn_abrir_desenho)
-        layout_linha_03.addWidget(self.btn_exportar_excel)
-        layout_linha_03.addWidget(self.btn_calculo_peso)
-        layout_linha_03.addWidget(self.btn_abrir_pcp)
-        layout_linha_03.addWidget(self.btn_abrir_compras)
-        layout_linha_03.addWidget(self.btn_fechar)
-        layout_linha_03.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
-
-        layout_linha_04.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
-
-        layout_linha_04.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        layout_button_04.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
         self.layout_footer.addStretch(1)
         self.layout_footer.addWidget(self.label_line_number)
         self.layout_footer.addStretch(1)
 
-        layout.addLayout(layout_linha_01)
-        layout.addLayout(layout_linha_02)
-        layout.addLayout(layout_linha_03)
-        layout.addLayout(layout_linha_04)
+        layout.addLayout(layout_header)
+        layout.addLayout(layout_campos_01)
+        layout.addLayout(layout_campos_02)
+        layout.addLayout(layout_button_03)
+        layout.addLayout(layout_button_04)
         layout.addWidget(self.tree)
         layout.addLayout(self.layout_footer)
-        layout.addWidget(self.tabWidget)
         self.setLayout(layout)
+
+        self.campo_codigo.returnPressed.connect(self.executar_consulta)
+        self.campo_descricao.returnPressed.connect(self.executar_consulta)
+        self.campo_contem_descricao.returnPressed.connect(self.executar_consulta)
+        self.campo_tipo.returnPressed.connect(self.executar_consulta)
+        self.campo_um.returnPressed.connect(self.executar_consulta)
+        self.campo_grupo.returnPressed.connect(self.executar_consulta)
 
         self.setStyleSheet("""
                     * {
@@ -615,10 +619,10 @@ class EngenhariaApp(QWidget):
         self.campo_codigo.clear()
         self.campo_descricao.clear()
         self.campo_contem_descricao.clear()
-        self.tipo_var.clear()
-        self.um_var.clear()
+        self.campo_tipo.clear()
+        self.campo_um.clear()
         self.combobox_armazem.clear()
-        self.grupo_var.clear()
+        self.campo_grupo.clear()
         self.checkbox_bloqueado.setChecked(False)
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
@@ -628,10 +632,10 @@ class EngenhariaApp(QWidget):
         self.campo_codigo.setEnabled(status)
         self.campo_descricao.setEnabled(status)
         self.campo_contem_descricao.setEnabled(status)
-        self.tipo_var.setEnabled(status)
-        self.um_var.setEnabled(status)
+        self.campo_tipo.setEnabled(status)
+        self.campo_um.setEnabled(status)
         self.combobox_armazem.setEnabled(status)
-        self.grupo_var.setEnabled(status)
+        self.campo_grupo.setEnabled(status)
         self.btn_consultar.setEnabled(status)
         self.btn_exportar_excel.setEnabled(status)
         self.btn_consultar_estrutura.setEnabled(status)
@@ -642,10 +646,10 @@ class EngenhariaApp(QWidget):
         codigo = self.campo_codigo.text().upper().strip()
         descricao = self.campo_descricao.text().upper().strip()
         descricao2 = self.campo_contem_descricao.text().upper().strip()
-        tipo = self.tipo_var.text().upper().strip()
-        um = self.um_var.text().upper().strip()
+        tipo = self.campo_tipo.text().upper().strip()
+        um = self.campo_um.text().upper().strip()
         armazem = self.combobox_armazem.currentData()
-        grupo = self.grupo_var.text().upper().strip()
+        grupo = self.campo_grupo.text().upper().strip()
         status_checkbox = self.checkbox_bloqueado.isChecked()
 
         armazem = armazem if armazem is not None else ''
