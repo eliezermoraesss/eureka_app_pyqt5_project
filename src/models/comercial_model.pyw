@@ -2,7 +2,7 @@ import locale
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QToolButton, QStyle
-from PyQt5.QtGui import QFont, QColor
+from PyQt5.QtGui import QFont, QColor, QPixmap
 from PyQt5.QtCore import Qt, QCoreApplication, QSize
 import pyodbc
 import pyperclip
@@ -156,6 +156,14 @@ class ComercialApp(QWidget):
             }
         """)
 
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        logo_enaplic_path = os.path.join(script_dir, '..', 'resources', 'images', 'logo_enaplic.jpg')
+        self.logo_label = QLabel(self)
+        self.logo_label.setObjectName('logo-enaplic')
+        pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(400)
+        self.logo_label.setPixmap(pixmap_logo)
+        self.logo_label.setAlignment(Qt.AlignCenter)
+
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont("Segoe UI", 10))
         self.campo_codigo.setFixedWidth(500)
@@ -184,6 +192,7 @@ class ComercialApp(QWidget):
         layout = QVBoxLayout()
         layout_linha_01 = QHBoxLayout()
         layout_footer = QHBoxLayout()
+        layout_footer_logo = QHBoxLayout()
 
         layout_linha_01.addWidget(self.campo_codigo)
         layout_linha_01.addWidget(self.criar_botao_limpar(self.campo_codigo))
@@ -194,9 +203,13 @@ class ComercialApp(QWidget):
         layout_linha_01.addWidget(self.btn_fechar)
         layout_linha_01.addStretch()
 
+        layout_footer_logo.addWidget(self.logo_label)
+
         layout.addLayout(layout_linha_01)
         layout.addWidget(self.tree)
         layout.addLayout(layout_footer)
+        layout.addLayout(layout_footer_logo)
+
         self.setLayout(layout)
 
     def criar_botao_limpar(self, campo):

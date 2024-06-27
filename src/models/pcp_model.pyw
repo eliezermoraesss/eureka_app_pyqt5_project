@@ -5,7 +5,7 @@ import pyodbc
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, QMessageBox, \
     QSizePolicy, QTabWidget, QMenu
-from PyQt5.QtGui import QFont, QColor, QIcon, QDesktopServices
+from PyQt5.QtGui import QFont, QColor, QIcon, QDesktopServices, QPixmap
 from PyQt5.QtCore import Qt, QCoreApplication, QDate, QUrl, QProcess, pyqtSignal
 import pyperclip
 import pandas as pd
@@ -224,6 +224,14 @@ class PcpApp(QWidget):
             }
         """)
 
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        logo_enaplic_path = os.path.join(script_dir, '..', 'resources', 'images', 'logo_enaplic.jpg')
+        self.logo_label = QLabel(self)
+        self.logo_label.setObjectName('logo-enaplic')
+        pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(400)
+        self.logo_label.setPixmap(pixmap_logo)
+        self.logo_label.setAlignment(Qt.AlignCenter)
+
         self.label_codigo = QLabel("Código:", self)
         self.label_descricao_prod = QLabel("Descrição:", self)
         self.label_contem_descricao_prod = QLabel("Contém na descrição:", self)
@@ -354,10 +362,11 @@ class PcpApp(QWidget):
         self.campo_observacao.returnPressed.connect(self.executar_consulta)
 
         layout = QVBoxLayout()
-        layout_campos_linha_01 = QHBoxLayout()
-        layout_campos_linha_02 = QHBoxLayout()
+        layout_campos_01 = QHBoxLayout()
+        layout_campos_02 = QHBoxLayout()
         self.layout_buttons = QHBoxLayout()
-        self.layout_footer = QHBoxLayout()
+        self.layout_footer_label = QHBoxLayout()
+        layout_footer_logo = QHBoxLayout()
 
         container_codigo = QVBoxLayout()
         container_codigo.addWidget(self.label_codigo)
@@ -391,16 +400,16 @@ class PcpApp(QWidget):
         container_observacao.addWidget(self.label_campo_observacao)
         container_observacao.addWidget(self.campo_observacao)
 
-        layout_campos_linha_01.addLayout(container_codigo)
-        layout_campos_linha_01.addLayout(container_descricao_prod)
-        layout_campos_linha_01.addLayout(container_contem_descricao_prod)
-        layout_campos_linha_01.addLayout(container_op)
-        layout_campos_linha_01.addLayout(container_qp)
-        layout_campos_linha_01.addLayout(container_observacao)
-        layout_campos_linha_02.addLayout(container_data_ini)
-        layout_campos_linha_02.addLayout(container_data_fim)
-        layout_campos_linha_01.addStretch()
-        layout_campos_linha_02.addStretch()
+        layout_campos_01.addLayout(container_codigo)
+        layout_campos_01.addLayout(container_descricao_prod)
+        layout_campos_01.addLayout(container_contem_descricao_prod)
+        layout_campos_01.addLayout(container_op)
+        layout_campos_01.addLayout(container_qp)
+        layout_campos_01.addLayout(container_observacao)
+        layout_campos_02.addLayout(container_data_ini)
+        layout_campos_02.addLayout(container_data_fim)
+        layout_campos_01.addStretch()
+        layout_campos_02.addStretch()
 
         self.layout_buttons.addWidget(self.btn_consultar)
         self.layout_buttons.addWidget(self.btn_consultar_estrutura)
@@ -415,13 +424,15 @@ class PcpApp(QWidget):
         self.layout_buttons.addWidget(self.btn_fechar)
         self.layout_buttons.addStretch()
 
-        self.layout_footer.addWidget(self.label_line_number)
+        self.layout_footer_label.addWidget(self.label_line_number)
+        layout_footer_logo.addWidget(self.logo_label)
 
-        layout.addLayout(layout_campos_linha_01)
-        layout.addLayout(layout_campos_linha_02)
+        layout.addLayout(layout_campos_01)
+        layout.addLayout(layout_campos_02)
         layout.addLayout(self.layout_buttons)
         layout.addWidget(self.tree)
-        layout.addLayout(self.layout_footer)
+        layout.addLayout(self.layout_footer_label)
+        layout.addLayout(layout_footer_logo)
         self.setLayout(layout)
 
     def fechar_guia(self, index):
