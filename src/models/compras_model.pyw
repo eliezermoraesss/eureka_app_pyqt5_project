@@ -832,28 +832,28 @@ class ComprasApp(QWidget):
 
         solic_com_pedido_where = f"""
                 WHERE 
-                    SC.C1_PEDIDO LIKE '%{numero_pedido}%'
+                    SC.C1_PEDIDO LIKE '%{numero_pedido}'
                     AND SC.C1_NUM LIKE '%{numero_sc}'
-                    AND PC.C7_ZZNUMQP LIKE '%{numero_qp}%'
+                    AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
                     AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
                     AND SC.C1_DESCRI LIKE '{descricao_produto}%'
                     AND {clausulas_contem_descricao}
-                    AND SC.C1_OP LIKE '{numero_op}%' 
-                    AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}%'
+                    AND SC.C1_OP LIKE '%{numero_op}' 
+                    AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}'
                     AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
                     AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data} ORDER BY PC.R_E_C_N_O_ DESC;
             """
 
         solic_sem_pedido_where = f"""
                 WHERE 
-                    SC.C1_PEDIDO LIKE '%{numero_pedido}%'
+                    SC.C1_PEDIDO LIKE '%{numero_pedido}'
                     AND SC.C1_NUM LIKE '%{numero_sc}'
-                    AND SC.C1_ZZNUMQP LIKE '%{numero_qp}%'
+                    AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
                     AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
                     AND SC.C1_DESCRI LIKE '{descricao_produto}%'
                     AND {clausulas_contem_descricao}
-                    AND SC.C1_OP LIKE '{numero_op}%' 
-                    AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}%'
+                    AND SC.C1_OP LIKE '%{numero_op}' 
+                    AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}'
                     AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
                     AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data}
 
@@ -911,12 +911,12 @@ class ComprasApp(QWidget):
                     PROD.B1_COD = SC.C1_PRODUTO
                 WHERE 
                     SC.C1_PEDIDO LIKE '      %'
-                    AND SC.C1_NUM LIKE '%{numero_sc}%'
-                    AND SC.C1_ZZNUMQP LIKE '%{numero_qp}%'
+                    AND SC.C1_NUM LIKE '%{numero_sc}'
+                    AND SC.C1_ZZNUMQP LIKE '%{numero_qp}'
                     AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
                     AND SC.C1_DESCRI LIKE '{descricao_produto}%'
                     AND {clausulas_contem_descricao}
-                    AND SC.C1_OP LIKE '{numero_op}%'
+                    AND SC.C1_OP LIKE '%{numero_op}'
                     AND SC.C1_LOCAL LIKE '{cod_armazem}%'
                     AND SC.D_E_L_E_T_ <> '*' {filtro_data} ORDER BY "SC" DESC;
             """
