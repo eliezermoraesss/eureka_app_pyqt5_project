@@ -175,7 +175,7 @@ class ComercialApp(QWidget):
         self.logo_label.setObjectName('logo-enaplic')
         pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(60)
         self.logo_label.setPixmap(pixmap_logo)
-        self.logo_label.setAlignment(Qt.AlignCenter)
+        self.logo_label.setAlignment(Qt.AlignLeft)
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont("Segoe UI", 10))

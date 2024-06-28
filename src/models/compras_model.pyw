@@ -149,7 +149,7 @@ class ComprasApp(QWidget):
         self.logo_label.setObjectName('logo-enaplic')
         pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(60)
         self.logo_label.setPixmap(pixmap_logo)
-        self.logo_label.setAlignment(Qt.AlignCenter)
+        self.logo_label.setAlignment(Qt.AlignLeft)
 
         self.altura_linha = 35
         self.tamanho_fonte_tabela = 10
@@ -261,7 +261,7 @@ class ComprasApp(QWidget):
         self.add_clear_button(self.campo_nm_fantasia_fornecedor)
 
         self.campo_data_inicio = QDateEdit(self)
-        self.campo_data_inicio.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_data_inicio.setFont(QFont(fonte_campos, 10))
         self.campo_data_inicio.setFixedWidth(150)
         self.campo_data_inicio.setCalendarPopup(True)
         self.campo_data_inicio.setDisplayFormat("dd/MM/yyyy")
@@ -273,7 +273,7 @@ class ComprasApp(QWidget):
         add_today_button(self.campo_data_inicio)
 
         self.campo_data_fim = QDateEdit(self)
-        self.campo_data_fim.setFont(QFont("Segoe UI", 10))
+        self.campo_data_fim.setFont(QFont(fonte_campos, 10))
         self.campo_data_fim.setFixedWidth(150)
         self.campo_data_fim.setCalendarPopup(True)
         self.campo_data_fim.setDisplayFormat("dd/MM/yyyy")
@@ -940,9 +940,8 @@ class ComprasApp(QWidget):
         try:
             dataframe_line_number = pd.read_sql(query_contagem_linhas, self.engine)
             line_number = dataframe_line_number.iloc[0, 0]
-            dataframe = pd.read_sql(query_consulta_filtro, self.engine)
 
-            if not dataframe.empty:
+            if line_number >= 1:
 
                 if line_number > 1:
                     message = f"Foram encontrados {line_number} resultados"
@@ -952,21 +951,22 @@ class ComprasApp(QWidget):
                 self.label_line_number.setText(f"{message}")
                 self.label_line_number.show()
 
-                dataframe.insert(0, 'Status PC', '')
-                dataframe[''] = ''
-                dataframe.insert(11, 'Dias em atraso', '')
-
                 data_atual = datetime.now()
-
-                self.configurar_tabela(dataframe)
-                self.configurar_tabela_tooltips(dataframe)
-
-                self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
-                self.tree.setRowCount(0)
             else:
                 exibir_mensagem("EUREKA® Compras", 'Nada encontrado!', "info")
                 self.controle_campos_formulario(True)
                 return
+
+            dataframe = pd.read_sql(query_consulta_filtro, self.engine)
+            dataframe.insert(0, 'Status PC', '')
+            dataframe[''] = ''
+            dataframe.insert(11, 'Dias em atraso', '')
+
+            self.configurar_tabela(dataframe)
+            self.configurar_tabela_tooltips(dataframe)
+
+            self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
+            self.tree.setRowCount(0)
 
             # Construir caminhos relativos
             script_dir = os.path.dirname(os.path.abspath(__file__))

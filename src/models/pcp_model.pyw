@@ -230,7 +230,7 @@ class PcpApp(QWidget):
         self.logo_label.setObjectName('logo-enaplic')
         pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(60)
         self.logo_label.setPixmap(pixmap_logo)
-        self.logo_label.setAlignment(Qt.AlignCenter)
+        self.logo_label.setAlignment(Qt.AlignLeft)
 
         self.label_codigo = QLabel("Código:", self)
         self.label_descricao_prod = QLabel("Descrição:", self)
@@ -277,7 +277,7 @@ class PcpApp(QWidget):
         self.add_clear_button(self.campo_OP)
 
         self.campo_data_inicio = QDateEdit(self)
-        self.campo_data_inicio.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_data_inicio.setFont(QFont(fonte_campos, 10))
         self.campo_data_inicio.setFixedWidth(150)
         self.campo_data_inicio.setCalendarPopup(True)
         self.campo_data_inicio.setDisplayFormat("dd/MM/yyyy")
@@ -290,7 +290,7 @@ class PcpApp(QWidget):
         self.add_today_button(self.campo_data_inicio)
 
         self.campo_data_fim = QDateEdit(self)
-        self.campo_data_fim.setFont(QFont(fonte_campos, tamanho_fonte_campos))
+        self.campo_data_fim.setFont(QFont(fonte_campos, 10))
         self.campo_data_fim.setFixedWidth(150)
         self.campo_data_fim.setCalendarPopup(True)
         self.campo_data_fim.setDisplayFormat("dd/MM/yyyy")
@@ -722,7 +722,13 @@ class PcpApp(QWidget):
             LEFT JOIN 
                 {database}.dbo.SYS_USR users
             ON 
-                users.USR_CNLOGON = op.C2_XMAQUIN AND users.D_E_L_E_T_ <> '*'
+                users.USR_CNLOGON = op.C2_XMAQUIN 
+                AND users.D_E_L_E_T_ <> '*'
+                AND users.USR_ID = (
+                    SELECT MAX(users.USR_ID) 
+                    FROM {database}.dbo.SYS_USR users
+                    WHERE users.USR_CNLOGON = op.C2_XMAQUIN 
+                AND users.D_E_L_E_T_ <> '*')
             WHERE 
                 C2_ZZNUMQP LIKE '%{numero_qp}'
                 AND C2_PRODUTO LIKE '{codigo_produto}%'
