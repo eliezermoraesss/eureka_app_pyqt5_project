@@ -192,7 +192,7 @@ class ComercialApp(QWidget):
         self.btn_exportar_pdf.setEnabled(False)
 
         self.btn_salvar_excel = QPushButton("Exportar Excel", self)
-        self.btn_salvar_excel.clicked.connect(self.salvar_excel("salvar_excel"))
+        self.btn_salvar_excel.clicked.connect(self.salvar_excel)
         self.btn_salvar_excel.setMinimumWidth(100)
         self.btn_salvar_excel.setEnabled(False)
 
@@ -252,19 +252,15 @@ class ComercialApp(QWidget):
 
         return botao_limpar
 
-    def salvar_excel(self, tipo_operacao):
+    def salvar_excel(self):
 
         now = datetime.now()
         default_filename = f'{self.codigo}_report_mp_{now.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
 
-        if tipo_operacao == 'salvar_excel':
-            desktop_path = os.path.join(os.path.expanduser("~"), 'Desktop')
-            self.file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
-                                                            os.path.join(desktop_path, default_filename),
-                                                            'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
-        elif tipo_operacao == 'exportar_pdf':
-            temp_path = os.environ.get('TEMP')
-            self.file_path = os.path.join(temp_path, default_filename)
+        desktop_path = os.path.join(os.path.expanduser("~"), 'Desktop')
+        self.file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
+                                                        os.path.join(desktop_path, default_filename),
+                                                        'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
 
         if self.file_path:
             data = self.obter_dados_tabela()
