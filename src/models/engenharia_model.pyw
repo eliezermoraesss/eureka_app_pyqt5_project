@@ -205,10 +205,10 @@ class EngenhariaApp(QWidget):
         self.label_line_number.setVisible(False)
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        logo_enaplic_path = os.path.join(script_dir, '..', 'resources', 'images', 'logo_enaplic.jpg')
+        logo_enaplic_path = os.path.join(script_dir, '..', 'resources', 'images', 'LOGO.jpeg')
         self.logo_label = QLabel(self)
         self.logo_label.setObjectName('logo-enaplic')
-        pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(400)
+        pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(60)
         self.logo_label.setPixmap(pixmap_logo)
         self.logo_label.setAlignment(Qt.AlignCenter)
 
