@@ -262,6 +262,11 @@ class EngenhariaApp(QWidget):
         self.btn_onde_e_usado.setMinimumWidth(150)
         self.btn_onde_e_usado.setEnabled(False)
 
+        self.btn_saldo_estoque = QPushButton("Saldos em Estoque", self)
+        self.btn_saldo_estoque.clicked.connect(lambda: self.executar_saldo_em_estoque(self.tree))
+        self.btn_saldo_estoque.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.btn_saldo_estoque.setEnabled(False)
+
         self.btn_limpar = QPushButton("Limpar", self)
         self.btn_limpar.clicked.connect(self.limpar_campos)
         self.btn_limpar.setMinimumWidth(100)
@@ -316,6 +321,7 @@ class EngenhariaApp(QWidget):
         layout_button_03.addWidget(self.btn_consultar)
         layout_button_03.addWidget(self.btn_consultar_estrutura)
         layout_button_03.addWidget(self.btn_onde_e_usado)
+        layout_button_03.addWidget(self.btn_saldo_estoque)
         layout_button_03.addWidget(self.btn_limpar)
         layout_button_03.addWidget(self.btn_nova_janela)
         layout_button_03.addWidget(self.btn_abrir_desenho)
@@ -643,6 +649,7 @@ class EngenhariaApp(QWidget):
         self.btn_exportar_excel.setEnabled(status)
         self.btn_consultar_estrutura.setEnabled(status)
         self.btn_onde_e_usado.setEnabled(status)
+        self.btn_saldo_estoque.setEnabled(status)
 
     def query_consulta_tabela_produtos(self):
 
