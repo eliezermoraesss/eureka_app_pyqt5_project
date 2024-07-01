@@ -367,6 +367,16 @@ class ComercialApp(QWidget):
 
         df_valores = df_valores.dropna(axis=1, how='all').fillna('')
 
+        def format_decimal(value):
+            return f'{value:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
+
+        if 'QUANT.' in df_dados.columns:
+            df_dados['QUANT.'] = df_dados['QUANT.'].apply(format_decimal)
+        if 'VALOR UNIT. (R$)' in df_dados.columns:
+            df_dados['VALOR UNIT. (R$)'] = df_dados['VALOR UNIT. (R$)'].apply(format_decimal)
+        if 'SUB-TOTAL (R$)' in df_dados.columns:
+            df_dados['SUB-TOTAL (R$)'] = df_dados['SUB-TOTAL (R$)'].apply(format_decimal)
+
         if 'TIPO' in df_dados.columns:
             df_dados = df_dados.drop(columns='TIPO')
 
@@ -374,7 +384,7 @@ class ComercialApp(QWidget):
             df_dados = df_dados.rename(columns={'UNID. MED.': 'UNID.\nMED.'})
 
         if 'ARMAZÉM' in df_dados.columns:
-            df_dados['ARM.'] = df_dados['ARM.'].replace({'COMERCIAL': 'COM.', 'MATÉRIA-PRIMA': 'MP'})
+            df_dados['ARMAZÉM'] = df_dados['ARMAZÉM'].replace({'COMERCIAL': 'COM.', 'MATÉRIA-PRIMA': 'MP'})
 
         if 'ULT. ATUALIZ.' in df_dados.columns:
             df_dados = df_dados.rename(columns={'ULT. ATUALIZ.': 'ÚLT.\nATUALIZ.'})
@@ -385,7 +395,8 @@ class ComercialApp(QWidget):
         if 'SUB-TOTAL (R$)' in df_dados.columns:
             df_dados = df_dados.rename(columns={'SUB-TOTAL (R$)': 'TOTAL (R$)'})
 
-        table_valores = df_valores.values.tolist()
+        table_valores_header = ['TOTAL', 'CUSTO (R$)', 'QUANTIDADE\n(kg)']
+        table_valores = table_valores_header + df_valores.values.tolist()
 
         # Criação do documento PDF
         doc = SimpleDocTemplate(pdf_path, pagesize=A4, topMargin=20, bottomMargin=30)
@@ -404,11 +415,12 @@ class ComercialApp(QWidget):
         styles = getSampleStyleSheet()
         title_style = ParagraphStyle(name='TitleStyle', fontSize=16, fontName='Helvetica-Bold', leading=24, alignment=TA_CENTER)
         normal_style = ParagraphStyle(name='NormalStyle', fontSize=10, leading=12, alignment=TA_CENTER)
-        product_style = ParagraphStyle(name='ProductStyle', fontSize=14, leading=20, fontName='Helvetica-Bold',
+        product_style = ParagraphStyle(name='ProductStyle', fontSize=12, leading=20, fontName='Helvetica-Bold',
                                        spaceAfter=12)
 
         title = Paragraph("Relatório de Custo de Matéria-Prima", title_style)
         date_time = Paragraph(datetime.now().strftime("%d/%m/%Y %H:%M"), normal_style)
+        elements.append(Paragraph("<br/><br/>", normal_style))
         product = Paragraph(f'{self.codigo} XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', product_style)
 
         elements.append(title)
