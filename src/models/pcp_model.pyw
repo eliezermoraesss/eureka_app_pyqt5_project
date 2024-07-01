@@ -230,7 +230,7 @@ class PcpApp(QWidget):
         self.logo_label.setObjectName('logo-enaplic')
         pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(60)
         self.logo_label.setPixmap(pixmap_logo)
-        self.logo_label.setAlignment(Qt.AlignLeft)
+        self.logo_label.setAlignment(Qt.AlignRight)
 
         self.label_codigo = QLabel("Código:", self)
         self.label_descricao_prod = QLabel("Descrição:", self)
@@ -413,8 +413,8 @@ class PcpApp(QWidget):
 
         self.layout_buttons.addWidget(self.btn_consultar)
         self.layout_buttons.addWidget(self.btn_consultar_estrutura)
-        self.layout_buttons.addWidget(self.btn_saldo_estoque)
         self.layout_buttons.addWidget(self.btn_onde_e_usado)
+        self.layout_buttons.addWidget(self.btn_saldo_estoque)
         self.layout_buttons.addWidget(self.btn_nova_janela)
         self.layout_buttons.addWidget(self.btn_limpar)
         self.layout_buttons.addWidget(self.btn_abrir_desenho)
@@ -424,7 +424,10 @@ class PcpApp(QWidget):
         self.layout_buttons.addWidget(self.btn_fechar)
         self.layout_buttons.addStretch()
 
+        self.layout_footer_label.addStretch(1)
         self.layout_footer_label.addWidget(self.label_line_number)
+        self.layout_footer_label.addStretch(1)
+
         layout_footer_logo.addWidget(self.logo_label)
 
         layout.addLayout(layout_campos_01)
@@ -770,30 +773,31 @@ class PcpApp(QWidget):
         try:
             dataframe_line_number = pd.read_sql(query_contagem_linhas, self.engine)
             line_number = dataframe_line_number.iloc[0, 0]
-            dataframe = pd.read_sql(query_consulta_op, self.engine)
 
-            if not dataframe.empty:
+            if line_number >= 1:
 
                 if line_number > 1:
-                    message = f"Foram encontrados {line_number} resultados"
+                    message = f"Foram encontrados {line_number} resultados!"
                 else:
-                    message = f"Foi encontrado {line_number} resultado"
+                    message = f"Foi encontrado {line_number} resultado!"
 
                 self.label_line_number.setText(f"{message}")
                 self.label_line_number.show()
 
-                dataframe.insert(0, 'Status OP', '')
-                dataframe[''] = ''
-
-                self.configurar_tabela(dataframe)
-                self.configurar_tabela_tooltips(dataframe)
-
-                self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
-                self.tree.setRowCount(0)
             else:
                 exibir_mensagem("EUREKA® PCP", 'Nada encontrado!', "info")
                 self.controle_campos_formulario(True)
                 return
+
+            dataframe = pd.read_sql(query_consulta_op, self.engine)
+            dataframe.insert(0, 'Status OP', '')
+            dataframe[''] = ''
+
+            self.configurar_tabela(dataframe)
+            self.configurar_tabela_tooltips(dataframe)
+
+            self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
+            self.tree.setRowCount(0)
 
             # Construir caminhos relativos
             script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -1019,17 +1023,19 @@ class PcpApp(QWidget):
 
             if codigo not in self.guias_abertas_onde_usado:
                 query_onde_usado = f"""
-                    SELECT STRUT.G1_COD AS "Código", PROD.B1_DESC "Descrição" 
-                    FROM {database}.dbo.SG1010 STRUT 
-                    INNER JOIN {database}.dbo.SB1010 PROD 
-                    ON G1_COD = B1_COD WHERE G1_COMP = '{codigo}' 
-                    AND STRUT.G1_REVFIM <> 'ZZZ' AND STRUT.D_E_L_E_T_ <> '*'
-                    AND STRUT.G1_REVFIM = (SELECT MAX(G1_REVFIM) 
-                                            FROM {database}.dbo.SG1010 
-                                            WHERE 
-                                                G1_COD = '{codigo}' 
-                                                AND G1_REVFIM <> 'ZZZ' 
-                                                AND STRUT.D_E_L_E_T_ <> '*');
+                    SELECT 
+                        STRUT.G1_COD AS "Código", 
+                        PROD.B1_DESC "Descrição"
+                    FROM 
+                        {database}.dbo.SG1010 STRUT 
+                    INNER JOIN 
+                        {database}.dbo.SB1010 PROD 
+                    ON 
+                        G1_COD = B1_COD 
+                    WHERE G1_COMP = '{codigo}' 
+                        AND STRUT.G1_REVFIM <> 'ZZZ' 
+                        AND STRUT.D_E_L_E_T_ <> '*'
+                    ORDER BY B1_DESC ASC;
                 """
                 self.guias_abertas_onde_usado.append(codigo)
                 try:

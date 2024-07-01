@@ -210,7 +210,7 @@ class EngenhariaApp(QWidget):
         self.logo_label.setObjectName('logo-enaplic')
         pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(60)
         self.logo_label.setPixmap(pixmap_logo)
-        self.logo_label.setAlignment(Qt.AlignLeft)
+        self.logo_label.setAlignment(Qt.AlignRight)
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont(fonte, tamanho_fonte))
@@ -326,10 +326,6 @@ class EngenhariaApp(QWidget):
         layout_button_03.addWidget(self.btn_fechar)
         layout_button_03.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
-        layout_button_04.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
-
-        layout_button_04.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
-
         self.layout_footer_label.addStretch(1)
         self.layout_footer_label.addWidget(self.label_line_number)
         self.layout_footer_label.addStretch(1)
@@ -353,116 +349,119 @@ class EngenhariaApp(QWidget):
         self.campo_grupo.returnPressed.connect(self.executar_consulta)
 
         self.setStyleSheet("""
-                    * {
-                        background-color: #363636;
-                    }
+            * {
+                background-color: #363636;
+            }
 
-                    QLabel, QCheckBox {
-                        color: #EEEEEE;
-                        font-size: 11px;
-                        font-weight: bold;
-                    }
-                    
-                    QLabel#logo-enaplic {
-                        margin: 5px 0;
-                    }
-                    
-                    QLabel#label-line-number {
-                        font-size: 14px;
-                        font-weight: regular;
-                    }
-
-                    QLineEdit {
-                        background-color: #DFE0E2;
-                        border: 1px solid #262626;
-                        padding: 5px;
-                        border-radius: 8px;
-                    }
-                    
-                    QDateEdit, QComboBox {
-                        background-color: #DFE0E2;
-                        border: 1px solid #262626;
-                        padding: 5px 10px;
-                        border-radius: 10px;
-                        height: 20px;
-                        font-size: 16px;
-                    }
+            QLabel, QCheckBox {
+                color: #EEEEEE;
+                font-size: 11px;
+                font-weight: bold;
+            }
             
-                    QDateEdit::drop-down, QComboBox::drop-down {
-                        subcontrol-origin: padding;
-                        subcontrol-position: top right;
-                        width: 30px;
-                        border-left-width: 1px;
-                        border-left-color: darkgray;
-                        border-left-style: solid;
-                        border-top-right-radius: 3px;
-                        border-bottom-right-radius: 3px;
-                    }
+            QLabel#logo-enaplic {
+                margin: 5px 0;
+            }
             
-                    QDateEdit::down-arrow, QComboBox::down-arrow {
-                        image: url(../resources/images/arrow.png);
-                        width: 10px;
-                        height: 10px;
-                    }   
+            QLabel#label-line-number {
+                font-size: 14px;
+                font-weight: regular;
+            }
 
-                    QPushButton {
-                        background-color: #0a79f8;
-                        color: #fff;
-                        padding: 5px 15px;
-                        border: 2px;
-                        border-radius: 8px;
-                        font-size: 11px;
-                        height: 20px;
-                        font-weight: bold;
-                        margin-top: 6px;
-                        margin-bottom: 6px;
-                    }
+            QLineEdit {
+                background-color: #DFE0E2;
+                border: 1px solid #262626;
+                padding: 5px;
+                border-radius: 8px;
+            }
+            
+            QDateEdit, QComboBox {
+                background-color: #DFE0E2;
+                border: 1px solid #262626;
+                padding: 5px 10px;
+                border-radius: 10px;
+                height: 20px;
+                font-size: 16px;
+            }
+    
+            QDateEdit::drop-down, QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 30px;
+                border-left-width: 1px;
+                border-left-color: darkgray;
+                border-left-style: solid;
+                border-top-right-radius: 3px;
+                border-bottom-right-radius: 3px;
+            }
+    
+            QDateEdit::down-arrow, QComboBox::down-arrow {
+                image: url(../resources/images/arrow.png);
+                width: 10px;
+                height: 10px;
+            }   
 
-                    QPushButton#PCP, QPushButton#compras {
-                        background-color: #DC5F00;
-                    }
+            QPushButton {
+                background-color: #0a79f8;
+                color: #fff;
+                padding: 5px 15px;
+                border: 2px;
+                border-radius: 8px;
+                font-size: 11px;
+                height: 20px;
+                font-weight: bold;
+                margin-top: 6px;
+                margin-bottom: 6px;
+            }
 
-                    QPushButton#compras {
-                        background-color: #836FFF;
-                    }
+            QPushButton#PCP, QPushButton#compras {
+                background-color: #DC5F00;
+            }
 
-                    QPushButton:hover, QPushButton#PCP:hover, QPushButton#compras:hover {
-                        background-color: #fff;
-                        color: #0a79f8
-                    }
+            QPushButton#compras {
+                background-color: #836FFF;
+            }
 
-                    QPushButton:pressed, QPushButton#PCP:pressed, QPushButton#compras:pressed {
-                        background-color: #6703c5;
-                        color: #fff;
-                    }
+            QPushButton:hover, QPushButton#PCP:hover, QPushButton#compras:hover {
+                background-color: #fff;
+                color: #0a79f8
+            }
 
-                    QTableWidget {
-                        border: 1px solid #000000;
-                        background-color: #363636;
-                    }
+            QPushButton:pressed, QPushButton#PCP:pressed, QPushButton#compras:pressed {
+                background-color: #6703c5;
+                color: #fff;
+            }
 
-                    QTableWidget QHeaderView::section {
-                        background-color: #262626;
-                        color: #A7A6A6;
-                        padding: 5px;
-                        height: 18px;
-                    }
+            QTableWidget {
+                border: 1px solid #000000;
+                background-color: #262626;
+                padding-left: 10px;
+            }
 
-                    QTableWidget QHeaderView::section:horizontal {
-                        border-top: 1px solid #333;
-                    }
+            QTableWidget QHeaderView::section {
+                background-color: #262626;
+                color: #A7A6A6;
+                padding: 5px;
+                height: 18px;
+            }
 
-                    QTableWidget::item {
-                        background-color: #363636;
-                        color: #fff;
-                        font-weight: bold;
-                    }
+            QTableWidget QHeaderView::section:horizontal {
+                border-top: 1px solid #333;
+            }
 
-                    QTableWidget::item:selected {
-                        background-color: #000000;
-                        color: #EEEEEE;
-                        font-weight: bold;
-                    }
+            QTableWidget::item {
+                background-color: #363636;
+                color: #fff;
+                font-weight: bold;
+                padding-right: 8px;
+                padding-left: 8px;
+            }
+
+            QTableWidget::item:selected {
+                background-color: #000000;
+                color: #EEEEEE;
+                font-weight: bold;
+            }
                 """)
 
     def abrir_modulo_pcp(self):
@@ -540,6 +539,7 @@ class EngenhariaApp(QWidget):
         self.tree.verticalHeader().setDefaultSectionSize(self.altura_linha)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
         self.tree.horizontalHeader().setStretchLastSection(True)
+
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(lambda pos: self.showContextMenu(pos, self.tree))
 
@@ -730,9 +730,9 @@ class EngenhariaApp(QWidget):
             if not dataframe.empty:
 
                 if line_number > 1:
-                    message = f"Foram encontrados {line_number} resultados"
+                    message = f"Foram encontrados {line_number} resultados!"
                 else:
-                    message = f"Foi encontrado {line_number} resultado"
+                    message = f"Foi encontrado {line_number} resultado!"
 
                 self.label_line_number.setText(f"{message}")
                 self.label_line_number.show()
@@ -984,25 +984,39 @@ class EngenhariaApp(QWidget):
 
     def executar_consulta_onde_usado(self, table):
         item_selecionado = table.currentItem()
+        codigo, descricao = None, None
 
         if item_selecionado:
-            codigo = table.item(item_selecionado.row(), 0).text()
-            descricao_onde_usado = table.item(item_selecionado.row(), 1).text()
+            header = table.horizontalHeader()
+            codigo_col = None
+            descricao_col = None
+
+            for col in range(header.count()):
+                header_text = table.horizontalHeaderItem(col).text()
+                if header_text == 'Código':
+                    codigo_col = col
+                elif header_text == 'Descrição':
+                    descricao_col = col
+
+            if codigo_col is not None and descricao_col is not None:
+                codigo = table.item(item_selecionado.row(), codigo_col).text()
+                descricao = table.item(item_selecionado.row(), descricao_col).text()
 
             if codigo not in self.guias_abertas_onde_usado:
                 query_onde_usado = f"""
-                    SELECT STRUT.G1_COD AS "Código", PROD.B1_DESC "Descrição" 
-                    FROM {database}.dbo.SG1010 STRUT 
-                    INNER JOIN {database}.dbo.SB1010 PROD 
-                    ON G1_COD = B1_COD WHERE G1_COMP = '{codigo}' 
-                    AND STRUT.G1_REVFIM <> 'ZZZ' AND STRUT.D_E_L_E_T_ <> '*'
-                    AND STRUT.G1_REVFIM = (SELECT MAX(G1_REVFIM) 
-                                            FROM {database}.dbo.SG1010 
-                                            WHERE 
-                                                G1_COD = '{codigo}' 
-                                                AND G1_REVFIM <> 'ZZZ' 
-                                                AND STRUT.D_E_L_E_T_ <> '*');
-
+                    SELECT 
+                        STRUT.G1_COD AS "Código", 
+                        PROD.B1_DESC "Descrição"
+                    FROM 
+                        {database}.dbo.SG1010 STRUT 
+                    INNER JOIN 
+                        {database}.dbo.SB1010 PROD 
+                    ON 
+                        G1_COD = B1_COD 
+                    WHERE G1_COMP = '{codigo}' 
+                    AND STRUT.G1_REVFIM <> 'ZZZ' 
+                    AND STRUT.D_E_L_E_T_ <> '*'
+                    ORDER BY B1_DESC ASC;
                 """
                 self.guias_abertas_onde_usado.append(codigo)
                 try:
@@ -1049,7 +1063,7 @@ class EngenhariaApp(QWidget):
                     # Ajustar automaticamente a largura da coluna "Descrição"
                     ajustar_largura_coluna_descricao(tabela_onde_usado)
 
-                    layout_cabecalho.addWidget(QLabel(f'Onde é usado?\n\n{codigo} - {descricao_onde_usado}'),
+                    layout_cabecalho.addWidget(QLabel(f'Onde é usado?\n\n{codigo} - {descricao}'),
                                                alignment=Qt.AlignLeft)
                     layout_nova_guia_estrutura.addLayout(layout_cabecalho)
                     layout_nova_guia_estrutura.addWidget(tabela_onde_usado)

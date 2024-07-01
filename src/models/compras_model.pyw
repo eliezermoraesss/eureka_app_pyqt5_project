@@ -149,9 +149,9 @@ class ComprasApp(QWidget):
         self.logo_label.setObjectName('logo-enaplic')
         pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(60)
         self.logo_label.setPixmap(pixmap_logo)
-        self.logo_label.setAlignment(Qt.AlignLeft)
+        self.logo_label.setAlignment(Qt.AlignRight)
 
-        self.altura_linha = 35
+        self.altura_linha = 30
         self.tamanho_fonte_tabela = 10
         self.fonte_tabela = 'Segoe UI'
 
@@ -501,7 +501,7 @@ class ComprasApp(QWidget):
                 color: #eeeeee;
                 padding: 7px 10px;
                 border: 2px solid #AF125A;
-                border-radius: 12px;
+                border-radius: 8px;
                 font-size: 12px;
                 height: 20px;
                 font-weight: bold;
@@ -763,7 +763,7 @@ class ComprasApp(QWidget):
             filtro_data = ''
 
         common_select = f"""
-                SELECT 
+                SELECT
                     SC.C1_ZZNUMQP AS "QP",
                     SC.C1_NUM AS "SC",
                     SC.C1_ITEM AS "Item SC",
@@ -944,9 +944,9 @@ class ComprasApp(QWidget):
             if line_number >= 1:
 
                 if line_number > 1:
-                    message = f"Foram encontrados {line_number} resultados"
+                    message = f"Foram encontrados {line_number} resultados!"
                 else:
-                    message = f"Foi encontrado {line_number} resultado"
+                    message = f"Foi encontrado {line_number} resultado!"
 
                 self.label_line_number.setText(f"{message}")
                 self.label_line_number.show()
@@ -986,7 +986,6 @@ class ComprasApp(QWidget):
 
                 self.tree.setSortingEnabled(False)
                 self.tree.insertRow(i)
-                self.tree.setColumnHidden(13, True)
 
                 for j, value in enumerate(row):
                     if value is not None:
@@ -1123,17 +1122,19 @@ class ComprasApp(QWidget):
 
             if codigo not in self.guias_abertas_onde_usado:
                 query_onde_usado = f"""
-                    SELECT STRUT.G1_COD AS "Código", PROD.B1_DESC "Descrição" 
-                    FROM {database}.dbo.SG1010 STRUT 
-                    INNER JOIN {database}.dbo.SB1010 PROD 
-                    ON G1_COD = B1_COD WHERE G1_COMP = '{codigo}' 
-                    AND STRUT.G1_REVFIM <> 'ZZZ' AND STRUT.D_E_L_E_T_ <> '*'
-                    AND STRUT.G1_REVFIM = (SELECT MAX(G1_REVFIM) 
-                                            FROM {database}.dbo.SG1010 
-                                            WHERE 
-                                                G1_COD = '{codigo}' 
-                                                AND G1_REVFIM <> 'ZZZ' 
-                                                AND STRUT.D_E_L_E_T_ <> '*');
+                    SELECT 
+                        STRUT.G1_COD AS "Código", 
+                        PROD.B1_DESC "Descrição"
+                    FROM 
+                        {database}.dbo.SG1010 STRUT 
+                    INNER JOIN 
+                        {database}.dbo.SB1010 PROD 
+                    ON 
+                        G1_COD = B1_COD 
+                    WHERE G1_COMP = '{codigo}' 
+                        AND STRUT.G1_REVFIM <> 'ZZZ' 
+                        AND STRUT.D_E_L_E_T_ <> '*'
+                    ORDER BY B1_DESC ASC;
                 """
                 self.guias_abertas_onde_usado.append(codigo)
                 try:
