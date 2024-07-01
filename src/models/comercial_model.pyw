@@ -11,9 +11,11 @@ import ctypes
 from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
+
+from reportlab.lib.enums import TA_CENTER
 from sqlalchemy import create_engine
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Image
 from reportlab.lib.units import inch, mm
 from reportlab.lib import colors
@@ -363,8 +365,30 @@ class ComercialApp(QWidget):
         df_dados = dataframe_tabela.iloc[:nan_row_index].dropna(how='all')
         df_valores = dataframe_tabela.iloc[nan_row_index + 1:].dropna(how='all')
 
+        df_valores = df_valores.dropna(axis=1, how='all').fillna('')
+
+        if 'TIPO' in df_dados.columns:
+            df_dados = df_dados.drop(columns='TIPO')
+
+        if 'UNID. MED.' in df_dados.columns:
+            df_dados = df_dados.rename(columns={'UNID. MED.': 'UNID.\nMED.'})
+
+        if 'ARMAZÉM' in df_dados.columns:
+            df_dados['ARM.'] = df_dados['ARM.'].replace({'COMERCIAL': 'COM.', 'MATÉRIA-PRIMA': 'MP'})
+
+        if 'ULT. ATUALIZ.' in df_dados.columns:
+            df_dados = df_dados.rename(columns={'ULT. ATUALIZ.': 'ÚLT.\nATUALIZ.'})
+
+        if 'VALOR UNIT. (R$)' in df_dados.columns:
+            df_dados = df_dados.rename(columns={'VALOR UNIT. (R$)': 'VALOR\nUNIT. (R$)'})
+
+        if 'SUB-TOTAL (R$)' in df_dados.columns:
+            df_dados = df_dados.rename(columns={'SUB-TOTAL (R$)': 'TOTAL (R$)'})
+
+        table_valores = df_valores.values.tolist()
+
         # Criação do documento PDF
-        doc = SimpleDocTemplate(pdf_path, pagesize=A4)
+        doc = SimpleDocTemplate(pdf_path, pagesize=A4, topMargin=20, bottomMargin=30)
         elements = []
 
         # Adicionar logo
@@ -372,41 +396,59 @@ class ComercialApp(QWidget):
         logo_enaplic_path = os.path.join(script_dir, '..', 'resources', 'images', 'logo_enaplic.jpg')
 
         if os.path.exists(logo_enaplic_path):
-            logo = Image(logo_enaplic_path, 2 * inch, 2 * inch)
+            logo = Image(logo_enaplic_path, 5 * inch, 1 * inch)
             elements.append(logo)
+            elements.append(Paragraph("<br/><br/>"))  # Espaço entre título e tabela
 
         # Adicionar título e data/hora
         styles = getSampleStyleSheet()
-        title = Paragraph("Relatório de Materiais", styles['Title'])
-        date_time = Paragraph(datetime.now().strftime("%d/%m/%Y %H:%M"), styles['Normal'])
+        title_style = ParagraphStyle(name='TitleStyle', fontSize=16, fontName='Helvetica-Bold', leading=24, alignment=TA_CENTER)
+        normal_style = ParagraphStyle(name='NormalStyle', fontSize=10, leading=12, alignment=TA_CENTER)
+        product_style = ParagraphStyle(name='ProductStyle', fontSize=14, leading=20, fontName='Helvetica-Bold',
+                                       spaceAfter=12)
+
+        title = Paragraph("Relatório de Custo de Matéria-Prima", title_style)
+        date_time = Paragraph(datetime.now().strftime("%d/%m/%Y %H:%M"), normal_style)
+        product = Paragraph(f'{self.codigo} XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', product_style)
 
         elements.append(title)
         elements.append(date_time)
-        elements.append(Paragraph("<br/><br/>", styles['Normal']))  # Espaço entre título e tabela
+        elements.append(product)
+        elements.append(Paragraph("<br/><br/>", normal_style))  # Espaço entre título e tabela
 
         # Dados da tabela
         column_headers_dados = list(df_dados.columns)
         table_dados = [column_headers_dados] + df_dados.values.tolist()
 
-        max_width = 540  # Largura máxima da tabela em pontos
-        col_widths = [max_width / len(column_headers_dados)] * len(column_headers_dados)
+        # Função para calcular a largura das colunas com base no conteúdo
+        def calculate_col_widths(dataframe, col_width_multiplier=1.2, min_width=45):
+            col_widths = []
+            for col in dataframe.columns:
+                max_length = max(dataframe[col].astype(str).apply(len).max(), len(col))
+                col_width = max_length * col_width_multiplier
+                if col == 'DESCRIÇÃO':
+                    col_width *= 2.5  # Aumentar a largura da coluna "descrição"
+                col_width = max(col_width, min_width)
+                col_widths.append(col_width)
+            return col_widths
+
+        col_widths_dados = calculate_col_widths(df_dados)
 
         # Estilo da tabela
         style = TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 6),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
             ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
             ('GRID', (0, 0), (-1, -1), 1, colors.black)
         ])
 
-        table = Table(table_dados, colWidths=col_widths)
+        table = Table(table_dados, colWidths=col_widths_dados)
         table.setStyle(style)
         elements.append(table)
-
-        table_valores = df_valores.values.tolist()
 
         summary_table = Table(table_valores)
 
@@ -427,7 +469,7 @@ class ComercialApp(QWidget):
         def add_page_number(canvas, doc):
             page_num = canvas.getPageNumber()
             text = f"Página {page_num}"
-            canvas.drawRightString(200 * mm, 15 * mm, text)
+            canvas.drawRightString(200 * mm, 5 * mm, text)
 
         doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
         os.startfile(pdf_path)
