@@ -539,7 +539,6 @@ class EngenhariaApp(QWidget):
         self.tree.verticalHeader().setDefaultSectionSize(self.altura_linha)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
         self.tree.horizontalHeader().setStretchLastSection(True)
-
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(lambda pos: self.showContextMenu(pos, self.tree))
 
@@ -846,12 +845,23 @@ class EngenhariaApp(QWidget):
 
     def executar_consulta_estrutura(self, table):
         item_selecionado = table.currentItem()
+        header = table.horizontalHeader()
+        codigo_col, descricao_col = None, None
+        codigo = None
+        descricao = None
 
-        if item_selecionado:
-            codigo = table.item(item_selecionado.row(), 0).text()
-            descricao = table.item(item_selecionado.row(), 1).text()
+        for col in range(header.count()):
+            header_text = table.horizontalHeaderItem(col).text()
+            if header_text == 'Código':
+                codigo_col = col
+            elif header_text == 'Descrição':
+                descricao_col = col
 
-            if codigo not in self.guias_abertas:
+            if codigo_col is not None and descricao_col is not None:
+                codigo = table.item(item_selecionado.row(), codigo_col).text()
+                descricao = table.item(item_selecionado.row(), descricao_col).text()
+
+            if codigo not in self.guias_abertas and codigo is not None:
                 select_query_estrutura = f"""
                     SELECT struct.G1_COMP AS "Código", prod.B1_DESC AS "Descrição", struct.G1_QUANT AS "QTD.", 
                     struct.G1_XUM AS "UNID.", struct.G1_REVFIM AS "REVISÃO", 
@@ -1014,8 +1024,8 @@ class EngenhariaApp(QWidget):
                     ON 
                         G1_COD = B1_COD 
                     WHERE G1_COMP = '{codigo}' 
-                    AND STRUT.G1_REVFIM <> 'ZZZ' 
-                    AND STRUT.D_E_L_E_T_ <> '*'
+                        AND STRUT.G1_REVFIM <> 'ZZZ' 
+                        AND STRUT.D_E_L_E_T_ <> '*'
                     ORDER BY B1_DESC ASC;
                 """
                 self.guias_abertas_onde_usado.append(codigo)

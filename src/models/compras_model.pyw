@@ -1005,7 +1005,7 @@ class ComprasApp(QWidget):
                             if j in (4, 7, 8, 9, 13):
                                 value = locale.format_string("%.2f", value, grouping=True)
 
-                            if j in (7, 8, 9) and value == 'nan':
+                            if j in (7, 8, 9, 13) and value == 'nan':
                                 value = '-'
                             if j == 35 and pd.isna(value):
                                 value = '-'
