@@ -125,8 +125,7 @@ class ComercialApp(QWidget):
                 font-size: 12px;
                 height: 14px;
                 font-weight: bold;
-                margin-top: 15px;
-                margin-bottom: 15px;
+                margin: 10px;
             }
 
             QPushButton:hover {
@@ -182,7 +181,7 @@ class ComercialApp(QWidget):
         self.campo_codigo.setFixedWidth(500)
         self.campo_codigo.setPlaceholderText("Digite o código da máquina ou equipamento...")
 
-        self.btn_consultar = QPushButton("Consultar MP", self)
+        self.btn_consultar = QPushButton("Custo MP ($)", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setMinimumWidth(100)
 
@@ -191,10 +190,10 @@ class ComercialApp(QWidget):
         self.btn_exportar_pdf.setMinimumWidth(100)
         self.btn_exportar_pdf.setEnabled(False)
 
-        self.btn_salvar_excel = QPushButton("Exportar Excel", self)
-        self.btn_salvar_excel.clicked.connect(self.salvar_excel)
-        self.btn_salvar_excel.setMinimumWidth(100)
-        self.btn_salvar_excel.setEnabled(False)
+        self.btn_exportar_excel = QPushButton("Exportar Excel", self)
+        self.btn_exportar_excel.clicked.connect(lambda: self.exportar_excel('excel'))
+        self.btn_exportar_excel.setMinimumWidth(100)
+        self.btn_exportar_excel.setEnabled(False)
 
         self.btn_fechar = QPushButton("Fechar", self)
         self.btn_fechar.clicked.connect(self.fechar_janela)
@@ -211,7 +210,7 @@ class ComercialApp(QWidget):
         layout_linha_01.addWidget(self.criar_botao_limpar())
 
         layout_linha_01.addWidget(self.btn_consultar)
-        layout_linha_01.addWidget(self.btn_salvar_excel)
+        layout_linha_01.addWidget(self.btn_exportar_excel)
         layout_linha_01.addWidget(self.btn_exportar_pdf)
         layout_linha_01.addWidget(self.btn_fechar)
         layout_linha_01.addStretch()
@@ -252,15 +251,18 @@ class ComercialApp(QWidget):
 
         return botao_limpar
 
-    def salvar_excel(self):
+    def exportar_excel(self, tipo_exportacao):
 
         now = datetime.now()
         default_filename = f'{self.codigo}_report_mp_{now.strftime("%Y-%m-%d_%H%M%S")}.xlsx'
-
         desktop_path = os.path.join(os.path.expanduser("~"), 'Desktop')
-        self.file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
-                                                        os.path.join(desktop_path, default_filename),
+
+        if tipo_exportacao == 'excel':
+            self.file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como', os.path.join(
+                                                        desktop_path, default_filename),
                                                         'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
+        elif tipo_exportacao == 'pdf':
+            self.file_path = os.path.join(desktop_path, default_filename)
 
         if self.file_path:
             data = self.obter_dados_tabela()
@@ -325,7 +327,8 @@ class ComercialApp(QWidget):
 
             recalculate_excel_formulas(self.file_path)
 
-            os.startfile(self.file_path)
+            if tipo_exportacao == 'excel':
+                os.startfile(self.file_path)
 
     def obter_dados_tabela(self):
         # Obter os dados da tabela
@@ -343,21 +346,19 @@ class ComercialApp(QWidget):
 
     def exportar_pdf(self):
 
-        if not self.file_path:
-            return
+        self.exportar_excel('pdf')
 
         # Ler dados do Excel
         dataframe_tabela = pd.read_excel(self.file_path, sheet_name='Dados')
 
         # Caminho para salvar o PDF
-        pdf_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como',
-                                                  f'{self.campo_codigo.text().upper().strip()}_MP.pdf',
+        pdf_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como', self.file_path.replace('.xlsx', '.pdf'),
                                                   'Arquivos PDF (*.pdf);;Todos os arquivos (*)')
 
         if not pdf_path:
             return
 
-        nan_row_index = dataframe_tabela.isna().all(axis=1).idmax()
+        nan_row_index = dataframe_tabela.isna().all(axis=1).idxmax()
 
         df_dados = dataframe_tabela.iloc[:nan_row_index].dropna(how='all')
         df_valores = dataframe_tabela.iloc[nan_row_index + 1:].dropna(how='all')
@@ -405,10 +406,9 @@ class ComercialApp(QWidget):
         table.setStyle(style)
         elements.append(table)
 
-        column_headers_part2 = list(df_valores.columns)
-        table_valores = [column_headers_part2] + df_valores.values.tolist()
+        table_valores = df_valores.values.tolist()
 
-        summary_table = Table(table_valores, colWidths=column_headers_part2)
+        summary_table = Table(table_valores)
 
         summary_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
@@ -465,13 +465,13 @@ class ComercialApp(QWidget):
     def bloquear_campos_pesquisa(self):
         self.campo_codigo.setEnabled(False)
         self.btn_consultar.setEnabled(False)
-        self.btn_salvar_excel.setEnabled(False)
+        self.btn_exportar_excel.setEnabled(False)
         self.btn_exportar_pdf.setEnabled(False)
 
     def desbloquear_campos_pesquisa(self):
         self.campo_codigo.setEnabled(True)
         self.btn_consultar.setEnabled(True)
-        self.btn_salvar_excel.setEnabled(True)
+        self.btn_exportar_excel.setEnabled(True)
         self.btn_exportar_pdf.setEnabled(True)
 
     def verificar_query(self):
