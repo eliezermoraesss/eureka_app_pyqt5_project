@@ -80,18 +80,39 @@ def recalculate_excel_formulas(file_path):
     app_excel.quit()
 
 
-class Communicate(QObject):
-    sinal = pyqtSignal()
+def get_product_name(codigo):
+    query = f"""
+        SELECT B1_DESC
+            FROM 
+                {database}.dbo.SB1010
+            WHERE 
+                B1_COD = N'{codigo}'
+                AND D_E_L_E_T_ <> '*';
+        """
+    try:
+        with pyodbc.connect(
+                f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}') as conn:
+            cursor = conn.cursor()
+            cursor.execute(query)
+
+            resultado = cursor.fetchone()
+            codigo_produto = resultado[0]
+
+            return codigo_produto
+
+    except Exception as ex:
+        exibir_mensagem('Erro banco de dados TOTVS', f'Erro ao consultar tabela de produtos SB1010: {str(ex)}', 'error')
+        return None
 
 
 class ComercialApp(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.c = Communicate()
-
         self.codigo = None
+        self.descricao = None
         self.file_path = None
+        self.titulo_relatorio_pdf = "Relatório de Custos de Matéria-Prima e Itens Comerciais"
 
         self.tree = QTableWidget(self)
         self.tree.setColumnCount(0)
@@ -99,11 +120,6 @@ class ComercialApp(QWidget):
 
         self.setWindowTitle("EUREKA® COMERCIAL - v0.1")
         locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
-
-        self.setAutoFillBackground(True)
-        palette = self.palette()
-        palette.setColor(self.backgroundRole(), QColor('#C9C9C9'))
-        self.setPalette(palette)
 
         self.setStyleSheet("""
             * {
@@ -426,16 +442,16 @@ class ComercialApp(QWidget):
             product_style = ParagraphStyle(name='ProductStyle', fontSize=12, leading=20, fontName='Helvetica-Bold',
                                            spaceAfter=12)
 
-            title = Paragraph("Relatório - Custo de Matéria-Prima por Produto", title_style)
+            title = Paragraph(f"{self.titulo_relatorio_pdf}", title_style)
             date_time = Paragraph(datetime.now().strftime("%d/%m/%Y %H:%M"), normal_style)
             elements_pdf.append(Paragraph("<br/><br/>", normal_style))
-            product = Paragraph(f'{self.codigo} XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', product_style)
+            product = Paragraph(f'{self.codigo} {self.descricao}', product_style)
 
             elements_pdf.append(title)
             elements_pdf.append(date_time)
             elements_pdf.append(Spacer(1, 12))
             elements_pdf.append(product)
-            elements_pdf.append(Spacer(1, 12))  # Espaço entre título e tabela
+            elements_pdf.append(Spacer(1, 8))  # Espaço entre título e tabela
 
             # Dados da tabela
             column_headers_dados = list(df_dados.columns)
@@ -448,7 +464,7 @@ class ComercialApp(QWidget):
                     max_length = max(dataframe[col].astype(str).apply(len).max(), len(col))
                     col_width = max_length * col_width_multiplier
                     if col == 'DESCRIÇÃO':
-                        col_width *= 3.2  # Aumentar a largura da coluna "descrição"
+                        col_width *= 3  # Aumentar a largura da coluna "descrição"
                     col_width = max(col_width, min_width)
                     col_widths.append(col_width)
                 return col_widths
@@ -461,9 +477,9 @@ class ComercialApp(QWidget):
             style_dados = TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),  # Vertical alignment for all cells
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('ALIGN', (col_idx_descricao, 0), (col_idx_descricao, -1), 'LEFT'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),  # Vertical alignment for all cells
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica'),
                 ('FONTSIZE', (0, 0), (-1, -1), 6),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
@@ -630,14 +646,15 @@ class ComercialApp(QWidget):
         return query
 
     def executar_consulta(self):
-        select_query = self.query_consulta()
+        query = self.query_consulta()
+        self.descricao = get_product_name(self.codigo)
         self.controle_campos_formulario(False)
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
         engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
 
         try:
-            dataframe = pd.read_sql(select_query, engine)
+            dataframe = pd.read_sql(query, engine)
 
             if not dataframe.empty:
                 consolidated_dataframe = dataframe.groupby('CÓDIGO').agg({
