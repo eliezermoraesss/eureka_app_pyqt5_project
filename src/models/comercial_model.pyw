@@ -136,6 +136,7 @@ class ComercialApp(QWidget):
                 height: 14px;
                 font-weight: bold;
                 margin-top: 20px;
+                margin-left: 10px;
             }
 
             QPushButton:hover {
@@ -152,6 +153,7 @@ class ComercialApp(QWidget):
                 border: 1px solid #000000;
                 background-color: #363636;
                 padding-left: 10px;
+                margin-top: 15px;
             }
 
             QTableWidget QHeaderView::section {
@@ -198,6 +200,10 @@ class ComercialApp(QWidget):
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setMinimumWidth(100)
 
+        self.btn_limpar = QPushButton("Limpar", self)
+        self.btn_limpar.clicked.connect(self.limpar_campos)
+        self.btn_limpar.setMinimumWidth(100)
+
         self.btn_exportar_pdf = QPushButton("Exportar PDF", self)
         self.btn_exportar_pdf.clicked.connect(self.exportar_pdf)
         self.btn_exportar_pdf.setMinimumWidth(100)
@@ -225,6 +231,7 @@ class ComercialApp(QWidget):
 
         layout_header.addLayout(container_codigo)
         layout_header.addWidget(self.btn_consultar)
+        layout_header.addWidget(self.btn_limpar)
         layout_header.addWidget(self.btn_exportar_excel)
         layout_header.addWidget(self.btn_exportar_pdf)
         layout_header.addWidget(self.btn_fechar)
