@@ -391,6 +391,15 @@ class ComercialApp(QWidget):
         table_valores_header = ['TOTAL', 'CUSTO (R$)', 'QUANTIDADE\n(kg)']
         table_valores = [table_valores_header] + df_valores.values.tolist()
 
+        # Index das colunas que você deseja formatar
+        idx_custo = table_valores_header.index('CUSTO (R$)')
+        idx_quantidade = table_valores_header.index('QUANTIDADE\n(kg)')
+
+        for row in table_valores[1:]:  # Começa do segundo item para pular o cabeçalho
+            row[idx_custo] = format_decimal(row[idx_custo])
+            if row[idx_quantidade] != '':
+                row[idx_quantidade] = format_decimal(row[idx_quantidade])
+
         def build_elements():
             elements_pdf = []
 
@@ -467,7 +476,7 @@ class ComercialApp(QWidget):
                 ('GRID', (0, 0), (-1, -1), 1, colors.black)
             ]))
 
-            elements_pdf.append(Paragraph("<br/><br/>", styles['Normal']))  # Espaço entre tabela e sumário
+            elements_pdf.append(Paragraph("<br/><br/><br/><br/>", styles['Normal']))  # Espaço entre tabela e sumário
             elements_pdf.append(summary_table)
 
             return elements_pdf
@@ -545,7 +554,7 @@ class ComercialApp(QWidget):
         self.btn_exportar_excel.setEnabled(status)
         self.btn_exportar_pdf.setEnabled(status)
 
-    def verificar_query(self):
+    def query_consulta(self):
         codigo = self.campo_codigo.text().upper().strip()
         self.codigo = codigo
 
@@ -605,7 +614,7 @@ class ComercialApp(QWidget):
         return query
 
     def executar_consulta(self):
-        select_query = self.verificar_query()
+        select_query = self.query_consulta()
         self.controle_campos_formulario(False)
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
