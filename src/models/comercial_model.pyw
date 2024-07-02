@@ -15,7 +15,7 @@ from PyPDF2 import PdfReader
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QPixmap, QIcon
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction
+    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QSizePolicy
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
@@ -112,6 +112,7 @@ class ComercialApp(QWidget):
         self.codigo = None
         self.descricao = None
         self.file_path = None
+        self.nova_janela = None
         self.titulo_relatorio_pdf = "Relatório de Custos de Matéria-Prima e Itens Comerciais"
 
         self.tree = QTableWidget(self)
@@ -149,6 +150,10 @@ class ComercialApp(QWidget):
         self.btn_limpar.setMinimumWidth(100)
         self.btn_limpar.setEnabled(False)
 
+        self.btn_nova_janela = QPushButton("Nova Janela", self)
+        self.btn_nova_janela.clicked.connect(self.abrir_nova_janela)
+        self.btn_nova_janela.setMinimumWidth(100)
+
         self.btn_exportar_pdf = QPushButton("Exportar PDF", self)
         self.btn_exportar_pdf.clicked.connect(self.exportar_pdf)
         self.btn_exportar_pdf.setMinimumWidth(100)
@@ -177,6 +182,7 @@ class ComercialApp(QWidget):
         layout_header.addLayout(container_codigo)
         layout_header.addWidget(self.btn_consultar)
         layout_header.addWidget(self.btn_limpar)
+        layout_header.addWidget(self.btn_nova_janela)
         layout_header.addWidget(self.btn_exportar_excel)
         layout_header.addWidget(self.btn_exportar_pdf)
         layout_header.addWidget(self.btn_fechar)
@@ -275,6 +281,12 @@ class ComercialApp(QWidget):
                         font-weight: bold;
                     }
                 """)
+
+    def abrir_nova_janela(self):
+        if not self.nova_janela or not self.nova_janela.isVisible():
+            self.nova_janela = ComercialApp()
+            self.nova_janela.setGeometry(self.x() + 50, self.y() + 50, self.width(), self.height())
+            self.nova_janela.show()
 
     def add_clear_button(self, line_edit):
         clear_icon = self.style().standardIcon(QStyle.SP_LineEditClearButton)
