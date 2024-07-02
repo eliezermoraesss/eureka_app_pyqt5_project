@@ -1,26 +1,28 @@
-import locale
-import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QToolButton, QStyle
-from PyQt5.QtGui import QFont, QColor, QPixmap
-from PyQt5.QtCore import Qt, QSize
-import pyodbc
-import pyperclip
-import pandas as pd
 import ctypes
-from datetime import datetime
+import io
+import locale
+import os
+import sys
 import tkinter as tk
+from datetime import datetime
 from tkinter import messagebox
 
+import pandas as pd
+import pyodbc
+import pyperclip
+import xlwings as xw
+from PyPDF2 import PdfReader
+from PyQt5.QtCore import Qt, QSize, pyqtSignal, QObject
+from PyQt5.QtGui import QFont, QColor, QPixmap
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
+    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QToolButton, QStyle
+from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
-from sqlalchemy import create_engine
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Image
 from reportlab.lib.units import inch, mm
-from reportlab.lib import colors
-import os
-import xlwings as xw
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Image
+from sqlalchemy import create_engine
 
 
 def exibir_mensagem(title, message, icon_type):
@@ -78,9 +80,15 @@ def recalculate_excel_formulas(file_path):
     app_excel.quit()
 
 
+class Communicate(QObject):
+    sinal = pyqtSignal()
+
+
 class ComercialApp(QWidget):
     def __init__(self):
         super().__init__()
+
+        self.c = Communicate()
 
         self.codigo = None
         self.file_path = None
@@ -104,9 +112,9 @@ class ComercialApp(QWidget):
 
             QLabel {
                 color: #262626;
-                font-size: 18px;
-                padding: 5px;
+                font-size: 12px;
                 font-weight: bold;
+                padding-left: 3px;    
             }
 
             QLineEdit {
@@ -176,12 +184,13 @@ class ComercialApp(QWidget):
         self.logo_label.setObjectName('logo-enaplic')
         pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(60)
         self.logo_label.setPixmap(pixmap_logo)
-        self.logo_label.setAlignment(Qt.AlignLeft)
+        self.logo_label.setAlignment(Qt.AlignRight)
+
+        self.label_codigo = QLabel("Código:", self)
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont("Segoe UI", 10))
-        self.campo_codigo.setFixedWidth(500)
-        self.campo_codigo.setPlaceholderText("Digite o código da máquina ou equipamento...")
+        self.campo_codigo.setFixedWidth(200)
 
         self.btn_consultar = QPushButton("Custo MP ($)", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
@@ -204,22 +213,25 @@ class ComercialApp(QWidget):
         self.campo_codigo.returnPressed.connect(self.executar_consulta)
 
         layout = QVBoxLayout()
-        layout_linha_01 = QHBoxLayout()
+        container_codigo = QVBoxLayout()
+        layout_header = QHBoxLayout()
         layout_footer = QHBoxLayout()
         layout_footer_logo = QHBoxLayout()
 
-        layout_linha_01.addWidget(self.campo_codigo)
-        layout_linha_01.addWidget(self.criar_botao_limpar())
+        container_codigo.addWidget(self.label_codigo)
+        container_codigo.addWidget(self.campo_codigo)
+        container_codigo.addWidget(self.criar_botao_limpar())
 
-        layout_linha_01.addWidget(self.btn_consultar)
-        layout_linha_01.addWidget(self.btn_exportar_excel)
-        layout_linha_01.addWidget(self.btn_exportar_pdf)
-        layout_linha_01.addWidget(self.btn_fechar)
-        layout_linha_01.addStretch()
+        layout_header.addLayout(container_codigo)
+        layout_header.addWidget(self.btn_consultar)
+        layout_header.addWidget(self.btn_exportar_excel)
+        layout_header.addWidget(self.btn_exportar_pdf)
+        layout_header.addWidget(self.btn_fechar)
+        layout_header.addStretch()
 
         layout_footer_logo.addWidget(self.logo_label)
 
-        layout.addLayout(layout_linha_01)
+        layout.addLayout(layout_header)
         layout.addWidget(self.tree)
         layout.addLayout(layout_footer)
         layout.addLayout(layout_footer_logo)
@@ -347,7 +359,6 @@ class ComercialApp(QWidget):
         return data
 
     def exportar_pdf(self):
-
         self.exportar_excel('pdf')
 
         # Ler dados do Excel
@@ -396,94 +407,124 @@ class ComercialApp(QWidget):
             df_dados = df_dados.rename(columns={'SUB-TOTAL (R$)': 'TOTAL (R$)'})
 
         table_valores_header = ['TOTAL', 'CUSTO (R$)', 'QUANTIDADE\n(kg)']
-        table_valores = table_valores_header + df_valores.values.tolist()
+        table_valores = [table_valores_header] + df_valores.values.tolist()
 
-        # Criação do documento PDF
-        doc = SimpleDocTemplate(pdf_path, pagesize=A4, topMargin=20, bottomMargin=30)
-        elements = []
+        def build_elements():
+            elements_pdf = []
 
-        # Adicionar logo
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        logo_enaplic_path = os.path.join(script_dir, '..', 'resources', 'images', 'logo_enaplic.jpg')
+            # Adicionar logo
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            logo_enaplic_path = os.path.join(script_dir, '..', 'resources', 'images', 'logo_enaplic.jpg')
 
-        if os.path.exists(logo_enaplic_path):
-            logo = Image(logo_enaplic_path, 5 * inch, 1 * inch)
-            elements.append(logo)
-            elements.append(Paragraph("<br/><br/>"))  # Espaço entre título e tabela
+            if os.path.exists(logo_enaplic_path):
+                logo = Image(logo_enaplic_path, 5 * inch, 1 * inch)
+                elements_pdf.append(logo)
+                elements_pdf.append(Paragraph("<br/><br/>"))  # Espaço entre título e tabela
 
-        # Adicionar título e data/hora
-        styles = getSampleStyleSheet()
-        title_style = ParagraphStyle(name='TitleStyle', fontSize=16, fontName='Helvetica-Bold', leading=24, alignment=TA_CENTER)
-        normal_style = ParagraphStyle(name='NormalStyle', fontSize=10, leading=12, alignment=TA_CENTER)
-        product_style = ParagraphStyle(name='ProductStyle', fontSize=12, leading=20, fontName='Helvetica-Bold',
-                                       spaceAfter=12)
+            # Adicionar título e data/hora
+            styles = getSampleStyleSheet()
+            title_style = ParagraphStyle(name='TitleStyle', fontSize=16, fontName='Helvetica-Bold', leading=24,
+                                         alignment=TA_CENTER)
+            normal_style = ParagraphStyle(name='NormalStyle', fontSize=10, leading=12, alignment=TA_CENTER)
+            product_style = ParagraphStyle(name='ProductStyle', fontSize=12, leading=20, fontName='Helvetica-Bold',
+                                           spaceAfter=12)
 
-        title = Paragraph("Relatório de Custo de Matéria-Prima", title_style)
-        date_time = Paragraph(datetime.now().strftime("%d/%m/%Y %H:%M"), normal_style)
-        elements.append(Paragraph("<br/><br/>", normal_style))
-        product = Paragraph(f'{self.codigo} XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', product_style)
+            title = Paragraph("Relatório de Custo de Matéria-Prima", title_style)
+            date_time = Paragraph(datetime.now().strftime("%d/%m/%Y %H:%M"), normal_style)
+            elements_pdf.append(Paragraph("<br/><br/>", normal_style))
+            product = Paragraph(f'{self.codigo} XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', product_style)
 
-        elements.append(title)
-        elements.append(date_time)
-        elements.append(product)
-        elements.append(Paragraph("<br/><br/>", normal_style))  # Espaço entre título e tabela
+            elements_pdf.append(title)
+            elements_pdf.append(date_time)
+            elements_pdf.append(product)
+            elements_pdf.append(Paragraph("<br/><br/>", normal_style))  # Espaço entre título e tabela
 
-        # Dados da tabela
-        column_headers_dados = list(df_dados.columns)
-        table_dados = [column_headers_dados] + df_dados.values.tolist()
+            # Dados da tabela
+            column_headers_dados = list(df_dados.columns)
+            table_dados = [column_headers_dados] + df_dados.values.tolist()
 
-        # Função para calcular a largura das colunas com base no conteúdo
-        def calculate_col_widths(dataframe, col_width_multiplier=1.2, min_width=45):
-            col_widths = []
-            for col in dataframe.columns:
-                max_length = max(dataframe[col].astype(str).apply(len).max(), len(col))
-                col_width = max_length * col_width_multiplier
-                if col == 'DESCRIÇÃO':
-                    col_width *= 2.5  # Aumentar a largura da coluna "descrição"
-                col_width = max(col_width, min_width)
-                col_widths.append(col_width)
-            return col_widths
+            # Função para calcular a largura das colunas com base no conteúdo
+            def calculate_col_widths(dataframe, col_width_multiplier=1.2, min_width=45):
+                col_widths = []
+                for col in dataframe.columns:
+                    max_length = max(dataframe[col].astype(str).apply(len).max(), len(col))
+                    col_width = max_length * col_width_multiplier
+                    if col == 'DESCRIÇÃO':
+                        col_width *= 2.5  # Aumentar a largura da coluna "descrição"
+                    col_width = max(col_width, min_width)
+                    col_widths.append(col_width)
+                return col_widths
 
-        col_widths_dados = calculate_col_widths(df_dados)
+            col_widths_dados = calculate_col_widths(df_dados)
 
-        # Estilo da tabela
-        style = TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ])
+            # Estilo da tabela
+            style = TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ])
 
-        table = Table(table_dados, colWidths=col_widths_dados)
-        table.setStyle(style)
-        elements.append(table)
+            table = Table(table_dados, colWidths=col_widths_dados)
+            table.setStyle(style)
+            elements_pdf.append(table)
 
-        summary_table = Table(table_valores)
+            summary_table = Table(table_valores)
 
-        summary_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]))
+            summary_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
 
-        elements.append(Paragraph("<br/><br/>", styles['Normal']))  # Espaço entre tabela e sumário
-        elements.append(summary_table)
+            elements_pdf.append(Paragraph("<br/><br/>", styles['Normal']))  # Espaço entre tabela e sumário
+            elements_pdf.append(summary_table)
 
-        # Função para adicionar rodapé com paginação
+            return elements_pdf
+
+        # Primeira passagem para contar as páginas
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=20, bottomMargin=30)
+        elements = build_elements()
+
         def add_page_number(canvas, doc):
             page_num = canvas.getPageNumber()
             text = f"Página {page_num}"
             canvas.drawRightString(200 * mm, 5 * mm, text)
 
         doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
+        pdf = buffer.getvalue()
+        buffer.close()
+
+        # Contar o número total de páginas
+        reader = PdfReader(io.BytesIO(pdf))
+        num_pages = len(reader.pages)
+
+        # Segunda passagem para adicionar paginação completa
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=20, bottomMargin=30)
+        elements = build_elements()
+
+        def add_page_number_with_total(canvas, doc):
+            page_num = canvas.getPageNumber()
+            text = f"Página {page_num} de {num_pages}"
+            canvas.drawRightString(200 * mm, 5 * mm, text)
+
+        doc.build(elements, onFirstPage=add_page_number_with_total, onLaterPages=add_page_number_with_total)
+        final_pdf = buffer.getvalue()
+        buffer.close()
+
+        # Salvar o PDF final
+        with open(pdf_path, "wb") as f:
+            f.write(final_pdf)
         os.startfile(pdf_path)
 
     def configurar_tabela(self, dataframe):
