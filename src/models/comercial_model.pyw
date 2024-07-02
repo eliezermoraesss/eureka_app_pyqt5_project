@@ -671,8 +671,8 @@ class ComercialApp(QWidget):
 
         if codigo == '':
             exibir_mensagem("ATENÇÃO!",
-                            "O campo de pesquisa está vazio.\n\nnDigite um código válido e tente "
-                            "novamente!\n\nEUREKA®",
+                            "O campo de pesquisa está vazio.\n\nDigite um código válido e tente "
+                            "novamente!\n\nEUREKA® Comercial",
                             "info")
             self.controle_campos_formulario(True)
             return
