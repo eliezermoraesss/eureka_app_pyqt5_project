@@ -21,7 +21,7 @@ from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch, mm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Image
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Image, Spacer
 from sqlalchemy import create_engine
 
 
@@ -395,11 +395,11 @@ class ComercialApp(QWidget):
         if 'SUB-TOTAL (R$)' in df_dados.columns:
             df_dados = df_dados.rename(columns={'SUB-TOTAL (R$)': 'TOTAL (R$)'})
 
-        table_valores_header = ['TOTAL', 'CUSTO (R$)', 'QUANTIDADE\n(kg)']
+        table_valores_header = ['TOTAL POR ARMAZÉM', 'CUSTO\n(R$)', 'QUANTIDADE\n(kg)']
         table_valores = [table_valores_header] + df_valores.values.tolist()
 
         # Index das colunas que você deseja formatar
-        idx_custo = table_valores_header.index('CUSTO (R$)')
+        idx_custo = table_valores_header.index('CUSTO\n(R$)')
         idx_quantidade = table_valores_header.index('QUANTIDADE\n(kg)')
 
         for row in table_valores[1:]:  # Começa do segundo item para pular o cabeçalho
@@ -415,9 +415,8 @@ class ComercialApp(QWidget):
             logo_enaplic_path = os.path.join(script_dir, '..', 'resources', 'images', 'logo_enaplic.jpg')
 
             if os.path.exists(logo_enaplic_path):
-                logo = Image(logo_enaplic_path, 5 * inch, 1 * inch)
+                logo = Image(logo_enaplic_path, 5 * inch, 0.5 * inch)
                 elements_pdf.append(logo)
-                elements_pdf.append(Paragraph("<br/><br/>"))  # Espaço entre título e tabela
 
             # Adicionar título e data/hora
             styles = getSampleStyleSheet()
@@ -427,15 +426,16 @@ class ComercialApp(QWidget):
             product_style = ParagraphStyle(name='ProductStyle', fontSize=12, leading=20, fontName='Helvetica-Bold',
                                            spaceAfter=12)
 
-            title = Paragraph("Relatório de Custo de Matéria-Prima", title_style)
+            title = Paragraph("Relatório - Custo de Matéria-Prima por Produto", title_style)
             date_time = Paragraph(datetime.now().strftime("%d/%m/%Y %H:%M"), normal_style)
             elements_pdf.append(Paragraph("<br/><br/>", normal_style))
             product = Paragraph(f'{self.codigo} XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', product_style)
 
             elements_pdf.append(title)
             elements_pdf.append(date_time)
+            elements_pdf.append(Spacer(1, 12))
             elements_pdf.append(product)
-            elements_pdf.append(Paragraph("<br/><br/>", normal_style))  # Espaço entre título e tabela
+            elements_pdf.append(Spacer(1, 12))  # Espaço entre título e tabela
 
             # Dados da tabela
             column_headers_dados = list(df_dados.columns)
@@ -448,18 +448,21 @@ class ComercialApp(QWidget):
                     max_length = max(dataframe[col].astype(str).apply(len).max(), len(col))
                     col_width = max_length * col_width_multiplier
                     if col == 'DESCRIÇÃO':
-                        col_width *= 2.5  # Aumentar a largura da coluna "descrição"
+                        col_width *= 3  # Aumentar a largura da coluna "descrição"
                     col_width = max(col_width, min_width)
                     col_widths.append(col_width)
                 return col_widths
 
             col_widths_dados = calculate_col_widths(df_dados)
 
+            col_idx_descricao = column_headers_dados.index('DESCRIÇÃO')
+
             # Estilo da tabela
-            style = TableStyle([
+            style_dados = TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('ALIGN', (col_idx_descricao, 0), (col_idx_descricao, -1), 'LEFT'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica'),
                 ('FONTSIZE', (0, 0), (-1, -1), 6),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
@@ -467,23 +470,25 @@ class ComercialApp(QWidget):
                 ('GRID', (0, 0), (-1, -1), 1, colors.black)
             ])
 
-            table = Table(table_dados, colWidths=col_widths_dados)
-            table.setStyle(style)
-            elements_pdf.append(table)
+            table_dados = Table(table_dados, colWidths=col_widths_dados)
+            table_dados.setStyle(style_dados)
+            elements_pdf.append(table_dados)
 
-            summary_table = Table(table_valores)
-
-            summary_table.setStyle(TableStyle([
+            style_valores = TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('ALIGN', (0, 0), (0, -1), 'LEFT'),  # Alinha a primeira coluna à esquerda
+                ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),  # Alinha as demais colunas à direita
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
                 ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
                 ('GRID', (0, 0), (-1, -1), 1, colors.black)
-            ]))
+            ])
 
-            elements_pdf.append(Paragraph("<br/><br/><br/><br/>", styles['Normal']))  # Espaço entre tabela e sumário
+            summary_table = Table(table_valores)
+            summary_table.setStyle(style_valores)
+
+            elements_pdf.append(Spacer(1, 36))  # Espaço entre tabela e sumário
             elements_pdf.append(summary_table)
 
             return elements_pdf
