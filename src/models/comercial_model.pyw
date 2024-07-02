@@ -448,7 +448,7 @@ class ComercialApp(QWidget):
                     max_length = max(dataframe[col].astype(str).apply(len).max(), len(col))
                     col_width = max_length * col_width_multiplier
                     if col == 'DESCRIÇÃO':
-                        col_width *= 3  # Aumentar a largura da coluna "descrição"
+                        col_width *= 3.2  # Aumentar a largura da coluna "descrição"
                     col_width = max(col_width, min_width)
                     col_widths.append(col_width)
                 return col_widths
@@ -463,11 +463,13 @@ class ComercialApp(QWidget):
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('ALIGN', (col_idx_descricao, 0), (col_idx_descricao, -1), 'LEFT'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),  # Vertical alignment for all cells
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica'),
                 ('FONTSIZE', (0, 0), (-1, -1), 6),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
                 ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ('LINEBELOW', (0, 0), (-1, 0), 0.5, colors.black),  # Adds a line below the first row
+                ('LINEABOVE', (0, 1), (-1, -1), 0.5, colors.black)  # Removes lines above all other rows
             ])
 
             table_dados = Table(table_dados, colWidths=col_widths_dados)
@@ -479,10 +481,12 @@ class ComercialApp(QWidget):
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (0, -1), 'LEFT'),  # Alinha a primeira coluna à esquerda
                 ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),  # Alinha as demais colunas à direita
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),  # Vertical alignment for all cells
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
                 ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ('LINEBELOW', (0, 0), (-1, 0), 0.5, colors.black),  # Adds a line below the first row
+                ('LINEABOVE', (0, 1), (-1, -1), 0.5, colors.black)  # Removes lines above all other rows
             ])
 
             summary_table = Table(table_valores)
@@ -540,7 +544,7 @@ class ComercialApp(QWidget):
         self.tree.itemDoubleClicked.connect(copiar_linha)
         fonte_tabela = QFont("Segoe UI", 10)
         self.tree.setFont(fonte_tabela)
-        altura_linha = 40
+        altura_linha = 35
         self.tree.verticalHeader().setDefaultSectionSize(altura_linha)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
         self.tree.horizontalHeader().setStretchLastSection(True)
