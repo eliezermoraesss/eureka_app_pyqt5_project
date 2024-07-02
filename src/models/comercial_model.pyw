@@ -12,10 +12,10 @@ import pyodbc
 import pyperclip
 import xlwings as xw
 from PyPDF2 import PdfReader
-from PyQt5.QtCore import Qt, QSize, pyqtSignal, QObject
-from PyQt5.QtGui import QFont, QColor, QPixmap, QIcon
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont, QPixmap, QIcon
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QToolButton, QStyle, QAction
+    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
@@ -118,83 +118,8 @@ class ComercialApp(QWidget):
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
 
-        self.setWindowTitle("EUREKA® COMERCIAL - v0.1")
+        self.setWindowTitle("EUREKA® COMERCIAL - v2.0")
         locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
-
-        self.setStyleSheet("""
-            * {
-                background-color: #C9C9C9;
-            }
-
-            QLabel {
-                color: #262626;
-                font-size: 14px;
-                font-weight: bold;
-                padding-left: 5px;
-            }
-
-            QLineEdit {
-                background-color: #FFFFFF;
-                border: 1px solid #262626;
-                padding: 5px 10px;
-                border-radius: 20px;
-                height: 40px;
-                font-size: 22px;
-            }
-
-            QPushButton {
-                background-color: #3f7c24;
-                color: #fff;
-                padding: 15px;
-                border: 2px;
-                border-radius: 20px;
-                font-size: 12px;
-                height: 14px;
-                font-weight: bold;
-                margin-top: 20px;
-                margin-left: 10px;
-            }
-
-            QPushButton:hover {
-                background-color: #fff;
-                color: #0a79f8
-            }
-
-            QPushButton:pressed {
-                background-color: #6703c5;
-                color: #fff;
-            }
-
-            QTableWidget {
-                border: 1px solid #000000;
-                background-color: #363636;
-                padding-left: 10px;
-                margin-top: 15px;
-            }
-
-            QTableWidget QHeaderView::section {
-                background-color: #262626;
-                color: #A7A6A6;
-                padding: 5px;
-                height: 18px;
-            }
-
-            QTableWidget QHeaderView::section:horizontal {
-                border-top: 1px solid #333;
-            }
-
-            QTableWidget::item {
-                background-color: #363636;
-                color: #fff;
-                font-weight: bold;
-            }
-
-            QTableWidget::item:selected {
-                background-color: #000000;
-                color: #EEEEEE;
-                font-weight: bold;
-            }
-        """)
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
         logo_enaplic_path = os.path.join(script_dir, '..', 'resources', 'images', 'LOGO.jpeg')
@@ -204,7 +129,10 @@ class ComercialApp(QWidget):
         self.logo_label.setPixmap(pixmap_logo)
         self.logo_label.setAlignment(Qt.AlignRight)
 
-        self.label_codigo = QLabel("Código:", self)
+        self.label_codigo = QLabel("Código do produto:", self)
+        self.label_product_name = QLabel("", self)
+        self.label_product_name.setObjectName('product-name')
+        self.label_product_name.setVisible(False)
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont("Segoe UI", 10))
@@ -212,13 +140,14 @@ class ComercialApp(QWidget):
         self.campo_codigo.setMaxLength(13)
         self.add_clear_button(self.campo_codigo)
 
-        self.btn_consultar = QPushButton("Custo MP ($)", self)
+        self.btn_consultar = QPushButton("Calcular Custo ($)", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
         self.btn_consultar.setMinimumWidth(100)
 
         self.btn_limpar = QPushButton("Limpar", self)
         self.btn_limpar.clicked.connect(self.limpar_campos)
         self.btn_limpar.setMinimumWidth(100)
+        self.btn_limpar.setEnabled(False)
 
         self.btn_exportar_pdf = QPushButton("Exportar PDF", self)
         self.btn_exportar_pdf.clicked.connect(self.exportar_pdf)
@@ -253,6 +182,9 @@ class ComercialApp(QWidget):
         layout_header.addWidget(self.btn_fechar)
         layout_header.addStretch()
 
+        layout_footer.addStretch(1)
+        layout_footer.addWidget(self.label_product_name)
+        layout_footer.addStretch(1)
         layout_footer_logo.addWidget(self.logo_label)
 
         layout.addLayout(layout_header)
@@ -261,6 +193,88 @@ class ComercialApp(QWidget):
         layout.addLayout(layout_footer_logo)
 
         self.setLayout(layout)
+
+        self.setStyleSheet("""
+                    * {
+                        background-color: #363636;
+                    }
+
+                    QLabel {
+                        color: #EEEEEE;
+                        font-size: 14px;
+                        font-weight: regular;
+                        padding-left: 5px;
+                    }
+                    
+                    QLabel#product-name {
+                        font-size: 20px;
+                        font-weight: bold;
+                    }
+
+                    QLineEdit {
+                        background-color: #EEEEEE;
+                        border: 1px solid #C9C9C9;
+                        padding: 10px;
+                        border-radius: 15px;
+                        height: 20px;
+                        font-size: 18px;
+                    }
+
+                    QPushButton {
+                        background-color: #3f7c24;
+                        color: #fff;
+                        padding: 15px;
+                        border: 2px;
+                        border-radius: 20px;
+                        font-size: 12px;
+                        height: 14px;
+                        font-weight: bold;
+                        margin-top: 20px;
+                        margin-left: 10px;
+                    }
+
+                    QPushButton:hover {
+                        background-color: #DC5F00;
+                        color: #EEEEEE;
+                    }
+
+                    QPushButton:pressed {
+                        background-color: #6703c5;
+                        color: #fff;
+                    }
+
+                    QTableWidget {
+                        border: 1px solid #EEEEEE;
+                        background-color: #C9C9C9;
+                        padding-left: 10px;
+                        margin: 15px 0 15px 0;
+                    }
+
+                    QTableWidget QHeaderView::section {
+                        background-color: #262626;
+                        color: #A7A6A6;
+                        padding: 5px;
+                        height: 18px;
+                    }
+
+                    QTableWidget QHeaderView::section:horizontal {
+                        border-top: 1px solid #333;
+                    }
+
+                    QTableWidget::item {
+                        background-color: #363636;
+                        color: #EEEEEE;
+                        font-weight: bold;
+                        padding-right: 8px;
+                        padding-left: 8px;
+                    }
+
+                    QTableWidget::item:selected {
+                        background-color: #000000;
+                        color: #EEEEEE;
+                        font-weight: bold;
+                    }
+                """)
 
     def add_clear_button(self, line_edit):
         clear_icon = self.style().standardIcon(QStyle.SP_LineEditClearButton)
@@ -579,12 +593,14 @@ class ComercialApp(QWidget):
         self.campo_codigo.clear()
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
+        self.label_product_name.hide()
 
     def controle_campos_formulario(self, status):
         self.campo_codigo.setEnabled(status)
         self.btn_consultar.setEnabled(status)
         self.btn_exportar_excel.setEnabled(status)
         self.btn_exportar_pdf.setEnabled(status)
+        self.btn_limpar.setEnabled(status)
 
     def query_consulta(self):
         codigo = self.campo_codigo.text().upper().strip()
@@ -648,6 +664,7 @@ class ComercialApp(QWidget):
     def executar_consulta(self):
         query = self.query_consulta()
         self.descricao = get_product_name(self.codigo)
+        self.label_product_name.hide()
         self.controle_campos_formulario(False)
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
@@ -713,6 +730,8 @@ class ComercialApp(QWidget):
 
                 self.tree.setSortingEnabled(True)
                 self.controle_campos_formulario(True)
+                self.label_product_name.setText(f"{self.codigo} - {self.descricao}")
+                self.label_product_name.show()
             else:
                 exibir_mensagem("EUREKA® Comercial", 'Produto não encontrado!', "info")
                 self.controle_campos_formulario(True)
