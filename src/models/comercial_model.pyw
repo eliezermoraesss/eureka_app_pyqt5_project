@@ -13,9 +13,9 @@ import pyperclip
 import xlwings as xw
 from PyPDF2 import PdfReader
 from PyQt5.QtCore import Qt, QSize, pyqtSignal, QObject
-from PyQt5.QtGui import QFont, QColor, QPixmap
+from PyQt5.QtGui import QFont, QColor, QPixmap, QIcon
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QToolButton, QStyle
+    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QToolButton, QStyle, QAction
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
@@ -112,9 +112,9 @@ class ComercialApp(QWidget):
 
             QLabel {
                 color: #262626;
-                font-size: 12px;
+                font-size: 14px;
                 font-weight: bold;
-                padding-left: 3px;    
+                padding-left: 5px;
             }
 
             QLineEdit {
@@ -135,7 +135,7 @@ class ComercialApp(QWidget):
                 font-size: 12px;
                 height: 14px;
                 font-weight: bold;
-                margin: 10px;
+                margin-top: 20px;
             }
 
             QPushButton:hover {
@@ -190,7 +190,9 @@ class ComercialApp(QWidget):
 
         self.campo_codigo = QLineEdit(self)
         self.campo_codigo.setFont(QFont("Segoe UI", 10))
-        self.campo_codigo.setFixedWidth(200)
+        self.campo_codigo.setFixedWidth(210)
+        self.campo_codigo.setMaxLength(13)
+        self.add_clear_button(self.campo_codigo)
 
         self.btn_consultar = QPushButton("Custo MP ($)", self)
         self.btn_consultar.clicked.connect(self.executar_consulta)
@@ -220,7 +222,6 @@ class ComercialApp(QWidget):
 
         container_codigo.addWidget(self.label_codigo)
         container_codigo.addWidget(self.campo_codigo)
-        container_codigo.addWidget(self.criar_botao_limpar())
 
         layout_header.addLayout(container_codigo)
         layout_header.addWidget(self.btn_consultar)
@@ -238,32 +239,13 @@ class ComercialApp(QWidget):
 
         self.setLayout(layout)
 
-    def criar_botao_limpar(self):
-        botao_limpar = QToolButton(self)
-        botao_limpar.setIcon(self.style().standardIcon(QStyle.SP_DialogCloseButton))  # Ícone integrado do Qt
-        botao_limpar.setCursor(Qt.PointingHandCursor)
-        botao_limpar.clicked.connect(self.limpar_campos)
-        botao_limpar.setIconSize(QSize(32, 32))
-
-        # Estilizando o botão usando QSS
-        botao_limpar.setStyleSheet("""
-            QToolButton {
-                border: none;
-                background: #c9c9c9;
-                padding: 2px;
-                width: 40px;
-                height: 40px;
-                border-radius: 20px;
-            }
-            QToolButton:hover {
-                background-color: #f0f0f0;
-            }
-            QToolButton:pressed {
-                background-color: #d0d0d0;
-            }
-        """)
-
-        return botao_limpar
+    def add_clear_button(self, line_edit):
+        clear_icon = self.style().standardIcon(QStyle.SP_LineEditClearButton)
+        pixmap = clear_icon.pixmap(40, 40)  # Redimensionar o ícone para 20x20 pixels
+        larger_clear_icon = QIcon(pixmap)
+        clear_action = QAction(larger_clear_icon, "Clear", line_edit)
+        clear_action.triggered.connect(line_edit.clear)
+        line_edit.addAction(clear_action, QLineEdit.TrailingPosition)
 
     def exportar_excel(self, tipo_exportacao):
 
@@ -557,17 +539,11 @@ class ComercialApp(QWidget):
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
 
-    def bloquear_campos_pesquisa(self):
-        self.campo_codigo.setEnabled(False)
-        self.btn_consultar.setEnabled(False)
-        self.btn_exportar_excel.setEnabled(False)
-        self.btn_exportar_pdf.setEnabled(False)
-
-    def desbloquear_campos_pesquisa(self):
-        self.campo_codigo.setEnabled(True)
-        self.btn_consultar.setEnabled(True)
-        self.btn_exportar_excel.setEnabled(True)
-        self.btn_exportar_pdf.setEnabled(True)
+    def controle_campos_formulario(self, status):
+        self.campo_codigo.setEnabled(status)
+        self.btn_consultar.setEnabled(status)
+        self.btn_exportar_excel.setEnabled(status)
+        self.btn_exportar_pdf.setEnabled(status)
 
     def verificar_query(self):
         codigo = self.campo_codigo.text().upper().strip()
@@ -630,69 +606,75 @@ class ComercialApp(QWidget):
 
     def executar_consulta(self):
         select_query = self.verificar_query()
-        self.bloquear_campos_pesquisa()
+        self.controle_campos_formulario(False)
 
         conn_str = f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}'
         engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
 
         try:
             dataframe = pd.read_sql(select_query, engine)
-            consolidated_dataframe = dataframe.groupby('CÓDIGO').agg({
-                'DESCRIÇÃO': 'first',
-                'QUANT.': 'sum',
-                'UNID. MED.': 'first',
-                'ULT. ATUALIZ.': 'first',
-                'TIPO': 'first',
-                'ARMAZÉM': 'first',
-                'VALOR UNIT. (R$)': 'first',
-                'SUB-TOTAL (R$)': 'sum'
-            }).reset_index()
 
-            # Converter para float com duas casas decimais
-            columns_to_convert = ['QUANT.', 'VALOR UNIT. (R$)', 'SUB-TOTAL (R$)']
-            consolidated_dataframe[columns_to_convert] = (consolidated_dataframe[columns_to_convert]
-                                                          .map(lambda x: round(float(x), 2)))
-            consolidated_dataframe[''] = ''
+            if not dataframe.empty:
+                consolidated_dataframe = dataframe.groupby('CÓDIGO').agg({
+                    'DESCRIÇÃO': 'first',
+                    'QUANT.': 'sum',
+                    'UNID. MED.': 'first',
+                    'ULT. ATUALIZ.': 'first',
+                    'TIPO': 'first',
+                    'ARMAZÉM': 'first',
+                    'VALOR UNIT. (R$)': 'first',
+                    'SUB-TOTAL (R$)': 'sum'
+                }).reset_index()
 
-            self.configurar_tabela(consolidated_dataframe)
+                # Converter para float com duas casas decimais
+                columns_to_convert = ['QUANT.', 'VALOR UNIT. (R$)', 'SUB-TOTAL (R$)']
+                consolidated_dataframe[columns_to_convert] = (consolidated_dataframe[columns_to_convert]
+                                                              .map(lambda x: round(float(x), 2)))
+                consolidated_dataframe[''] = ''
 
-            self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
-            self.tree.setRowCount(0)
+                self.configurar_tabela(consolidated_dataframe)
 
-            for i, row in consolidated_dataframe.iterrows():
-                self.tree.setSortingEnabled(False)
-                self.tree.insertRow(i)
-                for j, value in enumerate(row):
-                    # if j in (2, 7, 8):
-                    # value = locale.format_string("%.2f", value, grouping=True)
-                    if j == 4 and not value.isspace():
-                        data_obj = datetime.strptime(value, "%Y%m%d")
-                        value = data_obj.strftime("%d/%m/%Y")
-                    elif j == 6:
-                        if value == '01':
-                            value = 'MATÉRIA-PRIMA'
-                        elif value == '03':
-                            value = 'COMERCIAL'
-                        elif value == '11':
-                            value = 'PROD. COMER. IMPORT. DIRETO'
-                        elif value == '12':
-                            value = 'MAT. PRIMA IMPORT. DIRETO'
-                        elif value == '97':
-                            value = 'TRAT. SUPERFICIAL'
+                self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
+                self.tree.setRowCount(0)
 
-                    item = QTableWidgetItem(str(value).strip())
+                for i, row in consolidated_dataframe.iterrows():
+                    self.tree.setSortingEnabled(False)
+                    self.tree.insertRow(i)
+                    for j, value in enumerate(row):
+                        # if j in (2, 7, 8):
+                        # value = locale.format_string("%.2f", value, grouping=True)
+                        if j == 4 and not value.isspace():
+                            data_obj = datetime.strptime(value, "%Y%m%d")
+                            value = data_obj.strftime("%d/%m/%Y")
+                        elif j == 6:
+                            if value == '01':
+                                value = 'MATÉRIA-PRIMA'
+                            elif value == '03':
+                                value = 'COMERCIAL'
+                            elif value == '11':
+                                value = 'PROD. COMER. IMPORT. DIRETO'
+                            elif value == '12':
+                                value = 'MAT. PRIMA IMPORT. DIRETO'
+                            elif value == '97':
+                                value = 'TRAT. SUPERFICIAL'
 
-                    if 2 <= j < 7:
-                        item.setTextAlignment(Qt.AlignCenter)
-                    elif j == 7 or j == 8:
-                        item.setTextAlignment(Qt.AlignRight)
+                        item = QTableWidgetItem(str(value).strip())
 
-                    self.tree.setItem(i, j, item)
+                        if 2 <= j < 7:
+                            item.setTextAlignment(Qt.AlignCenter)
+                        elif j == 7 or j == 8:
+                            item.setTextAlignment(Qt.AlignRight)
 
-                # QCoreApplication.processEvents()
+                        self.tree.setItem(i, j, item)
 
-            self.tree.setSortingEnabled(True)
-            self.desbloquear_campos_pesquisa()
+                    # QCoreApplication.processEvents()
+
+                self.tree.setSortingEnabled(True)
+                self.controle_campos_formulario(True)
+            else:
+                exibir_mensagem("EUREKA® Comercial", 'Produto não encontrado!', "info")
+                self.controle_campos_formulario(True)
+                return
 
         except pyodbc.Error as ex:
             exibir_mensagem('Erro ao consultar tabela', f'Erro: {str(ex)}', 'error')
