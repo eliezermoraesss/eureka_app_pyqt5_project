@@ -105,6 +105,56 @@ def get_product_name(codigo):
         return None
 
 
+def query_consulta(codigo):
+
+    query = f"""
+    DECLARE @CodigoPai VARCHAR(50) = '{codigo}'; -- Substitua pelo código pai que deseja consultar
+
+    -- CTE para selecionar os itens pai e seus subitens recursivamente
+    WITH ListMP AS (
+        -- Selecionar o item pai inicialmente
+        SELECT G1_COD AS "CÓDIGO", G1_COMP AS "COMPONENTE", 0 AS Nivel
+        FROM SG1010
+        WHERE G1_COD = @CodigoPai AND G1_REVFIM = (
+            SELECT MAX(G1_REVFIM) 
+            FROM SG1010 
+            WHERE G1_COD = @CodigoPai AND G1_REVFIM <> 'ZZZ' AND D_E_L_E_T_ <> '*'
+        ) AND G1_REVFIM <> 'ZZZ' AND D_E_L_E_T_ <> '*'
+
+        UNION ALL
+
+        -- Selecione os subitens de cada item pai
+        SELECT sub.G1_COD, sub.G1_COMP, pai.Nivel + 1
+        FROM SG1010 AS sub
+        INNER JOIN ListMP AS pai ON sub.G1_COD = pai."COMPONENTE"
+        WHERE pai.Nivel < 100 -- Defina o limite máximo de recursão aqui
+        AND sub.G1_REVFIM <> 'ZZZ' AND sub.D_E_L_E_T_ <> '*'
+    )
+
+    -- Selecione todas as matérias-primas (tipo = 'MP') que correspondem aos itens encontrados
+    SELECT DISTINCT
+        mat.G1_COD AS "CODIGO PAI",
+        mat.G1_COMP AS "CÓDIGO", 
+        prod.B1_DESC AS "DESCRIÇÃO", 
+        mat.G1_QUANT AS "QUANT.", 
+        mat.G1_XUM AS "UNID. MED.", 
+        prod.B1_UCOM AS "ULT. ATUALIZ.",
+        prod.B1_TIPO AS "TIPO", 
+        prod.B1_LOCPAD AS "ARMAZÉM", 
+        prod.B1_UPRC AS "VALOR UNIT. (R$)",
+        (G1_QUANT * B1_UPRC) AS "SUB-TOTAL (R$)"
+    FROM SG1010 AS mat
+    INNER JOIN ListMP AS pai ON mat.G1_COD = pai."CÓDIGO"
+    INNER JOIN SB1010 AS prod ON mat.G1_COMP = prod.B1_COD
+    WHERE prod.B1_TIPO = 'MP'
+    AND prod.B1_LOCPAD IN ('01','03', '11', '12', '97')
+    AND mat.G1_REVFIM <> 'ZZZ' 
+    AND mat.D_E_L_E_T_ <> '*'
+    ORDER BY mat.G1_COMP ASC;
+    """
+    return query
+
+
 class ComercialApp(QWidget):
     def __init__(self):
         super().__init__()
@@ -614,68 +664,20 @@ class ComercialApp(QWidget):
         self.btn_exportar_pdf.setEnabled(status)
         self.btn_limpar.setEnabled(status)
 
-    def query_consulta(self):
+    def executar_consulta(self):
+
         codigo = self.campo_codigo.text().upper().strip()
         self.codigo = codigo
 
         if codigo == '':
-            self.btn_consultar.setEnabled(False)
             exibir_mensagem("ATENÇÃO!",
-                            "Os campos de pesquisa estão vazios.\nPreencha algum campo e tente "
-                            "novamente.\n\nツ\n\nSMARTPLIC®",
+                            "O campo de pesquisa está vazio.\n\nnDigite um código válido e tente "
+                            "novamente!\n\nEUREKA®",
                             "info")
-            return True
+            self.controle_campos_formulario(True)
+            return
 
-        query = f"""
-        DECLARE @CodigoPai VARCHAR(50) = '{codigo}'; -- Substitua pelo código pai que deseja consultar
-
-        -- CTE para selecionar os itens pai e seus subitens recursivamente
-        WITH ListMP AS (
-            -- Selecionar o item pai inicialmente
-            SELECT G1_COD AS "CÓDIGO", G1_COMP AS "COMPONENTE", 0 AS Nivel
-            FROM SG1010
-            WHERE G1_COD = @CodigoPai AND G1_REVFIM = (
-                SELECT MAX(G1_REVFIM) 
-                FROM SG1010 
-                WHERE G1_COD = @CodigoPai AND G1_REVFIM <> 'ZZZ' AND D_E_L_E_T_ <> '*'
-            ) AND G1_REVFIM <> 'ZZZ' AND D_E_L_E_T_ <> '*'
-
-            UNION ALL
-
-            -- Selecione os subitens de cada item pai
-            SELECT sub.G1_COD, sub.G1_COMP, pai.Nivel + 1
-            FROM SG1010 AS sub
-            INNER JOIN ListMP AS pai ON sub.G1_COD = pai."COMPONENTE"
-            WHERE pai.Nivel < 100 -- Defina o limite máximo de recursão aqui
-            AND sub.G1_REVFIM <> 'ZZZ' AND sub.D_E_L_E_T_ <> '*'
-        )
-
-        -- Selecione todas as matérias-primas (tipo = 'MP') que correspondem aos itens encontrados
-        SELECT DISTINCT
-            mat.G1_COD AS "CODIGO PAI",
-            mat.G1_COMP AS "CÓDIGO", 
-            prod.B1_DESC AS "DESCRIÇÃO", 
-            mat.G1_QUANT AS "QUANT.", 
-            mat.G1_XUM AS "UNID. MED.", 
-            prod.B1_UCOM AS "ULT. ATUALIZ.",
-            prod.B1_TIPO AS "TIPO", 
-            prod.B1_LOCPAD AS "ARMAZÉM", 
-            prod.B1_UPRC AS "VALOR UNIT. (R$)",
-            (G1_QUANT * B1_UPRC) AS "SUB-TOTAL (R$)"
-        FROM SG1010 AS mat
-        INNER JOIN ListMP AS pai ON mat.G1_COD = pai."CÓDIGO"
-        INNER JOIN SB1010 AS prod ON mat.G1_COMP = prod.B1_COD
-        WHERE prod.B1_TIPO = 'MP'
-        AND prod.B1_LOCPAD IN ('01','03', '11', '12', '97')
-        AND mat.G1_REVFIM <> 'ZZZ' 
-        AND mat.D_E_L_E_T_ <> '*'
-        ORDER BY mat.G1_COMP ASC;
-        """
-        return query
-
-    def executar_consulta(self):
-        query = self.query_consulta()
-        self.descricao = get_product_name(self.codigo)
+        query = query_consulta(codigo)
         self.label_product_name.hide()
         self.controle_campos_formulario(False)
 
@@ -686,6 +688,9 @@ class ComercialApp(QWidget):
             dataframe = pd.read_sql(query, engine)
 
             if not dataframe.empty:
+
+                self.descricao = get_product_name(self.codigo)
+
                 consolidated_dataframe = dataframe.groupby('CÓDIGO').agg({
                     'DESCRIÇÃO': 'first',
                     'QUANT.': 'sum',
