@@ -154,7 +154,7 @@ class PcpApp(QWidget):
             }
 
             QLineEdit {
-                background-color: #DFE0E2;
+                background-color: #EEEEEE;
                 border: 1px solid #262626;
                 padding: 5px 10px;
                 border-radius: 10px;

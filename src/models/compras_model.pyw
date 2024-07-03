@@ -180,7 +180,8 @@ class ComprasApp(QWidget):
         self.label_line_number.setObjectName("label-line-number")
         self.label_line_number.setVisible(False)
 
-        self.checkbox_exibir_somente_sc_com_pedido = QCheckBox("Somente Solicitações com Pedido de Compra", self)
+        self.checkbox_exibir_somente_sc_com_pedido = QCheckBox("Exibir Solicitação\nde Compras\nSEM Pedidos", self)
+        self.checkbox_exibir_somente_sc_com_pedido.setObjectName("checkbox-sc")
 
         self.label_sc = QLabel("Solic. Compra:", self)
         self.label_sc.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -341,7 +342,6 @@ class ComprasApp(QWidget):
         layout_campos_02 = QHBoxLayout()
         self.layout_buttons = QHBoxLayout()
         self.layout_footer_label = QHBoxLayout()
-        layout_footer_logo = QHBoxLayout()
 
         container_sc = QVBoxLayout()
         container_sc.addWidget(self.label_sc)
@@ -422,15 +422,14 @@ class ComprasApp(QWidget):
         self.layout_footer_label.addStretch(1)
         self.layout_footer_label.addWidget(self.label_line_number)
         self.layout_footer_label.addStretch(1)
-
-        layout_footer_logo.addWidget(self.logo_label)
+        self.layout_footer_label.addWidget(self.logo_label)
 
         layout.addLayout(layout_campos_01)
         layout.addLayout(layout_campos_02)
         layout.addLayout(self.layout_buttons)
         layout.addWidget(self.tree)
         layout.addLayout(self.layout_footer_label)
-        layout.addLayout(layout_footer_logo)
+
         self.setLayout(layout)
 
         self.setStyleSheet("""
@@ -445,13 +444,18 @@ class ComprasApp(QWidget):
                 padding-left: 10px; 
             }
             
-            QLabel#label-line-number {
+            QCheckBox#checkbox-sc {
                 font-size: 14px;
-                font-weight: regular;
+                font-weight: normal;
+            }
+            
+            QLabel#label-line-number {
+                font-size: 16px;
+                font-weight: normal;
             }
     
             QDateEdit, QComboBox {
-                background-color: #DFE0E2;
+                background-color: #EEEEEE;
                 border: 1px solid #262626;
                 margin-bottom: 20px;
                 padding: 5px 10px;
@@ -478,20 +482,16 @@ class ComprasApp(QWidget):
             }
     
             QLineEdit {
-                background-color: #DFE0E2;
+                background-color: #EEEEEE;
                 border: 1px solid #262626;
                 padding: 5px 10px;
                 border-radius: 10px;
-                height: 24px;
                 font-size: 16px;
             }
             
             QLineEdit#forn-raz, QLineEdit#forn-fantasia {
-                background-color: #DFE0E2;
-                border: 1px solid #262626;
                 padding: 5px 10px;
                 border-radius: 10px;
-                height: 24px;
                 font-size: 16px;
                 margin-bottom: 20px;
             }
@@ -746,6 +746,11 @@ class ComprasApp(QWidget):
         contem_descricao = self.campo_contem_descricao_prod.text().upper().strip()
         checkbox_sc_somente_com_pedido = self.checkbox_exibir_somente_sc_com_pedido.isChecked()
 
+        if numero_pedido.strip() != '':
+            numero_pedido_tabela_solic = numero_pedido
+        else:
+            numero_pedido_tabela_solic = '      '
+
         cod_armazem = self.combobox_armazem.currentData()
         if cod_armazem is None:
             cod_armazem = ''
@@ -910,7 +915,7 @@ class ComprasApp(QWidget):
                 ON 
                     PROD.B1_COD = SC.C1_PRODUTO
                 WHERE 
-                    SC.C1_PEDIDO LIKE '      %'
+                    SC.C1_PEDIDO LIKE '%{numero_pedido_tabela_solic}'
                     AND SC.C1_NUM LIKE '%{numero_sc}'
                     AND SC.C1_ZZNUMQP LIKE '%{numero_qp}'
                     AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
@@ -921,13 +926,12 @@ class ComprasApp(QWidget):
                     AND SC.D_E_L_E_T_ <> '*' {filtro_data} ORDER BY "SC" DESC;
             """
 
-        if checkbox_sc_somente_com_pedido:
+        if not checkbox_sc_somente_com_pedido:
             return common_select + solic_com_pedido_where
         else:
             return common_select + solic_sem_pedido_where
 
     def executar_consulta(self):
-
         query_consulta_filtro = self.query_consulta_followup()
         query_contagem_linhas = numero_linhas_consulta(query_consulta_filtro)
 
@@ -944,9 +948,9 @@ class ComprasApp(QWidget):
             if line_number >= 1:
 
                 if line_number > 1:
-                    message = f"Foram encontrados {line_number} resultados!"
+                    message = f"Foram encontrados {line_number} resultados"
                 else:
-                    message = f"Foi encontrado {line_number} resultado!"
+                    message = f"Foi encontrado {line_number} resultado"
 
                 self.label_line_number.setText(f"{message}")
                 self.label_line_number.show()
@@ -1072,8 +1076,8 @@ class ComprasApp(QWidget):
     def configurar_tabela_tooltips(self, dataframe):
         # Mapa de tooltips correspondentes às colunas da consulta SQL
         tooltip_map = {
-            "Status PC": "CINZA - Solicitação sem Pedido de Compra\nVERMELHO - Aguardando entrega\nAZUL - Entrega "
-                         "parcial\nVERDE - Pedido de Compra encerrado"
+            "Status PC": "VERMELHO - SC sem Pedido de Compra\nCINZA - Aguardando entrega\nAZUL - Entrega "
+                         "parcial\nVERDE - Pedido de compra encerrado"
         }
 
         # Obtenha os cabeçalhos das colunas do dataframe

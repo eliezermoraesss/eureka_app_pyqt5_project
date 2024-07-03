@@ -303,7 +303,7 @@ class ComercialApp(QWidget):
                         border: 1px solid #EEEEEE;
                         background-color: #C9C9C9;
                         padding-left: 10px;
-                        margin: 15px 0 15px 0;
+                        margin: 15px 0;
                     }
 
                     QTableWidget QHeaderView::section {
