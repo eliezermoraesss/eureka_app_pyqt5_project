@@ -821,7 +821,7 @@ class ComprasApp(QWidget):
                 LEFT JOIN
                     {database}.dbo.SA2010 FORN
                 ON
-                    FORN.A2_COD = SC.C1_FORNECE
+                    FORN.A2_COD = PC.C7_FORNECE 
                 LEFT JOIN
                     {database}.dbo.NNR010 ARM
                 ON
@@ -924,7 +924,8 @@ class ComprasApp(QWidget):
                     AND {clausulas_contem_descricao}
                     AND SC.C1_OP LIKE '%{numero_op}'
                     AND SC.C1_LOCAL LIKE '{cod_armazem}%'
-                    AND SC.D_E_L_E_T_ <> '*' {filtro_data} ORDER BY "SC" DESC;
+                    AND SC.D_E_L_E_T_ <> '*' {filtro_data} 
+                    AND SC.C1_COTACAO <> 'XXXXXX' ORDER BY "SC" DESC;
             """
 
         if not checkbox_sc_somente_com_pedido:
@@ -1125,7 +1126,7 @@ class ComprasApp(QWidget):
                 codigo = table.item(item_selecionado.row(), codigo_col).text()
                 descricao = table.item(item_selecionado.row(), descricao_col).text()
 
-            if codigo not in self.guias_abertas_onde_usado is not None:
+            if codigo not in self.guias_abertas_onde_usado and codigo is not None:
                 query_onde_usado = f"""
                     SELECT 
                         STRUT.G1_COD AS "Código", 
@@ -1260,7 +1261,7 @@ class ComprasApp(QWidget):
                 codigo = table.item(item_selecionado.row(), codigo_col).text()
                 descricao = table.item(item_selecionado.row(), descricao_col).text()
 
-            if codigo not in self.guias_abertas_saldo:
+            if codigo not in self.guias_abertas_saldo and codigo is not None:
                 query_saldo = f"""
                     SELECT 
                         B2_QATU AS "Saldo Atual",
@@ -1405,7 +1406,7 @@ class ComprasApp(QWidget):
                 codigo = table.item(item_selecionado.row(), codigo_col).text()
                 descricao = table.item(item_selecionado.row(), descricao_col).text()
 
-            if codigo not in self.guias_abertas_ultimos_fornecedores:
+            if codigo not in self.guias_abertas_ultimos_fornecedores and codigo is not None:
                 query = f"""
                     SELECT 
                         A5_FORNECE AS "Cód. Forn.", 
