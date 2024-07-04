@@ -527,6 +527,7 @@ class ComprasApp(QWidget):
                 border: 1px solid #000000;
                 background-color: #686D76;
                 padding-left: 10px;
+                margin: 15px 0;
             }
     
             QTableWidget QHeaderView::section {
@@ -1124,7 +1125,7 @@ class ComprasApp(QWidget):
                 codigo = table.item(item_selecionado.row(), codigo_col).text()
                 descricao = table.item(item_selecionado.row(), descricao_col).text()
 
-            if codigo not in self.guias_abertas_onde_usado:
+            if codigo not in self.guias_abertas_onde_usado is not None:
                 query_onde_usado = f"""
                     SELECT 
                         STRUT.G1_COD AS "Código", 
