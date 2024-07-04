@@ -122,8 +122,8 @@ class PcpApp(QWidget):
             }
             
             QLabel#label-line-number {
-                font-size: 14px;
-                font-weight: regular;
+                font-size: 16px;
+                font-weight: normal;
             }
             
             QDateEdit {
@@ -196,6 +196,7 @@ class PcpApp(QWidget):
                 border: 1px solid #000000;
                 background-color: #686D76;
                 padding-left: 10px;
+                margin: 15px 0;
             }
 
             QTableWidget QHeaderView::section {
@@ -777,9 +778,9 @@ class PcpApp(QWidget):
             if line_number >= 1:
 
                 if line_number > 1:
-                    message = f"Foram encontrados {line_number} resultados!"
+                    message = f"Foram encontrados {line_number} resultados"
                 else:
-                    message = f"Foi encontrado {line_number} resultado!"
+                    message = f"Foi encontrado {line_number} resultado"
 
                 self.label_line_number.setText(f"{message}")
                 self.label_line_number.show()

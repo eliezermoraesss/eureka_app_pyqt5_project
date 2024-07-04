@@ -264,7 +264,7 @@ class EngenhariaApp(QWidget):
 
         self.btn_saldo_estoque = QPushButton("Saldos em Estoque", self)
         self.btn_saldo_estoque.clicked.connect(lambda: self.executar_saldo_em_estoque(self.tree))
-        self.btn_saldo_estoque.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.btn_saldo_estoque.setMinimumWidth(150)
         self.btn_saldo_estoque.setEnabled(False)
 
         self.btn_limpar = QPushButton("Limpar", self)
@@ -370,8 +370,8 @@ class EngenhariaApp(QWidget):
             }
             
             QLabel#label-line-number {
-                font-size: 14px;
-                font-weight: regular;
+                font-size: 16px;
+                font-weight: normal;
             }
 
             QLineEdit {
@@ -416,8 +416,7 @@ class EngenhariaApp(QWidget):
                 font-size: 11px;
                 height: 20px;
                 font-weight: bold;
-                margin-top: 6px;
-                margin-bottom: 6px;
+                margin: 10px 5px;
             }
 
             QPushButton#PCP, QPushButton#compras {
@@ -442,6 +441,7 @@ class EngenhariaApp(QWidget):
                 border: 1px solid #000000;
                 background-color: #262626;
                 padding-left: 10px;
+                margin-bottom: 15px;
             }
 
             QTableWidget QHeaderView::section {
@@ -736,9 +736,9 @@ class EngenhariaApp(QWidget):
             if not dataframe.empty:
 
                 if line_number > 1:
-                    message = f"Foram encontrados {line_number} resultados!"
+                    message = f"Foram encontrados {line_number} resultados"
                 else:
-                    message = f"Foi encontrado {line_number} resultado!"
+                    message = f"Foi encontrado {line_number} resultado"
 
                 self.label_line_number.setText(f"{message}")
                 self.label_line_number.show()
@@ -1305,16 +1305,5 @@ if __name__ == "__main__":
     username, password, database, server = setup_mssql()
     driver = '{SQL Server}'
 
-    largura_janela = 1400  # Substitua pelo valor desejado
-    altura_janela = 700  # Substitua pelo valor desejado
-
-    largura_tela = app.primaryScreen().size().width()
-    altura_tela = app.primaryScreen().size().height()
-
-    pos_x = (largura_tela - largura_janela) // 2
-    pos_y = (altura_tela - altura_janela) // 2
-
-    window.setGeometry(pos_x, pos_y, largura_janela, altura_janela)
-
-    window.show()
+    window.showMaximized()
     sys.exit(app.exec_())
