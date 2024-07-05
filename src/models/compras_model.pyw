@@ -251,7 +251,7 @@ class ComprasApp(QWidget):
         self.campo_razao_social_fornecedor.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_razao_social_fornecedor.setMaximumWidth(250)  # Ajuste conforme necessário
         self.campo_razao_social_fornecedor.setMaxLength(40)
-        self.add_clear_button(self.campo_razao_social_fornecedor)
+        # self.add_clear_button(self.campo_razao_social_fornecedor)
 
         self.campo_nm_fantasia_fornecedor = QLineEdit(self)
         self.campo_nm_fantasia_fornecedor.setObjectName("forn-fantasia")
@@ -259,7 +259,7 @@ class ComprasApp(QWidget):
         self.campo_nm_fantasia_fornecedor.setMaximumWidth(250)  # Ajuste conforme necessário
         self.campo_nm_fantasia_fornecedor.setMaxLength(40)
         self.campo_nm_fantasia_fornecedor.setMaxLength(40)
-        self.add_clear_button(self.campo_nm_fantasia_fornecedor)
+        # self.add_clear_button(self.campo_nm_fantasia_fornecedor)
 
         self.campo_data_inicio = QDateEdit(self)
         self.campo_data_inicio.setFont(QFont(fonte_campos, 10))
@@ -494,7 +494,7 @@ class ComprasApp(QWidget):
                 padding: 5px 10px;
                 border-radius: 10px;
                 font-size: 16px;
-                margin-bottom: 20px;
+                margin-bottom:  20px;
             }
     
             QPushButton {
@@ -506,7 +506,7 @@ class ComprasApp(QWidget):
                 font-size: 12px;
                 height: 20px;
                 font-weight: bold;
-                margin: 0px 5px 10px 5px;
+                margin: 10px 5px 5px 5px;
             }
             
             QPushButton#btn_engenharia {
@@ -528,7 +528,7 @@ class ComprasApp(QWidget):
                 border: 1px solid #000000;
                 background-color: #686D76;
                 padding-left: 10px;
-                margin: 15px 0;
+                margin: 5px 15px 0px 0px;
             }
     
             QTableWidget QHeaderView::section {
