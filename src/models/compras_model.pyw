@@ -180,7 +180,7 @@ class ComprasApp(QWidget):
         self.label_line_number.setObjectName("label-line-number")
         self.label_line_number.setVisible(False)
 
-        self.checkbox_exibir_somente_sc_com_pedido = QCheckBox("Exibir Solicitação\nde Compras\nSEM Pedidos", self)
+        self.checkbox_exibir_somente_sc_com_pedido = QCheckBox("Ocultar Solicitação de Compras EM ABERTO", self)
         self.checkbox_exibir_somente_sc_com_pedido.setObjectName("checkbox-sc")
 
         self.label_sc = QLabel("Solic. Compra:", self)
@@ -445,7 +445,8 @@ class ComprasApp(QWidget):
             }
             
             QCheckBox#checkbox-sc {
-                font-size: 14px;
+                margin-left: 10px;
+                font-size: 16px;
                 font-weight: normal;
             }
             
@@ -784,7 +785,7 @@ class ComprasApp(QWidget):
                     ITEM_NF.D1_QUANT AS "Qtd. Entregue",
                     CASE 
                         WHEN ITEM_NF.D1_QUANT IS NULL THEN SC.C1_QUJE 
-                        ELSE SC.C1_QUJE - ITEM_NF.D1_QUANT 
+                        ELSE SC.C1_QUJE - ITEM_NF.D1_QUANT
                     END AS "Qtd. Pendente",
                     ITEM_NF.D1_DTDIGIT AS "Data Entrega",
                     PC.C7_ENCER AS "Status Ped. Compra",
@@ -809,15 +810,15 @@ class ComprasApp(QWidget):
                     PC.S_T_A_M_P_ AS "Aberto em:",
                     SC.C1_OP AS "OP"
                 FROM 
-                    {database}.dbo.SC1010 SC
-                LEFT JOIN 
+                    {database}.dbo.SC7010 PC
+                LEFT JOIN
                     {database}.dbo.SD1010 ITEM_NF
                 ON 
-                    SC.C1_PEDIDO = ITEM_NF.D1_PEDIDO AND SC.C1_ITEMPED = ITEM_NF.D1_ITEMPC
+                    PC.C7_NUM = ITEM_NF.D1_PEDIDO AND PC.C7_ITEM = ITEM_NF.D1_ITEMPC
                 LEFT JOIN
-                    {database}.dbo.SC7010 PC
+                    {database}.dbo.SC1010 SC
                 ON 
-                    SC.C1_PEDIDO = PC.C7_NUM AND SC.C1_ITEMPED = PC.C7_ITEM AND SC.C1_ZZNUMQP = PC.C7_ZZNUMQP
+                    SC.C1_PEDIDO = PC.C7_NUM AND SC.C1_ITEMPED = PC.C7_ITEM
                 LEFT JOIN
                     {database}.dbo.SA2010 FORN
                 ON
@@ -837,31 +838,37 @@ class ComprasApp(QWidget):
             """
 
         solic_com_pedido_where = f"""
-                WHERE 
-                    SC.C1_PEDIDO LIKE '%{numero_pedido}'
-                    AND SC.C1_NUM LIKE '%{numero_sc}'
+                WHERE
+                    PC.C7_NUM LIKE '%{numero_pedido}'
+                    AND PC.C7_NUMSC LIKE '%{numero_sc}'
                     AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
-                    AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
-                    AND SC.C1_DESCRI LIKE '{descricao_produto}%'
-                    AND {clausulas_contem_descricao}
-                    AND SC.C1_OP LIKE '%{numero_op}' 
-                    AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}'
-                    AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
-                    AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data} ORDER BY PC.R_E_C_N_O_ DESC;
-            """
-
-        solic_sem_pedido_where = f"""
-                WHERE 
-                    SC.C1_PEDIDO LIKE '%{numero_pedido}'
-                    AND SC.C1_NUM LIKE '%{numero_sc}'
-                    AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
-                    AND SC.C1_PRODUTO LIKE '{codigo_produto}%'
+                    AND PC.C7_PRODUTO LIKE '{codigo_produto}%'
                     AND SC.C1_DESCRI LIKE '{descricao_produto}%'
                     AND {clausulas_contem_descricao}
                     AND SC.C1_OP LIKE '%{numero_op}' 
                     AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}'
                     AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
                     AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data}
+                    AND PC.D_E_L_E_T_ <> '*'
+                    AND SC.D_E_L_E_T_ <> '*'
+                    AND PROD.D_E_L_E_T_ <> '*' ORDER BY PC.R_E_C_N_O_ DESC;
+            """
+
+        solic_sem_pedido_where = f"""
+                WHERE
+                    PC.C7_NUM LIKE '%{numero_pedido}'
+                    AND PC.C7_NUMSC LIKE '%{numero_sc}'
+                    AND PC.C7_ZZNUMQP LIKE '%{numero_qp}'
+                    AND PC.C7_PRODUTO LIKE '{codigo_produto}%'
+                    AND SC.C1_DESCRI LIKE '{descricao_produto}%'
+                    AND {clausulas_contem_descricao}
+                    AND SC.C1_OP LIKE '%{numero_op}' 
+                    AND FORN.A2_NOME LIKE '%{razao_social_fornecedor}'
+                    AND FORN.A2_NREDUZ LIKE '%{nome_fantasia_fornecedor}%'
+                    AND SC.C1_LOCAL LIKE '{cod_armazem}%' {filtro_data}
+                    AND PC.D_E_L_E_T_ <> '*'
+                    AND SC.D_E_L_E_T_ <> '*'
+                    AND PROD.D_E_L_E_T_ <> '*' 
 
                 UNION ALL
 
@@ -924,11 +931,12 @@ class ComprasApp(QWidget):
                     AND {clausulas_contem_descricao}
                     AND SC.C1_OP LIKE '%{numero_op}'
                     AND SC.C1_LOCAL LIKE '{cod_armazem}%'
-                    AND SC.D_E_L_E_T_ <> '*' {filtro_data} 
+                    AND SC.D_E_L_E_T_ <> '*' {filtro_data}
+                    AND PROD.D_E_L_E_T_ <> '*'
                     AND SC.C1_COTACAO <> 'XXXXXX' ORDER BY "SC" DESC;
             """
 
-        if not checkbox_sc_somente_com_pedido:
+        if checkbox_sc_somente_com_pedido:
             return common_select + solic_com_pedido_where
         else:
             return common_select + solic_sem_pedido_where
@@ -950,9 +958,9 @@ class ComprasApp(QWidget):
             if line_number >= 1:
 
                 if line_number > 1:
-                    message = f"Foram encontrados {line_number} resultados"
+                    message = f"Foram encontradas {line_number} linhas"
                 else:
-                    message = f"Foi encontrado {line_number} resultado"
+                    message = f"Foi encontrada {line_number} linha"
 
                 self.label_line_number.setText(f"{message}")
                 self.label_line_number.show()
