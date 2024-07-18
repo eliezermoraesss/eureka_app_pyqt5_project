@@ -1033,6 +1033,7 @@ class EngenhariaApp(QWidget):
                     WHERE G1_COMP = '{codigo}' 
                         AND STRUT.G1_REVFIM <> 'ZZZ' 
                         AND STRUT.D_E_L_E_T_ <> '*'
+                        AND PROD.D_E_L_E_T_ <> '*'
                     ORDER BY B1_DESC ASC;
                 """
                 self.guias_abertas_onde_usado.append(codigo)

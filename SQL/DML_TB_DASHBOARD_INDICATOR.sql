@@ -6,4 +6,4 @@ INSERT INTO enaplic_management.dbo.tb_dashboard_indicators
     vl_all_sc, vl_all_pc, vl_compras_perc, vl_mat_received, 
     vl_mat_received_perc) 
 VALUES
-    ('', '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    (N'999999', N'HELLO WORLD! :D', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
