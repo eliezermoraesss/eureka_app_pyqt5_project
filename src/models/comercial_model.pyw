@@ -129,36 +129,36 @@ def query_consulta(codigo):
         WHERE pai.Nivel < 100 -- Defina o limite máximo de recursão aqui
         AND sub.G1_REVFIM <> 'ZZZ' AND sub.D_E_L_E_T_ <> '*'
     )
-
-    -- Selecione todas as matérias-primas (tipo = 'MP') que correspondem aos itens encontrados e some as quantidades
-    SELECT 
-        mat.G1_COD AS "CODIGO PAI",
-        mat.G1_COMP AS "CÓDIGO", 
-        prod.B1_DESC AS "DESCRIÇÃO", 
-        SUM(pai.QUANTIDADE) AS "QUANT.",
-        mat.G1_XUM AS "UNID. MED.", 
-        prod.B1_UCOM AS "ULT. ATUALIZ.",
-        prod.B1_TIPO AS "TIPO", 
-        prod.B1_LOCPAD AS "ARMAZÉM", 
-        prod.B1_UPRC AS "VALOR UNIT. (R$)",
-        SUM(pai.QUANTIDADE * prod.B1_UPRC) AS "SUB-TOTAL (R$)"
-    FROM SG1010 AS mat
-    INNER JOIN ListMP AS pai ON mat.G1_COD = pai."CÓDIGO"
-    INNER JOIN SB1010 AS prod ON mat.G1_COMP = prod.B1_COD
-    WHERE prod.B1_TIPO = 'MP'
-    AND prod.B1_LOCPAD IN ('01','03', '11', '12', '97')
-    AND mat.G1_REVFIM <> 'ZZZ' 
-    AND mat.D_E_L_E_T_ <> '*'
-    GROUP BY 
-        mat.G1_COD, 
-        mat.G1_COMP, 
-        prod.B1_DESC, 
-        mat.G1_XUM, 
-        prod.B1_UCOM, 
-        prod.B1_TIPO, 
-        prod.B1_LOCPAD, 
-        prod.B1_UPRC
-    ORDER BY mat.G1_COMP ASC;
+    
+	-- Selecionar os componentes, somar as quantidades e evitar componentes duplicados
+	SELECT 
+	    "COMPONENTE" AS "CÓDIGO",
+	    prod.B1_DESC AS "DESCRIÇÃO",
+	    SUM("QUANTIDADE") AS "QUANT.",
+	    prod.B1_UM AS "UNID. MED.", 
+	    prod.B1_UCOM AS "ULT. ATUALIZ.",
+	    prod.B1_TIPO AS "TIPO", 
+	    prod.B1_LOCPAD AS "ARMAZÉM", 
+	    prod.B1_UPRC AS "VALOR UNIT. (R$)",
+	    SUM("QUANTIDADE" * prod.B1_UPRC) AS "SUB-TOTAL (R$)"
+	FROM 
+	    ListMP AS listMP
+	INNER JOIN 
+	    SB1010 AS prod ON listMP."COMPONENTE" = prod.B1_COD
+	WHERE 
+	    prod.B1_TIPO = 'MP'
+	    AND prod.B1_LOCPAD IN ('01','03', '11', '12', '97')
+	    AND prod.D_E_L_E_T_ <> '*'
+	GROUP BY 
+	    "COMPONENTE",
+	    prod.B1_DESC,
+	    prod.B1_UM,
+	    prod.B1_UCOM,
+	    prod.B1_TIPO,
+	    prod.B1_LOCPAD,
+	    prod.B1_UPRC
+	ORDER BY 
+	    "COMPONENTE" ASC;
     """
     return query
 
