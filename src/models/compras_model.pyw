@@ -815,7 +815,7 @@ class ComprasApp(QWidget):
                     {database}.dbo.SD1010 ITEM_NF
                 ON 
                     PC.C7_NUM = ITEM_NF.D1_PEDIDO AND PC.C7_ITEM = ITEM_NF.D1_ITEMPC
-                LEFT JOIN
+                INNER JOIN
                     {database}.dbo.SC1010 SC
                 ON 
                     SC.C1_PEDIDO = PC.C7_NUM AND SC.C1_ITEMPED = PC.C7_ITEM

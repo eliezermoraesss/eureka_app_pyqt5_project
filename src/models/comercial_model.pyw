@@ -308,8 +308,8 @@ class ComercialApp(QWidget):
                     }
 
                     QTableWidget {
-                        border: 1px solid #EEEEEE;
-                        background-color: #C9C9C9;
+                        border: 1px solid #000000;
+                        background-color: #686D76;
                         padding-left: 10px;
                         margin: 15px 0;
                     }

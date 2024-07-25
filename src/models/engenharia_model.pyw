@@ -439,7 +439,7 @@ class EngenhariaApp(QWidget):
 
             QTableWidget {
                 border: 1px solid #000000;
-                background-color: #262626;
+                background-color: #686D76;
                 padding-left: 10px;
                 margin-bottom: 15px;
             }
