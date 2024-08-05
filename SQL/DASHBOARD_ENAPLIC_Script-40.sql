@@ -13,6 +13,17 @@ CREATE TABLE enaplic_management.dbo.tb_open_qps (
 	S_T_A_M_P datetime DEFAULT switchoffset(sysdatetimeoffset(),'-03:00') NOT NULL,
 );
 
+-- DROP TABLE enaplic_management.dbo.tb_end_qps;
+
+CREATE TABLE enaplic_management.dbo.tb_end_qps (
+	id int IDENTITY(1,1) NOT NULL,
+	cod_qp varchar(6) NOT NULL PRIMARY KEY,
+	des_qp varchar(200) NOT NULL,
+	dt_open_qp varchar(10) NULL,
+	dt_end_qp varchar(10) NULL,
+	S_T_A_M_P datetime DEFAULT switchoffset(sysdatetimeoffset(),'-03:00') NOT NULL,
+);
+
 -- CREATE DATABASE enaplic_management;
 
 -- DROP DATABASE enaplic_management;
@@ -28,6 +39,9 @@ CREATE TABLE enaplic_management.dbo.tb_dashboard_indicators (
 	des_qp varchar(200) NOT NULL,
 	dt_open_qp varchar(10) NULL,
 	dt_end_qp varchar(10) NULL,
+	dt_start_proj varchar(10) NULL,
+	dt_end_proj varchar(10) NULL,
+	vl_proj_duration int NULL,
 	status_proj varchar(1) NULL,
 	vl_proj_all_prod int NOT NULL,
 	vl_proj_prod_cancel int NOT NULL,
@@ -62,6 +76,9 @@ CREATE TABLE enaplic_management.dbo.tb_current_dashboard_indicators (
 	des_qp varchar(200) NOT NULL,
 	dt_open_qp varchar(10) NULL,
 	dt_end_qp varchar(10) NULL,
+	dt_start_proj varchar(10) NULL,
+	dt_end_proj varchar(10) NULL,
+	vl_proj_duration int NULL,
 	status_proj varchar(1) NULL,
 	vl_proj_all_prod int NOT NULL,
 	vl_proj_prod_cancel int NOT NULL,
@@ -153,11 +170,11 @@ ADD STAMP ROWVERSION;
 
 -- Adicionar a coluna dt_open_qp
 ALTER TABLE enaplic_management.dbo.tb_dashboard_indicators 
-ADD dt_open_qp VARCHAR(8);
+ADD dt_start_proj VARCHAR(10);
 
 -- Adicionar a coluna dt_end_qp
 ALTER TABLE enaplic_management.dbo.tb_dashboard_indicators 
-ADD dt_end_qp VARCHAR(8);
+ADD dt_end_proj VARCHAR(10);
 
 ALTER TABLE enaplic_management.dbo.tb_dashboard_indicators
 DROP COLUMN status_proj;
@@ -209,6 +226,13 @@ SELECT
 	* 
 FROM 
 	enaplic_management.dbo.tb_open_qps
+ORDER BY 
+	id DESC;
+
+SELECT 
+	* 
+FROM 
+	enaplic_management.dbo.tb_end_qps
 ORDER BY 
 	id DESC;
 
