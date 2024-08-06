@@ -92,33 +92,6 @@ class QpClosedApp(QWidget):
                 font-size: 16px;
                 font-weight: normal;
             }
-            
-            QDateEdit {
-                background-color: #DFE0E2;
-                border: 1px solid #262626;
-                margin-bottom: 20px;
-                padding: 5px 10px;
-                border-radius: 10px;
-                height: 24px;
-                font-size: 16px;
-            }
-            
-            QDateEdit::drop-down {
-                subcontrol-origin: padding;
-                subcontrol-position: top right;
-                width: 30px;
-                border-left-width: 1px;
-                border-left-color: darkgray;
-                border-left-style: solid;
-                border-top-right-radius: 3px;
-                border-bottom-right-radius: 3px;
-            }
-            
-            QDateEdit::down-arrow {
-                image: url(../resources/images/arrow.png);
-                width: 10px;
-                height: 10px;
-            }
 
             QLineEdit {
                 background-color: #EEEEEE;
@@ -132,7 +105,7 @@ class QpClosedApp(QWidget):
             QPushButton {
                 background-color: #DC5F00;
                 color: #EEEEEE;
-                padding: 5px 10px;
+                padding: 10px;
                 border: 2px;
                 border-radius: 8px;
                 font-size: 12px;
@@ -140,21 +113,13 @@ class QpClosedApp(QWidget):
                 font-weight: bold;
                 margin: 10px 5px;
             }
-            
-            QPushButton#btn_engenharia {
-                background-color: #0a79f8;
-            }
-            
-            QPushButton#btn_compras {
-                background-color: #836FFF;
-            }
 
-            QPushButton:hover, QPushButton:hover#btn_engenharia, QPushButton:hover#btn_compras {
+            QPushButton:hover {
                 background-color: #E84545;
                 color: #fff
             }
     
-            QPushButton:pressed, QPushButton:pressed#btn_engenharia, QPushButton:pressed#btn_compras {
+            QPushButton:pressed {
                 background-color: #6703c5;
                 color: #fff;
             }
@@ -203,20 +168,20 @@ class QpClosedApp(QWidget):
         self.label_descricao_prod = QLabel("Descrição:", self)
         self.label_contem_descricao_prod = QLabel("Contém na descrição:", self)
         self.label_contem_descricao_prod.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.label_qp = QLabel("Número QP:", self)
+        self.label_qp = QLabel("QP:", self)
         self.label_line_number = QLabel("", self)
         self.label_line_number.setVisible(False)
 
         self.campo_descricao_prod = QLineEdit(self)
         self.campo_descricao_prod.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_descricao_prod.setMaxLength(60)
-        self.campo_descricao_prod.setFixedWidth(280)
+        self.campo_descricao_prod.setFixedWidth(400)
         self.add_clear_button(self.campo_descricao_prod)
 
         self.campo_contem_descricao_prod = QLineEdit(self)
         self.campo_contem_descricao_prod.setFont(QFont(fonte_campos, tamanho_fonte_campos))
         self.campo_contem_descricao_prod.setMaxLength(60)
-        self.campo_contem_descricao_prod.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.campo_contem_descricao_prod.setFixedWidth(400)
         self.add_clear_button(self.campo_contem_descricao_prod)
 
         self.campo_qp = QLineEdit(self)
@@ -225,13 +190,17 @@ class QpClosedApp(QWidget):
         self.campo_qp.setFixedWidth(110)
         self.add_clear_button(self.campo_qp)
 
-        self.btn_finalizar_qp = QPushButton("Finalizar QP", self)
+        self.btn_finalizar_qp = QPushButton("Pesquisar QP", self)
         self.btn_finalizar_qp.clicked.connect(self.consultar_qps_finalizadas)
         self.btn_finalizar_qp.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        
+        self.btn_limpar = QPushButton("Limpar", self)
+        self.btn_limpar.clicked.connect(self.limpar_campos)
+        self.btn_limpar.setFixedWidth(110)
 
         self.btn_fechar = QPushButton("Fechar", self)
         self.btn_fechar.clicked.connect(self.fechar_janela)
-        self.btn_fechar.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        self.btn_fechar.setFixedWidth(110)
 
         self.campo_qp.returnPressed.connect(self.consultar_qps_finalizadas)
         self.campo_descricao_prod.returnPressed.connect(self.consultar_qps_finalizadas)
@@ -239,7 +208,6 @@ class QpClosedApp(QWidget):
 
         layout = QVBoxLayout()
         layout_campos_01 = QHBoxLayout()
-        layout_campos_02 = QHBoxLayout()
         self.layout_buttons = QHBoxLayout()
         self.layout_footer_label = QHBoxLayout()
         layout_footer_logo = QHBoxLayout()
@@ -260,9 +228,9 @@ class QpClosedApp(QWidget):
         layout_campos_01.addLayout(container_descricao_prod)
         layout_campos_01.addLayout(container_contem_descricao_prod)
         layout_campos_01.addStretch()
-        layout_campos_02.addStretch()
 
         self.layout_buttons.addWidget(self.btn_finalizar_qp)
+        self.layout_buttons.addWidget(self.btn_limpar)
         self.layout_buttons.addWidget(self.btn_fechar)
         self.layout_buttons.addStretch()
 
@@ -273,7 +241,6 @@ class QpClosedApp(QWidget):
         layout_footer_logo.addWidget(self.logo_label)
 
         layout.addLayout(layout_campos_01)
-        layout.addLayout(layout_campos_02)
         layout.addLayout(self.layout_buttons)
         layout.addWidget(self.tree)
         layout.addLayout(self.layout_footer_label)
@@ -358,20 +325,39 @@ class QpClosedApp(QWidget):
     def fechar_janela(self):
         self.close()
 
-    def consultar_qps_finalizadas(self):
-        query = """
+    def query_consulta_qps_finalizadas(self):
+        numero_qp = self.campo_qp.text().upper().strip()
+        descricao = self.campo_descricao_prod.text().upper().strip()
+        contem_descricao = self.campo_contem_descricao_prod.text().upper().strip()
+        
+        palavras_contem_descricao = contem_descricao.split('*')
+        clausulas_contem_descricao = " AND ".join(
+            [f"des_qp LIKE '%{palavra}%'" for palavra in palavras_contem_descricao])
+        
+        query = f"""
             SELECT
                 cod_qp AS "QP",
-                des_qp AS "Projeto",
-                dt_open_qp AS "Data de emissão",
-                dt_end_qp AS "Prazo de entrega",
-                dt_completed_qp AS "Data de Entrega"
-            FROM enaplic_management.dbo.tb_end_qps
-        """
-        line_number = """
+                des_qp AS "NOME DO PROJETO",
+                dt_open_qp AS "DATA DE EMISSÃO",
+                dt_end_qp AS "PRAZO DE ENTREGA",
+                dt_completed_qp AS "DATA DE CONCLUSÃO"
+            FROM 
+                enaplic_management.dbo.tb_end_qps
+            WHERE 
+                cod_qp LIKE '%{numero_qp}'
+                AND des_qp LIKE '{descricao}%'
+                AND {clausulas_contem_descricao}
+                ORDER BY id DESC
+            """
+            
+        return query
+
+    def consultar_qps_finalizadas(self):
+        query = self.query_consulta_qps_finalizadas()
+        line_number = f"""
             SELECT
-                COUNT(*)
-            FROM enaplic_management.dbo.tb_end_qps
+                COUNT(*) AS count
+            FROM ({query.replace("ORDER BY id DESC", "")}) AS results
         """
 
         conn_str = f'DRIVER={driver};SERVER={server};UID={username};PWD={password}'
@@ -391,17 +377,26 @@ class QpClosedApp(QWidget):
                 self.label_line_number.show()
 
             else:
-                exibir_mensagem("EUREKA® PCP", 'Nada encontrado!', "info")
+                exibir_mensagem("EUREKA® PCP", 'Nenhuma QP encontrada!', "info")
                 self.controle_campos_formulario(True)
                 return
 
             dataframe = pd.read_sql(query, self.engine)
+            dataframe.insert(0, 'Status', '')
             dataframe[''] = ''
 
             self.configurar_tabela(dataframe)
 
             self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
             self.tree.setRowCount(0)
+            
+            # Construir caminhos relativos
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            open_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'red.png')
+            closed_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'green.png')
+
+            open_icon = QIcon(open_icon_path)
+            closed_icon = QIcon(closed_icon_path)
 
             for i, row in dataframe.iterrows():
                 if self.interromper_consulta_sql:
@@ -411,7 +406,17 @@ class QpClosedApp(QWidget):
                 self.tree.insertRow(i)
                 for j, value in enumerate(row):
                     if value is not None:
-                        item = QTableWidgetItem(str(value).strip())
+                        if j == 0:
+                            item = QTableWidgetItem()
+                            if row['DATA DE CONCLUSÃO'] == None:
+                                item.setIcon(open_icon)
+                            else:
+                                item.setIcon(closed_icon)
+                            item.setTextAlignment(Qt.AlignCenter)
+                        else:
+                            item = QTableWidgetItem(str(value).strip())
+                            if j != 2:
+                                item.setTextAlignment(Qt.AlignCenter)
                     else:
                         item = QTableWidgetItem('')
 
