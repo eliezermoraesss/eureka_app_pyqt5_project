@@ -763,6 +763,8 @@ class PcpApp(QWidget):
 
     def executar_consulta(self):
         query_consulta_op = self.query_consulta_ordem_producao()
+        if query_consulta_op is None:
+            return
         query_contagem_linhas = numero_linhas_consulta(query_consulta_op)
 
         self.label_line_number.hide()
@@ -1281,6 +1283,9 @@ class PcpApp(QWidget):
                 finally:
                     self.tabWidget.setCurrentIndex(self.tabWidget.indexOf(nova_guia_saldo))
                     conn_saldo.close()
+                    
+    def atualizar_data_conclusao_qp(numero_qp, self):
+        pass
 
 
 if __name__ == "__main__":

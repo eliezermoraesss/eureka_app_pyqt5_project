@@ -21,6 +21,7 @@ CREATE TABLE enaplic_management.dbo.tb_end_qps (
 	des_qp varchar(200) NOT NULL,
 	dt_open_qp varchar(10) NULL,
 	dt_end_qp varchar(10) NULL,
+	dt_completed_qp varchar(10) NULL,
 	S_T_A_M_P datetime DEFAULT switchoffset(sysdatetimeoffset(),'-03:00') NOT NULL,
 );
 
