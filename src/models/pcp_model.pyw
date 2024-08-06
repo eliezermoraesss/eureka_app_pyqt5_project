@@ -1283,9 +1283,6 @@ class PcpApp(QWidget):
                 finally:
                     self.tabWidget.setCurrentIndex(self.tabWidget.indexOf(nova_guia_saldo))
                     conn_saldo.close()
-                    
-    def atualizar_data_conclusao_qp(numero_qp, self):
-        pass
 
 
 if __name__ == "__main__":
