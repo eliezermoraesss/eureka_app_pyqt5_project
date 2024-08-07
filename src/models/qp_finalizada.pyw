@@ -6,11 +6,12 @@ from tkinter import messagebox
 import pandas as pd
 import pyperclip
 import sys
-from PyQt5.QtCore import Qt, QProcess, pyqtSignal
+from PyQt5.QtCore import Qt, QProcess, pyqtSignal, QDate
 from PyQt5.QtGui import QFont, QIcon, QPixmap
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QTableWidget, QTableWidgetItem, QHeaderView, QStyle, QAction, QLabel, QSizePolicy, QTabWidget, QMenu, QFrame
-from sqlalchemy import create_engine
+    QTableWidget, QTableWidgetItem, QHeaderView, QStyle, QAction, QLabel, QSizePolicy, QTabWidget, QMenu, QFrame, \
+    QCalendarWidget
+from sqlalchemy import create_engine, text
 
 
 def exibir_mensagem(title, message, icon_type):
@@ -63,7 +64,6 @@ class QpClosedApp(QWidget):
         locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
         self.engine = None
-        self.interromper_consulta_sql = False
         self.tree = QTableWidget(self)
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
@@ -178,7 +178,7 @@ class QpClosedApp(QWidget):
         self.logo_label.setPixmap(pixmap_logo)
         self.logo_label.setAlignment(Qt.AlignRight)
 
-        self.label_title = QLabel("CONSULTA DE QP CONCLUÍDAS", self)
+        self.label_title = QLabel("CONSULTA DE QP", self)
         self.label_title.setObjectName('label-title')
 
         self.line = QFrame(self)
@@ -211,10 +211,10 @@ class QpClosedApp(QWidget):
         self.campo_qp.setFixedWidth(110)
         self.add_clear_button(self.campo_qp)
 
-        self.btn_finalizar_qp = QPushButton("Pesquisar QP", self)
+        self.btn_finalizar_qp = QPushButton("QPs Concluídas", self)
         self.btn_finalizar_qp.clicked.connect(self.consultar_qps_finalizadas)
         self.btn_finalizar_qp.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-        
+
         self.btn_limpar = QPushButton("Limpar", self)
         self.btn_limpar.clicked.connect(self.limpar_campos)
         self.btn_limpar.setFixedWidth(110)
@@ -232,7 +232,7 @@ class QpClosedApp(QWidget):
         layout_campos_01 = QHBoxLayout()
         self.layout_buttons = QHBoxLayout()
         self.layout_footer_label = QHBoxLayout()
-        
+
         layout_title.addStretch(1)
         layout_title.addWidget(self.logo_label)
         layout_title.addWidget(self.label_title)
@@ -271,6 +271,15 @@ class QpClosedApp(QWidget):
         layout.addWidget(self.tree)
         layout.addLayout(self.layout_footer_label)
         self.setLayout(layout)
+
+        self.calendar = QCalendarWidget(self)
+        self.calendar.setFixedSize(350, 200)
+        self.calendar.setGridVisible(True)
+        self.calendar.hide()
+        self.calendar.clicked.connect(self.date_selected)
+
+        self.tree.cellClicked.connect(self.cell_clicked)
+        self.selected_row = None
 
     def show_context_menu(self, position, table):
         indexes = table.selectedIndexes()
@@ -354,11 +363,11 @@ class QpClosedApp(QWidget):
         numero_qp = self.campo_qp.text().upper().strip()
         descricao = self.campo_descricao_prod.text().upper().strip()
         contem_descricao = self.campo_contem_descricao_prod.text().upper().strip()
-        
+
         palavras_contem_descricao = contem_descricao.split('*')
         clausulas_contem_descricao = " AND ".join(
             [f"des_qp LIKE '%{palavra}%'" for palavra in palavras_contem_descricao])
-        
+
         query = f"""
             SELECT
                 cod_qp AS "QP",
@@ -374,7 +383,7 @@ class QpClosedApp(QWidget):
                 AND {clausulas_contem_descricao}
                 ORDER BY id DESC
             """
-            
+
         return query
 
     def consultar_qps_finalizadas(self):
@@ -414,7 +423,7 @@ class QpClosedApp(QWidget):
 
             self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
             self.tree.setRowCount(0)
-            
+
             # Construir caminhos relativos
             script_dir = os.path.dirname(os.path.abspath(__file__))
             open_icon_path = os.path.join(script_dir, '..', 'resources', 'images', 'red.png')
@@ -424,8 +433,6 @@ class QpClosedApp(QWidget):
             closed_icon = QIcon(closed_icon_path)
 
             for i, row in dataframe.iterrows():
-                if self.interromper_consulta_sql:
-                    break
 
                 self.tree.setSortingEnabled(False)
                 self.tree.insertRow(i)
@@ -433,7 +440,7 @@ class QpClosedApp(QWidget):
                     if value is not None:
                         if j == 0:
                             item = QTableWidgetItem()
-                            if row['DATA DE CONCLUSÃO'] == None:
+                            if row['DATA DE CONCLUSÃO'] is None:
                                 item.setIcon(open_icon)
                             else:
                                 item.setIcon(closed_icon)
@@ -458,7 +465,39 @@ class QpClosedApp(QWidget):
             if hasattr(self, 'engine'):
                 self.engine.dispose()
                 self.engine = None
-            self.interromper_consulta_sql = False
+
+    def cell_clicked(self, row, column):
+        if self.tree.horizontalHeaderItem(column).text() == "DATA DE CONCLUSÃO":
+            self.selected_row = row
+            self.calendar.setGeometry(self.tree.visualItemRect(self.tree.item(row, column)))
+            self.calendar.show()
+        else:
+            self.calendar.hide()
+
+    def date_selected(self, date):
+        if self.selected_row is not None:
+            date_str = date.toString("dd/MM/yyyy")
+            cod_qp = self.tree.item(self.selected_row, 1).text()  # Assuming QP is in the second column
+
+            update_query = text("""
+                UPDATE enaplic_management.dbo.tb_end_qps
+                SET dt_completed_qp = :selected_date
+                WHERE cod_qp = :cod_qp
+            """)
+
+            try:
+                conn_str = f'DRIVER={driver};SERVER={server};UID={username};PWD={password}'
+                self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
+
+                with self.engine.begin() as connection:
+                    connection.execute(update_query, {'selected_date': date_str, 'cod_qp': cod_qp})
+
+                item = QTableWidgetItem(date_str)
+                item.setTextAlignment(Qt.AlignCenter)
+                self.tree.setItem(self.selected_row, 5, item)
+                self.calendar.hide()
+            except Exception as ex:
+                exibir_mensagem('Erro ao atualizar tabela', f'Erro: {str(ex)}', 'error')
 
 
 if __name__ == "__main__":
