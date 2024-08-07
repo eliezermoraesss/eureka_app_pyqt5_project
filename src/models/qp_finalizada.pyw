@@ -6,7 +6,7 @@ from tkinter import messagebox
 import pandas as pd
 import pyperclip
 import sys
-from PyQt5.QtCore import Qt, QProcess, pyqtSignal, QDate
+from PyQt5.QtCore import Qt, QProcess, pyqtSignal, QDate, QCoreApplication, QEvent
 from PyQt5.QtGui import QFont, QIcon, QPixmap
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QStyle, QAction, QLabel, QSizePolicy, QTabWidget, QMenu, QFrame, \
@@ -281,35 +281,8 @@ class QpClosedApp(QWidget):
         self.tree.cellDoubleClicked.connect(self.cell_clicked_open_calendar)
         self.selected_row = None
         self.selected_column = None
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Escape and self.calendar.isVisible():
-            self.calendar.hide()
-        elif event.key() == Qt.Key_Delete:
-            current_item = self.tree.currentItem()
-            if current_item is not None or current_item != '':
-                current_row = self.tree.currentRow()
-                current_column = self.tree.currentColumn()
-                if self.tree.horizontalHeaderItem(current_column).text() == "DATA DE CONCLUSÃO":
-                    cell_value = current_item.text()
-                    if cell_value:
-                        cod_qp = self.tree.item(current_row, 1).text()
-
-                        delete_query = text("""
-                            UPDATE enaplic_management.dbo.tb_end_qps
-                            SET dt_completed_qp = ''
-                            WHERE cod_qp = :cod_qp
-                        """)
-
-                        try:
-                            conn_str = f'DRIVER={driver};SERVER={server};UID={username};PWD={password}'
-                            self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
-
-                            with self.engine.begin() as connection:
-                                connection.execute(delete_query, {'cod_qp': cod_qp})
-                            self.tree.setItem(current_row, current_column, QTableWidgetItem(''))
-                        except Exception as ex:
-                            exibir_mensagem('Erro ao remover data da tabela', f'Erro: {str(ex)}', 'error')
+        self.tree.installEventFilter(self)
+        self.installEventFilter(self)
 
     def show_context_menu(self, position, table):
         indexes = table.selectedIndexes()
@@ -522,8 +495,46 @@ class QpClosedApp(QWidget):
                 item.setTextAlignment(Qt.AlignCenter)
                 self.tree.setItem(self.selected_row, 5, item)
                 self.calendar.hide()
+                self.consultar_qps_finalizadas()
             except Exception as ex:
                 exibir_mensagem('Erro ao atualizar tabela', f'Erro: {str(ex)}', 'error')
+
+    def eventFilter(self, obj, event):
+        if obj == self.tree:
+            if event.type() == QEvent.MouseButtonRelease or event.type() == QEvent.KeyPress:
+                if self.calendar.isVisible():
+                    self.calendar.hide()
+        return super().eventFilter(obj, event)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape and self.calendar.isVisible():
+            self.calendar.hide()
+        elif event.key() == Qt.Key_Delete:
+            current_item = self.tree.currentItem()
+            if current_item is not None or current_item != '':
+                current_row = self.tree.currentRow()
+                current_column = self.tree.currentColumn()
+                if self.tree.horizontalHeaderItem(current_column).text() == "DATA DE CONCLUSÃO":
+                    cell_value = current_item.text()
+                    if cell_value:
+                        cod_qp = self.tree.item(current_row, 1).text()
+
+                        delete_query = text("""
+                            UPDATE enaplic_management.dbo.tb_end_qps
+                            SET dt_completed_qp = ''
+                            WHERE cod_qp = :cod_qp
+                        """)
+
+                        try:
+                            conn_str = f'DRIVER={driver};SERVER={server};UID={username};PWD={password}'
+                            self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
+
+                            with self.engine.begin() as connection:
+                                connection.execute(delete_query, {'cod_qp': cod_qp})
+                            self.tree.setItem(current_row, current_column, QTableWidgetItem(''))
+                            self.consultar_qps_finalizadas()
+                        except Exception as ex:
+                            exibir_mensagem('Erro ao remover data da tabela', f'Erro: {str(ex)}', 'error')
 
 
 if __name__ == "__main__":
