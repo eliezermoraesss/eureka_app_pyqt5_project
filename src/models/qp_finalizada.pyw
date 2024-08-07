@@ -281,6 +281,12 @@ class QpClosedApp(QWidget):
         self.tree.cellClicked.connect(self.cell_clicked)
         self.selected_row = None
 
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape and self.calendar.isVisible():
+            self.calendar.hide()
+        elif event.key() == Qt.Key_Delete and self.tree.selectedIndexes():
+            self.clear_selected_date()
+
     def show_context_menu(self, position, table):
         indexes = table.selectedIndexes()
         if indexes:
@@ -499,13 +505,14 @@ class QpClosedApp(QWidget):
             except Exception as ex:
                 exibir_mensagem('Erro ao atualizar tabela', f'Erro: {str(ex)}', 'error')
 
+    def clear_selected_date(self):
+        pass
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = QpClosedApp()
     username, password, database, server = setup_mssql()
     driver = '{SQL Server}'
-
     window.showMaximized()
-
     sys.exit(app.exec_())

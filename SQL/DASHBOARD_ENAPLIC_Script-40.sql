@@ -250,6 +250,13 @@ SET
     dt_completed_qp = '07/08/2024' 
 WHERE 
     cod_qp = '007573';
+   
+UPDATE 
+    enaplic_management.dbo.tb_end_qps 
+SET 
+    dt_completed_qp = '' 
+WHERE 
+    cod_qp = '007573';
 
 /*
  * CORRESPONDÊNCIA COLUNAS X INDICADORES

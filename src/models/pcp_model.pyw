@@ -313,7 +313,7 @@ class PcpApp(QWidget):
         self.btn_consultar_estrutura.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.btn_consultar_estrutura.setEnabled(False)
 
-        self.btn_qps_concluidas = QPushButton("QPs Concluídas", self)
+        self.btn_qps_concluidas = QPushButton("QPS", self)
         self.btn_qps_concluidas.setObjectName("btn_qps_concluidas")
         self.btn_qps_concluidas.clicked.connect(self.abrir_modulo_qps_concluidas)
         self.btn_qps_concluidas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
