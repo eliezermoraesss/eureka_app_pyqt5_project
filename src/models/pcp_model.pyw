@@ -181,16 +181,16 @@ class PcpApp(QWidget):
             QPushButton#btn_compras {
                 background-color: #836FFF;
             }
+            
+             QPushButton#btn_qps_concluidas {
+                background-color: #180161;
+            }
 
-            QPushButton:hover, QPushButton:hover#btn_engenharia, QPushButton:hover#btn_compras {
-                background-color: #E84545;
-                color: #fff
-            }
+            QPushButton:hover, QPushButton:hover#btn_engenharia, QPushButton:hover#btn_compras, 
+            QPushButton:hover#btn_qps_concluidas { background-color: #E84545; color: #fff }
     
-            QPushButton:pressed, QPushButton:pressed#btn_engenharia, QPushButton:pressed#btn_compras {
-                background-color: #6703c5;
-                color: #fff;
-            }
+            QPushButton:pressed, QPushButton:pressed#btn_engenharia, QPushButton:pressed#btn_compras, 
+            QPushButton:pressed#btn_qps_concluidas { background-color: #6703c5; color: #fff; }
 
             QTableWidget {
                 border: 1px solid #000000;
@@ -313,6 +313,11 @@ class PcpApp(QWidget):
         self.btn_consultar_estrutura.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.btn_consultar_estrutura.setEnabled(False)
 
+        self.btn_qps_concluidas = QPushButton("QPs Concluídas", self)
+        self.btn_qps_concluidas.setObjectName("btn_qps_concluidas")
+        self.btn_qps_concluidas.clicked.connect(self.abrir_modulo_qps_concluidas)
+        self.btn_qps_concluidas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
         self.btn_abrir_compras = QPushButton("Compras", self)
         self.btn_abrir_compras.setObjectName("btn_compras")
         self.btn_abrir_compras.clicked.connect(self.abrir_modulo_compras)
@@ -422,6 +427,7 @@ class PcpApp(QWidget):
         self.layout_buttons.addWidget(self.btn_exportar_excel)
         self.layout_buttons.addWidget(self.btn_abrir_compras)
         self.layout_buttons.addWidget(self.btn_abrir_engenharia)
+        self.layout_buttons.addWidget(self.btn_qps_concluidas)
         self.layout_buttons.addWidget(self.btn_fechar)
         self.layout_buttons.addStretch()
 
@@ -546,6 +552,11 @@ class PcpApp(QWidget):
     def abrir_modulo_compras(self):
         script_dir = os.path.dirname(os.path.abspath(__file__))
         script_path = os.path.join(script_dir, 'compras_model.pyw')
+        self.process.start("python", [script_path])
+
+    def abrir_modulo_qps_concluidas(self):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        script_path = os.path.join(script_dir, 'qp_finalizada.pyw')
         self.process.start("python", [script_path])
 
     def abrir_nova_janela(self):
