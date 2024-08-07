@@ -278,14 +278,38 @@ class QpClosedApp(QWidget):
         self.calendar.hide()
         self.calendar.clicked.connect(self.date_selected)
 
-        self.tree.cellClicked.connect(self.cell_clicked)
+        self.tree.cellDoubleClicked.connect(self.cell_clicked_open_calendar)
         self.selected_row = None
+        self.selected_column = None
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape and self.calendar.isVisible():
             self.calendar.hide()
-        elif event.key() == Qt.Key_Delete and self.tree.selectedIndexes():
-            self.clear_selected_date()
+        elif event.key() == Qt.Key_Delete:
+            current_item = self.tree.currentItem()
+            if current_item is not None or current_item != '':
+                current_row = self.tree.currentRow()
+                current_column = self.tree.currentColumn()
+                if self.tree.horizontalHeaderItem(current_column).text() == "DATA DE CONCLUSÃO":
+                    cell_value = current_item.text()
+                    if cell_value:
+                        cod_qp = self.tree.item(current_row, 1).text()
+
+                        delete_query = text("""
+                            UPDATE enaplic_management.dbo.tb_end_qps
+                            SET dt_completed_qp = ''
+                            WHERE cod_qp = :cod_qp
+                        """)
+
+                        try:
+                            conn_str = f'DRIVER={driver};SERVER={server};UID={username};PWD={password}'
+                            self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
+
+                            with self.engine.begin() as connection:
+                                connection.execute(delete_query, {'cod_qp': cod_qp})
+                            self.tree.setItem(current_row, current_column, QTableWidgetItem(''))
+                        except Exception as ex:
+                            exibir_mensagem('Erro ao remover data da tabela', f'Erro: {str(ex)}', 'error')
 
     def show_context_menu(self, position, table):
         indexes = table.selectedIndexes()
@@ -294,17 +318,12 @@ class QpClosedApp(QWidget):
             index = table.indexAt(position)
             if not index.isValid():
                 return
-
             # Seleciona a linha inteira
             table.selectRow(index.row())
-
             menu = QMenu()
-
             context_menu_nova_janela = QAction('Nova janela', self)
             context_menu_nova_janela.triggered.connect(lambda: self.abrir_nova_janela())
-
             menu.addAction(context_menu_nova_janela)
-
             menu.exec_(table.viewport().mapToGlobal(position))
 
     def limpar_campos(self):
@@ -446,7 +465,7 @@ class QpClosedApp(QWidget):
                     if value is not None:
                         if j == 0:
                             item = QTableWidgetItem()
-                            if row['DATA DE CONCLUSÃO'] is None:
+                            if row['DATA DE CONCLUSÃO'] in (None, ''):
                                 item.setIcon(open_icon)
                             else:
                                 item.setIcon(closed_icon)
@@ -472,9 +491,10 @@ class QpClosedApp(QWidget):
                 self.engine.dispose()
                 self.engine = None
 
-    def cell_clicked(self, row, column):
+    def cell_clicked_open_calendar(self, row, column):
         if self.tree.horizontalHeaderItem(column).text() == "DATA DE CONCLUSÃO":
             self.selected_row = row
+            self.selected_column = column
             self.calendar.setGeometry(self.tree.visualItemRect(self.tree.item(row, column)))
             self.calendar.show()
         else:
@@ -504,9 +524,6 @@ class QpClosedApp(QWidget):
                 self.calendar.hide()
             except Exception as ex:
                 exibir_mensagem('Erro ao atualizar tabela', f'Erro: {str(ex)}', 'error')
-
-    def clear_selected_date(self):
-        pass
 
 
 if __name__ == "__main__":
