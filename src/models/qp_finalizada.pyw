@@ -9,7 +9,7 @@ import sys
 from PyQt5.QtCore import Qt, QProcess, pyqtSignal
 from PyQt5.QtGui import QFont, QIcon, QPixmap
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QTableWidget, QTableWidgetItem, QHeaderView, QStyle, QAction, QLabel, QSizePolicy, QTabWidget, QMenu
+    QTableWidget, QTableWidgetItem, QHeaderView, QStyle, QAction, QLabel, QSizePolicy, QTabWidget, QMenu, QFrame
 from sqlalchemy import create_engine
 
 
@@ -92,6 +92,12 @@ class QpClosedApp(QWidget):
                 font-size: 16px;
                 font-weight: normal;
             }
+            
+            QLabel#label-title {
+                margin: 10px;
+                font-size: 20px;
+                font-weight: bold;
+            }
 
             QLineEdit {
                 background-color: #EEEEEE;
@@ -155,6 +161,13 @@ class QpClosedApp(QWidget):
                 color: #EEEEEE;
                 font-weight: bold;
             }
+            
+            QFrame#line {
+                color: white;
+                background-color: white;
+                border: 1px solid white;
+                margin-bottom: 3px;
+            }
         """)
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -164,6 +177,14 @@ class QpClosedApp(QWidget):
         pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(60)
         self.logo_label.setPixmap(pixmap_logo)
         self.logo_label.setAlignment(Qt.AlignRight)
+
+        self.label_title = QLabel("CONSULTA DE QP CONCLUÍDAS", self)
+        self.label_title.setObjectName('label-title')
+
+        self.line = QFrame(self)
+        self.line.setObjectName('line')
+        self.line.setFrameShape(QFrame.HLine)
+        self.line.setFrameShadow(QFrame.Sunken)
 
         self.label_descricao_prod = QLabel("Descrição:", self)
         self.label_contem_descricao_prod = QLabel("Contém na descrição:", self)
@@ -207,10 +228,15 @@ class QpClosedApp(QWidget):
         self.campo_contem_descricao_prod.returnPressed.connect(self.consultar_qps_finalizadas)
 
         layout = QVBoxLayout()
+        layout_title = QHBoxLayout()
         layout_campos_01 = QHBoxLayout()
         self.layout_buttons = QHBoxLayout()
         self.layout_footer_label = QHBoxLayout()
-        layout_footer_logo = QHBoxLayout()
+        
+        layout_title.addStretch(1)
+        layout_title.addWidget(self.logo_label)
+        layout_title.addWidget(self.label_title)
+        layout_title.addStretch(1)
 
         container_descricao_prod = QVBoxLayout()
         container_descricao_prod.addWidget(self.label_descricao_prod)
@@ -238,16 +264,15 @@ class QpClosedApp(QWidget):
         self.layout_footer_label.addWidget(self.label_line_number)
         self.layout_footer_label.addStretch(1)
 
-        layout_footer_logo.addWidget(self.logo_label)
-
+        layout.addLayout(layout_title)
+        layout.addWidget(self.line)
         layout.addLayout(layout_campos_01)
         layout.addLayout(self.layout_buttons)
         layout.addWidget(self.tree)
         layout.addLayout(self.layout_footer_label)
-        layout.addLayout(layout_footer_logo)
         self.setLayout(layout)
 
-    def showContextMenu(self, position, table):
+    def show_context_menu(self, position, table):
         indexes = table.selectedIndexes()
         if indexes:
             # Obtém o índice do item clicado
@@ -302,7 +327,7 @@ class QpClosedApp(QWidget):
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
         self.tree.horizontalHeader().setStretchLastSection(True)
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.tree.customContextMenuRequested.connect(lambda pos: self.showContextMenu(pos, self.tree))
+        self.tree.customContextMenuRequested.connect(lambda pos: self.show_context_menu(pos, self.tree))
 
     def copiar_linha(self, item):
         if item is not None:
