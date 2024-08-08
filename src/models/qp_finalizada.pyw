@@ -372,7 +372,9 @@ class QpClosedApp(QWidget):
                 des_qp AS "NOME DO PROJETO",
                 dt_open_qp AS "DATA DE EMISSÃO",
                 dt_end_qp AS "PRAZO DE ENTREGA",
-                dt_completed_qp AS "DATA DE CONCLUSÃO"
+                dt_completed_qp AS "DATA DE CONCLUSÃO",
+                vl_delay AS "DIAS EM ATRASO",
+                status_delivery AS "STATUS ENTREGA"
             FROM 
                 enaplic_management.dbo.tb_end_qps
             WHERE 
@@ -414,7 +416,7 @@ class QpClosedApp(QWidget):
                 return
 
             dataframe = pd.read_sql(query, self.engine)
-            dataframe.insert(0, 'Status', '')
+            dataframe.insert(0, '', '')
             dataframe[''] = ''
 
             self.configurar_tabela(dataframe)
