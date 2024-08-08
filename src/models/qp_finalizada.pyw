@@ -109,7 +109,7 @@ class QpClosedApp(QWidget):
             }
 
             QPushButton {
-                background-color: #180161;
+                background-color: #DC5F00;
                 color: #EEEEEE;
                 padding: 10px;
                 border: 2px;
@@ -278,7 +278,7 @@ class QpClosedApp(QWidget):
         self.calendar.hide()
         self.calendar.clicked.connect(self.date_selected)
 
-        self.tree.cellDoubleClicked.connect(self.cell_clicked_open_calendar)
+        self.tree.cellClicked.connect(self.cell_clicked_open_calendar)
         self.selected_row = None
         self.selected_column = None
         self.tree.installEventFilter(self)
