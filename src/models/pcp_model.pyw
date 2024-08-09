@@ -163,7 +163,7 @@ class PcpApp(QWidget):
             }
 
             QPushButton {
-                background-color: #DC5F00;
+                background-color: #EB5B00;
                 color: #EEEEEE;
                 padding: 7px 10px;
                 border: 2px;

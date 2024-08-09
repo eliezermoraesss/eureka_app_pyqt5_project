@@ -109,7 +109,7 @@ class QpClosedApp(QWidget):
             }
 
             QPushButton {
-                background-color: #DC5F00;
+                background-color: #131842;
                 color: #EEEEEE;
                 padding: 10px;
                 border: 2px;
@@ -211,7 +211,7 @@ class QpClosedApp(QWidget):
         self.campo_qp.setFixedWidth(110)
         self.add_clear_button(self.campo_qp)
 
-        self.btn_finalizar_qp = QPushButton("QPs Concluídas", self)
+        self.btn_finalizar_qp = QPushButton("Carregar QPS concluídas", self)
         self.btn_finalizar_qp.clicked.connect(self.consultar_qps_finalizadas)
         self.btn_finalizar_qp.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
 
@@ -278,7 +278,7 @@ class QpClosedApp(QWidget):
         self.calendar.hide()
         self.calendar.clicked.connect(self.date_selected)
 
-        self.tree.cellClicked.connect(self.cell_clicked_open_calendar)
+        self.tree.cellDoubleClicked.connect(self.cell_clicked_open_calendar)
         self.selected_row = None
         self.selected_column = None
         self.tree.installEventFilter(self)
@@ -331,6 +331,7 @@ class QpClosedApp(QWidget):
         self.tree.itemDoubleClicked.connect(self.copiar_linha)
         self.tree.setFont(QFont(self.fonte_tabela, self.tamanho_fonte_tabela))
         self.tree.verticalHeader().setDefaultSectionSize(self.altura_linha)
+        self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
         self.tree.horizontalHeader().setStretchLastSection(True)
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -420,8 +421,6 @@ class QpClosedApp(QWidget):
             dataframe[''] = ''
 
             self.configurar_tabela(dataframe)
-
-            self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
             self.tree.setRowCount(0)
 
             # Construir caminhos relativos
