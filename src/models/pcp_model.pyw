@@ -183,7 +183,7 @@ class PcpApp(QWidget):
             }
             
              QPushButton#btn_qps_concluidas {
-                background-color: #180161;
+                background-color: #1A5319;
             }
 
             QPushButton:hover, QPushButton:hover#btn_engenharia, QPushButton:hover#btn_compras, 
@@ -418,6 +418,7 @@ class PcpApp(QWidget):
         layout_campos_02.addStretch()
 
         self.layout_buttons.addWidget(self.btn_consultar)
+        self.layout_buttons.addWidget(self.btn_qps_concluidas)
         self.layout_buttons.addWidget(self.btn_consultar_estrutura)
         self.layout_buttons.addWidget(self.btn_onde_e_usado)
         self.layout_buttons.addWidget(self.btn_saldo_estoque)
@@ -427,7 +428,6 @@ class PcpApp(QWidget):
         self.layout_buttons.addWidget(self.btn_exportar_excel)
         self.layout_buttons.addWidget(self.btn_abrir_compras)
         self.layout_buttons.addWidget(self.btn_abrir_engenharia)
-        self.layout_buttons.addWidget(self.btn_qps_concluidas)
         self.layout_buttons.addWidget(self.btn_fechar)
         self.layout_buttons.addStretch()
 

@@ -109,7 +109,7 @@ class QpClosedApp(QWidget):
             }
 
             QPushButton {
-                background-color: #131842;
+                background-color: #1A5319;
                 color: #EEEEEE;
                 padding: 10px;
                 border: 2px;
