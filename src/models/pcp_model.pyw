@@ -4,7 +4,7 @@ import sys
 import pyodbc
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QStyle, QAction, QDateEdit, QLabel, QMessageBox, \
-    QSizePolicy, QTabWidget, QMenu
+    QSizePolicy, QTabWidget, QMenu, QFrame
 from PyQt5.QtGui import QFont, QColor, QIcon, QDesktopServices, QPixmap
 from PyQt5.QtCore import Qt, QCoreApplication, QDate, QUrl, QProcess, pyqtSignal
 import pyperclip
@@ -126,6 +126,12 @@ class PcpApp(QWidget):
                 font-weight: normal;
             }
             
+            QLabel#label-title {
+                margin: 10px;
+                font-size: 30px;
+                font-weight: bold;
+            }
+            
             QDateEdit {
                 background-color: #DFE0E2;
                 border: 1px solid #262626;
@@ -183,7 +189,7 @@ class PcpApp(QWidget):
             }
             
              QPushButton#btn_qps_concluidas {
-                background-color: #1A5319;
+                background-color: #E4003A;
             }
 
             QPushButton:hover, QPushButton:hover#btn_engenharia, QPushButton:hover#btn_compras, 
@@ -223,13 +229,28 @@ class PcpApp(QWidget):
                 color: #EEEEEE;
                 font-weight: bold;
             }
+            
+            QFrame#line {
+                color: white;
+                background-color: white;
+                border: 1px solid white;
+                margin-bottom: 3px;
+            }
         """)
+
+        self.label_title = QLabel("PCP", self)
+        self.label_title.setObjectName('label-title')
+
+        self.line = QFrame(self)
+        self.line.setObjectName('line')
+        self.line.setFrameShape(QFrame.HLine)
+        self.line.setFrameShadow(QFrame.Sunken)
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
         logo_enaplic_path = os.path.join(script_dir, '..', 'resources', 'images', 'LOGO.jpeg')
         self.logo_label = QLabel(self)
         self.logo_label.setObjectName('logo-enaplic')
-        pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(60)
+        pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(50)
         self.logo_label.setPixmap(pixmap_logo)
         self.logo_label.setAlignment(Qt.AlignRight)
 
@@ -368,11 +389,16 @@ class PcpApp(QWidget):
         self.campo_observacao.returnPressed.connect(self.executar_consulta)
 
         layout = QVBoxLayout()
+        layout_title = QHBoxLayout()
         layout_campos_01 = QHBoxLayout()
         layout_campos_02 = QHBoxLayout()
         self.layout_buttons = QHBoxLayout()
         self.layout_footer_label = QHBoxLayout()
-        layout_footer_logo = QHBoxLayout()
+
+        layout_title.addStretch(1)
+        layout_title.addWidget(self.logo_label)
+        layout_title.addWidget(self.label_title)
+        layout_title.addStretch(1)
 
         container_codigo = QVBoxLayout()
         container_codigo.addWidget(self.label_codigo)
@@ -435,14 +461,13 @@ class PcpApp(QWidget):
         self.layout_footer_label.addWidget(self.label_line_number)
         self.layout_footer_label.addStretch(1)
 
-        layout_footer_logo.addWidget(self.logo_label)
-
+        layout.addLayout(layout_title)
+        layout.addWidget(self.line)
         layout.addLayout(layout_campos_01)
         layout.addLayout(layout_campos_02)
         layout.addLayout(self.layout_buttons)
         layout.addWidget(self.tree)
         layout.addLayout(self.layout_footer_label)
-        layout.addLayout(layout_footer_logo)
         self.setLayout(layout)
 
     def fechar_guia(self, index):
@@ -556,7 +581,7 @@ class PcpApp(QWidget):
 
     def abrir_modulo_qps_concluidas(self):
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        script_path = os.path.join(script_dir, 'qp_finalizada.pyw')
+        script_path = os.path.join(script_dir, 'qps.pyw')
         self.process.start("python", [script_path])
 
     def abrir_nova_janela(self):

@@ -95,7 +95,7 @@ class QpClosedApp(QWidget):
             
             QLabel#label-title {
                 margin: 10px;
-                font-size: 20px;
+                font-size: 30px;
                 font-weight: bold;
             }
 
@@ -109,7 +109,7 @@ class QpClosedApp(QWidget):
             }
 
             QPushButton {
-                background-color: #1A5319;
+                background-color: #EB5B00;
                 color: #EEEEEE;
                 padding: 10px;
                 border: 2px;
@@ -119,13 +119,23 @@ class QpClosedApp(QWidget):
                 font-weight: bold;
                 margin: 10px 5px;
             }
+            
+            QPushButton#btn_qps_finalizadas {
+                background-color: #C5EBAA;
+                color: #294B29;
+            }
+            
+            QPushButton#btn_qps_abertas {
+                background-color: #FFC94A;
+                color: #3E3232;
+            }
 
-            QPushButton:hover {
+            QPushButton:hover, QPushButton:hover#btn_qps_finalizadas, QPushButton:hover#btn_qps_abertas {
                 background-color: #E84545;
                 color: #fff
             }
     
-            QPushButton:pressed {
+            QPushButton:pressed, QPushButton:pressed#btn_qps_finalizadas, QPushButton:pressed#btn_qps_abertas {
                 background-color: #6703c5;
                 color: #fff;
             }
@@ -174,7 +184,7 @@ class QpClosedApp(QWidget):
         logo_enaplic_path = os.path.join(script_dir, '..', 'resources', 'images', 'LOGO.jpeg')
         self.logo_label = QLabel(self)
         self.logo_label.setObjectName('logo-enaplic')
-        pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(60)
+        pixmap_logo = QPixmap(logo_enaplic_path).scaledToWidth(50)
         self.logo_label.setPixmap(pixmap_logo)
         self.logo_label.setAlignment(Qt.AlignRight)
 
@@ -211,9 +221,15 @@ class QpClosedApp(QWidget):
         self.campo_qp.setFixedWidth(110)
         self.add_clear_button(self.campo_qp)
 
-        self.btn_finalizar_qp = QPushButton("Carregar QPS concluídas", self)
-        self.btn_finalizar_qp.clicked.connect(self.consultar_qps_finalizadas)
-        self.btn_finalizar_qp.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        self.btn_qps_finalizadas = QPushButton("QPS CONCLUÍDAS", self)
+        self.btn_qps_finalizadas.clicked.connect(self.consultar_qps_finalizadas)
+        self.btn_qps_finalizadas.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        self.btn_qps_finalizadas.setObjectName("btn_qps_finalizadas")
+        
+        self.btn_qps_abertas = QPushButton("QPS ABERTAS", self)
+        self.btn_qps_abertas.clicked.connect(self.consultar_qps_abertas)
+        self.btn_qps_abertas.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        self.btn_qps_abertas.setObjectName("btn_qps_abertas")
 
         self.btn_limpar = QPushButton("Limpar", self)
         self.btn_limpar.clicked.connect(self.limpar_campos)
@@ -255,7 +271,8 @@ class QpClosedApp(QWidget):
         layout_campos_01.addLayout(container_contem_descricao_prod)
         layout_campos_01.addStretch()
 
-        self.layout_buttons.addWidget(self.btn_finalizar_qp)
+        self.layout_buttons.addWidget(self.btn_qps_finalizadas)
+        self.layout_buttons.addWidget(self.btn_qps_abertas)
         self.layout_buttons.addWidget(self.btn_limpar)
         self.layout_buttons.addWidget(self.btn_fechar)
         self.layout_buttons.addStretch()
@@ -386,6 +403,32 @@ class QpClosedApp(QWidget):
             """
 
         return query
+    
+    def query_consulta_qps_abertas(self):
+        numero_qp = self.campo_qp.text().upper().strip()
+        descricao = self.campo_descricao_prod.text().upper().strip()
+        contem_descricao = self.campo_contem_descricao_prod.text().upper().strip()
+
+        palavras_contem_descricao = contem_descricao.split('*')
+        clausulas_contem_descricao = " AND ".join(
+            [f"des_qp LIKE '%{palavra}%'" for palavra in palavras_contem_descricao])
+
+        query = f"""
+            SELECT
+                cod_qp AS "QP",
+                des_qp AS "NOME DO PROJETO",
+                dt_open_qp AS "DATA DE EMISSÃO",
+                dt_end_qp AS "PRAZO DE ENTREGA"
+            FROM 
+                enaplic_management.dbo.tb_open_qps
+            WHERE 
+                cod_qp LIKE '%{numero_qp}'
+                AND des_qp LIKE '{descricao}%'
+                AND {clausulas_contem_descricao}
+                ORDER BY id DESC
+            """
+
+        return query
 
     def consultar_qps_finalizadas(self):
         query = self.query_consulta_qps_finalizadas()
@@ -448,6 +491,67 @@ class QpClosedApp(QWidget):
                             item = QTableWidgetItem(str(value).strip())
                             if j != 2:
                                 item.setTextAlignment(Qt.AlignCenter)
+                    else:
+                        item = QTableWidgetItem('')
+
+                    self.tree.setItem(i, j, item)
+
+            self.tree.setSortingEnabled(True)
+            self.controle_campos_formulario(True)
+
+        except Exception as ex:
+            exibir_mensagem('Erro ao consultar tabela', f'Erro: {str(ex)}', 'error')
+
+        finally:
+            # Fecha a conexão com o banco de dados se estiver aberta
+            if hasattr(self, 'engine'):
+                self.engine.dispose()
+                self.engine = None
+                
+    def consultar_qps_abertas(self):
+        query = self.query_consulta_qps_abertas()
+        line_number = f"""
+            SELECT
+                COUNT(*) AS count
+            FROM ({query.replace("ORDER BY id DESC", "")}) AS results
+        """
+
+        conn_str = f'DRIVER={driver};SERVER={server};UID={username};PWD={password}'
+        self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
+
+        try:
+            dataframe_line_number = pd.read_sql(line_number, self.engine)
+            line_number = dataframe_line_number.iloc[0, 0]
+
+            if line_number >= 1:
+                if line_number > 1:
+                    message = f"Foram encontrados {line_number} resultados"
+                else:
+                    message = f"Foi encontrado {line_number} resultado"
+
+                self.label_line_number.setText(f"{message}")
+                self.label_line_number.show()
+
+            else:
+                exibir_mensagem("EUREKA® PCP", 'Nenhuma QP encontrada!', "info")
+                self.controle_campos_formulario(True)
+                return
+
+            dataframe = pd.read_sql(query, self.engine)
+            dataframe[''] = ''
+
+            self.configurar_tabela(dataframe)
+            self.tree.setRowCount(0)
+
+            for i, row in dataframe.iterrows():
+
+                self.tree.setSortingEnabled(False)
+                self.tree.insertRow(i)
+                for j, value in enumerate(row):
+                    if value is not None:
+                        item = QTableWidgetItem(str(value).strip())
+                        if j != 1:
+                            item.setTextAlignment(Qt.AlignCenter)
                     else:
                         item = QTableWidgetItem('')
 
