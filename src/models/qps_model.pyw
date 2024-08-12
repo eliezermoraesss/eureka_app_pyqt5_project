@@ -220,14 +220,19 @@ class QpClosedApp(QWidget):
         self.campo_qp.setMaxLength(6)
         self.campo_qp.setFixedWidth(110)
         self.add_clear_button(self.campo_qp)
+        
+        self.btn_qps = QPushButton("Exibir todas QPS", self)
+        self.btn_qps.clicked.connect(lambda: self.consultar_qps('T'))
+        self.btn_qps.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        self.btn_qps.setObjectName("btn_qps")
 
-        self.btn_qps_finalizadas = QPushButton("QPS CONCLUÍDAS", self)
-        self.btn_qps_finalizadas.clicked.connect(self.consultar_qps_finalizadas)
+        self.btn_qps_finalizadas = QPushButton("QPS concluídas", self)
+        self.btn_qps_finalizadas.clicked.connect(lambda: self.consultar_qps('F'))
         self.btn_qps_finalizadas.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.btn_qps_finalizadas.setObjectName("btn_qps_finalizadas")
         
-        self.btn_qps_abertas = QPushButton("QPS ABERTAS", self)
-        self.btn_qps_abertas.clicked.connect(self.consultar_qps_abertas)
+        self.btn_qps_abertas = QPushButton("QPS em aberto", self)
+        self.btn_qps_abertas.clicked.connect(lambda: self.consultar_qps('A'))
         self.btn_qps_abertas.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.btn_qps_abertas.setObjectName("btn_qps_abertas")
 
@@ -238,10 +243,6 @@ class QpClosedApp(QWidget):
         self.btn_fechar = QPushButton("Fechar", self)
         self.btn_fechar.clicked.connect(self.fechar_janela)
         self.btn_fechar.setFixedWidth(110)
-
-        self.campo_qp.returnPressed.connect(self.consultar_qps_finalizadas)
-        self.campo_descricao_prod.returnPressed.connect(self.consultar_qps_finalizadas)
-        self.campo_contem_descricao_prod.returnPressed.connect(self.consultar_qps_finalizadas)
 
         layout = QVBoxLayout()
         layout_title = QHBoxLayout()
@@ -271,6 +272,7 @@ class QpClosedApp(QWidget):
         layout_campos_01.addLayout(container_contem_descricao_prod)
         layout_campos_01.addStretch()
 
+        self.layout_buttons.addWidget(self.btn_qps)
         self.layout_buttons.addWidget(self.btn_qps_finalizadas)
         self.layout_buttons.addWidget(self.btn_qps_abertas)
         self.layout_buttons.addWidget(self.btn_limpar)
@@ -350,7 +352,7 @@ class QpClosedApp(QWidget):
         self.tree.verticalHeader().setDefaultSectionSize(self.altura_linha)
         self.tree.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
-        self.tree.horizontalHeader().setStretchLastSection(True)
+        self.tree.horizontalHeader().setStretchLastSection(False)
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(lambda pos: self.show_context_menu(pos, self.tree))
 
@@ -375,7 +377,7 @@ class QpClosedApp(QWidget):
     def fechar_janela(self):
         self.close()
 
-    def query_consulta_qps_finalizadas(self):
+    def query_consulta_qps(self, status_qp):
         numero_qp = self.campo_qp.text().upper().strip()
         descricao = self.campo_descricao_prod.text().upper().strip()
         contem_descricao = self.campo_contem_descricao_prod.text().upper().strip()
@@ -388,50 +390,26 @@ class QpClosedApp(QWidget):
             SELECT
                 cod_qp AS "QP",
                 des_qp AS "NOME DO PROJETO",
+                status_qp AS "STATUS QP",
                 dt_open_qp AS "DATA DE EMISSÃO",
                 dt_end_qp AS "PRAZO DE ENTREGA",
                 dt_completed_qp AS "DATA DE CONCLUSÃO",
                 vl_delay AS "DIAS EM ATRASO",
                 status_delivery AS "STATUS ENTREGA"
             FROM 
-                enaplic_management.dbo.tb_end_qps
-            WHERE 
+                enaplic_management.dbo.tb_qps
+            WHERE
                 cod_qp LIKE '%{numero_qp}'
                 AND des_qp LIKE '{descricao}%'
                 AND {clausulas_contem_descricao}
+                AND status_qp = '{status_qp}'
                 ORDER BY id DESC
             """
 
-        return query
-    
-    def query_consulta_qps_abertas(self):
-        numero_qp = self.campo_qp.text().upper().strip()
-        descricao = self.campo_descricao_prod.text().upper().strip()
-        contem_descricao = self.campo_contem_descricao_prod.text().upper().strip()
+        return query if status_qp in ('F', 'A') else query.replace("AND status_qp = 'T'",'')
 
-        palavras_contem_descricao = contem_descricao.split('*')
-        clausulas_contem_descricao = " AND ".join(
-            [f"des_qp LIKE '%{palavra}%'" for palavra in palavras_contem_descricao])
-
-        query = f"""
-            SELECT
-                cod_qp AS "QP",
-                des_qp AS "NOME DO PROJETO",
-                dt_open_qp AS "DATA DE EMISSÃO",
-                dt_end_qp AS "PRAZO DE ENTREGA"
-            FROM 
-                enaplic_management.dbo.tb_open_qps
-            WHERE 
-                cod_qp LIKE '%{numero_qp}'
-                AND des_qp LIKE '{descricao}%'
-                AND {clausulas_contem_descricao}
-                ORDER BY id DESC
-            """
-
-        return query
-
-    def consultar_qps_finalizadas(self):
-        query = self.query_consulta_qps_finalizadas()
+    def consultar_qps(self, status_qp):
+        query = self.query_consulta_qps(status_qp)
         line_number = f"""
             SELECT
                 COUNT(*) AS count
@@ -461,6 +439,7 @@ class QpClosedApp(QWidget):
 
             dataframe = pd.read_sql(query, self.engine)
             dataframe.insert(0, '', '')
+            dataframe = dataframe.drop('DATA DE CONCLUSÃO', axis=1) if status_qp == 'A' else dataframe
             dataframe[''] = ''
 
             self.configurar_tabela(dataframe)
@@ -482,76 +461,15 @@ class QpClosedApp(QWidget):
                     if value is not None:
                         if j == 0:
                             item = QTableWidgetItem()
-                            if row['DATA DE CONCLUSÃO'] in (None, ''):
+                            if row['STATUS QP'] =='A':
                                 item.setIcon(open_icon)
-                            else:
+                            elif row['STATUS QP'] =='F':
                                 item.setIcon(closed_icon)
                             item.setTextAlignment(Qt.AlignCenter)
                         else:
                             item = QTableWidgetItem(str(value).strip())
                             if j != 2:
                                 item.setTextAlignment(Qt.AlignCenter)
-                    else:
-                        item = QTableWidgetItem('')
-
-                    self.tree.setItem(i, j, item)
-
-            self.tree.setSortingEnabled(True)
-            self.controle_campos_formulario(True)
-
-        except Exception as ex:
-            exibir_mensagem('Erro ao consultar tabela', f'Erro: {str(ex)}', 'error')
-
-        finally:
-            # Fecha a conexão com o banco de dados se estiver aberta
-            if hasattr(self, 'engine'):
-                self.engine.dispose()
-                self.engine = None
-                
-    def consultar_qps_abertas(self):
-        query = self.query_consulta_qps_abertas()
-        line_number = f"""
-            SELECT
-                COUNT(*) AS count
-            FROM ({query.replace("ORDER BY id DESC", "")}) AS results
-        """
-
-        conn_str = f'DRIVER={driver};SERVER={server};UID={username};PWD={password}'
-        self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
-
-        try:
-            dataframe_line_number = pd.read_sql(line_number, self.engine)
-            line_number = dataframe_line_number.iloc[0, 0]
-
-            if line_number >= 1:
-                if line_number > 1:
-                    message = f"Foram encontrados {line_number} resultados"
-                else:
-                    message = f"Foi encontrado {line_number} resultado"
-
-                self.label_line_number.setText(f"{message}")
-                self.label_line_number.show()
-
-            else:
-                exibir_mensagem("EUREKA® PCP", 'Nenhuma QP encontrada!', "info")
-                self.controle_campos_formulario(True)
-                return
-
-            dataframe = pd.read_sql(query, self.engine)
-            dataframe[''] = ''
-
-            self.configurar_tabela(dataframe)
-            self.tree.setRowCount(0)
-
-            for i, row in dataframe.iterrows():
-
-                self.tree.setSortingEnabled(False)
-                self.tree.insertRow(i)
-                for j, value in enumerate(row):
-                    if value is not None:
-                        item = QTableWidgetItem(str(value).strip())
-                        if j != 1:
-                            item.setTextAlignment(Qt.AlignCenter)
                     else:
                         item = QTableWidgetItem('')
 
@@ -584,7 +502,7 @@ class QpClosedApp(QWidget):
             cod_qp = self.tree.item(self.selected_row, 1).text()  # Assuming QP is in the second column
 
             update_query = text("""
-                UPDATE enaplic_management.dbo.tb_end_qps
+                UPDATE enaplic_management.dbo.tb_qps
                 SET dt_completed_qp = :selected_date
                 WHERE cod_qp = :cod_qp
             """)
@@ -600,7 +518,7 @@ class QpClosedApp(QWidget):
                 item.setTextAlignment(Qt.AlignCenter)
                 self.tree.setItem(self.selected_row, 5, item)
                 self.calendar.hide()
-                self.consultar_qps_finalizadas()
+                self.consultar_qps()
             except Exception as ex:
                 exibir_mensagem('Erro ao atualizar tabela', f'Erro: {str(ex)}', 'error')
 
@@ -625,7 +543,7 @@ class QpClosedApp(QWidget):
                         cod_qp = self.tree.item(current_row, 1).text()
 
                         delete_query = text("""
-                            UPDATE enaplic_management.dbo.tb_end_qps
+                            UPDATE enaplic_management.dbo.tb_qps
                             SET dt_completed_qp = ''
                             WHERE cod_qp = :cod_qp
                         """)
@@ -637,7 +555,7 @@ class QpClosedApp(QWidget):
                             with self.engine.begin() as connection:
                                 connection.execute(delete_query, {'cod_qp': cod_qp})
                             self.tree.setItem(current_row, current_column, QTableWidgetItem(''))
-                            self.consultar_qps_finalizadas()
+                            self.consultar_qps()
                         except Exception as ex:
                             exibir_mensagem('Erro ao remover data da tabela', f'Erro: {str(ex)}', 'error')
 
