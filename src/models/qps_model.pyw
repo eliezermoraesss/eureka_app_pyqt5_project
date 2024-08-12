@@ -129,13 +129,18 @@ class QpClosedApp(QWidget):
                 background-color: #FFC94A;
                 color: #3E3232;
             }
+            
+            QPushButton#btn_qps {
+                background-color: #6EACDA;
+                color: #021526;
+            }
 
-            QPushButton:hover, QPushButton:hover#btn_qps_finalizadas, QPushButton:hover#btn_qps_abertas {
+            QPushButton:hover, QPushButton:hover#btn_qps_finalizadas, QPushButton:hover#btn_qps_abertas, QPushButton:hover#btn_qps {
                 background-color: #E84545;
                 color: #fff
             }
     
-            QPushButton:pressed, QPushButton:pressed#btn_qps_finalizadas, QPushButton:pressed#btn_qps_abertas {
+            QPushButton:pressed, QPushButton:pressed#btn_qps_finalizadas, QPushButton:pressed#btn_qps_abertas, QPushButton:pressed#btn_qps {
                 background-color: #6703c5;
                 color: #fff;
             }
@@ -516,9 +521,8 @@ class QpClosedApp(QWidget):
 
                 item = QTableWidgetItem(date_str)
                 item.setTextAlignment(Qt.AlignCenter)
-                self.tree.setItem(self.selected_row, 5, item)
+                self.tree.setItem(self.selected_row, self.selected_column, item)
                 self.calendar.hide()
-                self.consultar_qps()
             except Exception as ex:
                 exibir_mensagem('Erro ao atualizar tabela', f'Erro: {str(ex)}', 'error')
 
@@ -555,7 +559,6 @@ class QpClosedApp(QWidget):
                             with self.engine.begin() as connection:
                                 connection.execute(delete_query, {'cod_qp': cod_qp})
                             self.tree.setItem(current_row, current_column, QTableWidgetItem(''))
-                            self.consultar_qps()
                         except Exception as ex:
                             exibir_mensagem('Erro ao remover data da tabela', f'Erro: {str(ex)}', 'error')
 
