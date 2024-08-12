@@ -398,7 +398,7 @@ class QpClosedApp(QWidget):
                 status_qp AS "STATUS QP",
                 dt_open_qp AS "DATA DE EMISSÃO",
                 dt_end_qp AS "PRAZO DE ENTREGA",
-                dt_completed_qp AS "DATA DE CONCLUSÃO",
+                dt_completed_qp AS "DATA DE ENTREGA",
                 vl_delay AS "DIAS EM ATRASO",
                 status_delivery AS "STATUS ENTREGA"
             FROM 
@@ -444,7 +444,7 @@ class QpClosedApp(QWidget):
 
             dataframe = pd.read_sql(query, self.engine)
             dataframe.insert(0, '', '')
-            dataframe = dataframe.drop('DATA DE CONCLUSÃO', axis=1) if status_qp == 'A' else dataframe
+            dataframe = dataframe.drop('DATA DE ENTREGA', axis=1) if status_qp == 'A' else dataframe
             dataframe[''] = ''
 
             self.configurar_tabela(dataframe)
@@ -495,7 +495,7 @@ class QpClosedApp(QWidget):
                 self.engine = None
 
     def cell_clicked_open_calendar(self, row, column):
-        if self.tree.horizontalHeaderItem(column).text() == "DATA DE CONCLUSÃO":
+        if self.tree.horizontalHeaderItem(column).text() == "DATA DE ENTREGA":
             self.selected_row = row
             self.selected_column = column
             status_qp = self.tree.item(self.selected_row, 3).text()
@@ -545,7 +545,7 @@ class QpClosedApp(QWidget):
             if current_item is not None or current_item != '':
                 current_row = self.tree.currentRow()
                 current_column = self.tree.currentColumn()
-                if self.tree.horizontalHeaderItem(current_column).text() == "DATA DE CONCLUSÃO":
+                if self.tree.horizontalHeaderItem(current_column).text() == "DATA DE ENTREGA":
                     cell_value = current_item.text()
                     status_qp = self.tree.item(current_row, 3).text()
                     if cell_value and status_qp == 'FINALIZADO':
