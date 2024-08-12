@@ -472,6 +472,8 @@ class QpClosedApp(QWidget):
                                 item.setIcon(closed_icon)
                             item.setTextAlignment(Qt.AlignCenter)
                         else:
+                            if j == 3:
+                                value = 'FINALIZADO' if value == 'F' else 'ABERTO'
                             item = QTableWidgetItem(str(value).strip())
                             if j != 2:
                                 item.setTextAlignment(Qt.AlignCenter)
