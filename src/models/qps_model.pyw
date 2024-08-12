@@ -498,8 +498,10 @@ class QpClosedApp(QWidget):
         if self.tree.horizontalHeaderItem(column).text() == "DATA DE CONCLUSÃO":
             self.selected_row = row
             self.selected_column = column
-            self.calendar.setGeometry(self.tree.visualItemRect(self.tree.item(row, column)))
-            self.calendar.show()
+            status_qp = self.tree.item(self.selected_row, 3).text()
+            if status_qp == "FINALIZADO":
+                self.calendar.setGeometry(self.tree.visualItemRect(self.tree.item(row, column)))
+                self.calendar.show()
         else:
             self.calendar.hide()
 
@@ -545,10 +547,11 @@ class QpClosedApp(QWidget):
                 current_column = self.tree.currentColumn()
                 if self.tree.horizontalHeaderItem(current_column).text() == "DATA DE CONCLUSÃO":
                     cell_value = current_item.text()
-                    if cell_value:
+                    status_qp = self.tree.item(current_row, 3).text()
+                    if cell_value and status_qp == 'FINALIZADO':
                         cod_qp = self.tree.item(current_row, 1).text()
 
-                        delete_query = text("""
+                        update_query = text("""
                             UPDATE enaplic_management.dbo.tb_qps
                             SET dt_completed_qp = ''
                             WHERE cod_qp = :cod_qp
@@ -559,7 +562,7 @@ class QpClosedApp(QWidget):
                             self.engine = create_engine(f'mssql+pyodbc:///?odbc_connect={conn_str}')
 
                             with self.engine.begin() as connection:
-                                connection.execute(delete_query, {'cod_qp': cod_qp})
+                                connection.execute(update_query, {'cod_qp': cod_qp})
                             self.tree.setItem(current_row, current_column, QTableWidgetItem(''))
                         except Exception as ex:
                             exibir_mensagem('Erro ao remover data da tabela', f'Erro: {str(ex)}', 'error')
