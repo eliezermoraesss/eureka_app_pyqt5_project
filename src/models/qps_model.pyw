@@ -1,4 +1,5 @@
 import ctypes
+from datetime import datetime
 import locale
 import os
 import tkinter as tk
@@ -10,7 +11,7 @@ from PyQt5.QtCore import Qt, QProcess, pyqtSignal, QDate, QCoreApplication, QEve
 from PyQt5.QtGui import QFont, QIcon, QPixmap
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, QTableWidgetItem, QHeaderView, QStyle, QAction, QLabel, QSizePolicy, QTabWidget, QMenu, QFrame, \
-    QCalendarWidget
+    QCalendarWidget, QFileDialog
 from sqlalchemy import create_engine, text
 
 
@@ -241,6 +242,11 @@ class QpClosedApp(QWidget):
         self.btn_qps_abertas.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.btn_qps_abertas.setObjectName("btn_qps_abertas")
 
+        self.btn_exportar_excel = QPushButton("Exportar Excel", self)
+        self.btn_exportar_excel.clicked.connect(self.exportar_excel)
+        self.btn_exportar_excel.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        self.btn_exportar_excel.setEnabled(False)
+
         self.btn_limpar = QPushButton("Limpar", self)
         self.btn_limpar.clicked.connect(self.limpar_campos)
         self.btn_limpar.setFixedWidth(110)
@@ -280,6 +286,7 @@ class QpClosedApp(QWidget):
         self.layout_buttons.addWidget(self.btn_qps)
         self.layout_buttons.addWidget(self.btn_qps_finalizadas)
         self.layout_buttons.addWidget(self.btn_qps_abertas)
+        self.layout_buttons.addWidget(self.btn_exportar_excel)
         self.layout_buttons.addWidget(self.btn_limpar)
         self.layout_buttons.addWidget(self.btn_fechar)
         self.layout_buttons.addStretch()
@@ -307,6 +314,48 @@ class QpClosedApp(QWidget):
         self.selected_column = None
         self.tree.installEventFilter(self)
         self.installEventFilter(self)
+        
+    def exportar_excel(self):
+        desktop_path = os.path.join(os.path.expanduser("~"), 'Desktop')
+
+        now = datetime.now()
+        default_filename = f'QPS-report_{now.today().strftime('%Y-%m-%d_%H%M%S')}.xlsx'
+
+        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como', os.path.join(desktop_path, default_filename),
+                                                   'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
+
+        if file_path:
+            data = self.obter_dados_tabela()
+            column_headers = [self.tree.horizontalHeaderItem(i).text() for i in range(self.tree.columnCount())]
+            df = pd.DataFrame(data, columns=column_headers)
+
+            writer = pd.ExcelWriter(file_path, engine='xlsxwriter')
+            df.to_excel(writer, sheet_name='Dados', index=False)
+
+            workbook = writer.book
+            worksheet = writer.sheets['Dados']
+
+            for i, col in enumerate(df.columns):
+                max_len = df[col].astype(str).map(len).max()
+                worksheet.set_column(i, i, max_len + 2)
+
+            writer.close()
+
+            os.startfile(file_path)
+
+    def obter_dados_tabela(self):
+        # Obter os dados da tabela
+        data = []
+        for i in range(self.tree.rowCount()):
+            row_data = []
+            for j in range(self.tree.columnCount()):
+                item = self.tree.item(i, j)
+                if item is not None:
+                    row_data.append(item.text())
+                else:
+                    row_data.append("")
+            data.append(row_data)
+        return data
 
     def show_context_menu(self, position, table):
         indexes = table.selectedIndexes()
@@ -378,6 +427,7 @@ class QpClosedApp(QWidget):
 
     def controle_campos_formulario(self, status):
         self.campo_qp.setEnabled(status)
+        self.btn_exportar_excel.setEnabled(status)
 
     def fechar_janela(self):
         self.close()
