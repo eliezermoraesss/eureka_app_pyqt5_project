@@ -1,16 +1,18 @@
 import ctypes
-from datetime import datetime
 import locale
 import os
+import sys
 import tkinter as tk
+from datetime import datetime
 from tkinter import messagebox
+
 import pandas as pd
 import pyperclip
-import sys
-from PyQt5.QtCore import Qt, QProcess, pyqtSignal, QDate, QCoreApplication, QEvent
+import requests
+from PyQt5.QtCore import Qt, QProcess, pyqtSignal, QEvent, QThread
 from PyQt5.QtGui import QFont, QIcon, QPixmap
 from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
-    QTableWidget, QTableWidgetItem, QHeaderView, QStyle, QAction, QLabel, QSizePolicy, QTabWidget, QMenu, QFrame, \
+    QTableWidget, QTableWidgetItem, QHeaderView, QStyle, QAction, QLabel, QSizePolicy, QMenu, QFrame, \
     QCalendarWidget, QFileDialog
 from sqlalchemy import create_engine, text
 
@@ -55,15 +57,31 @@ def setup_mssql():
         sys.exit()
 
 
+class UpdateTableThread(QThread):
+    update_complete = pyqtSignal(bool, str)
+
+    def run(self):
+        try:
+            url = "http://localhost:5000/indicators/save?qp=closed"
+            response = requests.post(url)
+
+            if response.status_code == 201:
+                self.update_complete.emit(True, "A tabela foi atualizada com sucesso!")
+            else:
+                self.update_complete.emit(False, f"Erro ao atualizar a tabela. Código de status: {response.status_code}")
+        except Exception as e:
+            self.update_complete.emit(False, f"Erro ao enviar a requisição: {str(e)}")
+
 class QpClosedApp(QWidget):
     guia_fechada = pyqtSignal()
 
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("EUREKA® PCP - v2.0")
+        self.setWindowTitle("EUREKA® PCP - Consulta de QP")
         locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
+        self.update_thread = None
         self.engine = None
         self.tree = QTableWidget(self)
         self.tree.setColumnCount(0)
@@ -242,6 +260,12 @@ class QpClosedApp(QWidget):
         self.btn_qps_abertas.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.btn_qps_abertas.setObjectName("btn_qps_abertas")
 
+        self.btn_atualizar_tabela = QPushButton("Atualizar status da entrega", self)
+        self.btn_atualizar_tabela.clicked.connect(self.atualizar_tabela)
+        self.btn_atualizar_tabela.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        self.btn_atualizar_tabela.hide()
+        self.btn_atualizar_tabela.setObjectName("btn_atualizar_tabela")
+
         self.btn_exportar_excel = QPushButton("Exportar Excel", self)
         self.btn_exportar_excel.clicked.connect(self.exportar_excel)
         self.btn_exportar_excel.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
@@ -254,6 +278,18 @@ class QpClosedApp(QWidget):
         self.btn_fechar = QPushButton("Fechar", self)
         self.btn_fechar.clicked.connect(self.fechar_janela)
         self.btn_fechar.setFixedWidth(110)
+
+        self.calendar = QCalendarWidget(self)
+        self.calendar.setFixedSize(350, 200)
+        self.calendar.setGridVisible(True)
+        self.calendar.hide()
+        self.calendar.clicked.connect(self.date_selected)
+
+        self.tree.cellDoubleClicked.connect(self.cell_clicked_open_calendar)
+        self.selected_row = None
+        self.selected_column = None
+        self.tree.installEventFilter(self)
+        self.installEventFilter(self)
 
         layout = QVBoxLayout()
         layout_title = QHBoxLayout()
@@ -286,6 +322,7 @@ class QpClosedApp(QWidget):
         self.layout_buttons.addWidget(self.btn_qps)
         self.layout_buttons.addWidget(self.btn_qps_finalizadas)
         self.layout_buttons.addWidget(self.btn_qps_abertas)
+        self.layout_buttons.addWidget(self.btn_atualizar_tabela)
         self.layout_buttons.addWidget(self.btn_exportar_excel)
         self.layout_buttons.addWidget(self.btn_limpar)
         self.layout_buttons.addWidget(self.btn_fechar)
@@ -303,17 +340,21 @@ class QpClosedApp(QWidget):
         layout.addLayout(self.layout_footer_label)
         self.setLayout(layout)
 
-        self.calendar = QCalendarWidget(self)
-        self.calendar.setFixedSize(350, 200)
-        self.calendar.setGridVisible(True)
-        self.calendar.hide()
-        self.calendar.clicked.connect(self.date_selected)
+    def atualizar_tabela(self):
+        exibir_mensagem("Atualização em andamento",
+                        "A atualização está em andamento e demorará cerca de 5 minutos.",
+                        "info")
+        self.btn_atualizar_tabela.setEnabled(False)
+        self.update_thread = UpdateTableThread()
+        self.update_thread.update_complete.connect(self.on_update_complete)
+        self.update_thread.start()
 
-        self.tree.cellDoubleClicked.connect(self.cell_clicked_open_calendar)
-        self.selected_row = None
-        self.selected_column = None
-        self.tree.installEventFilter(self)
-        self.installEventFilter(self)
+    def on_update_complete(self, success, message):
+        self.btn_atualizar_tabela.setEnabled(True)
+        if success:
+            exibir_mensagem("Atualização concluída", message, "info")
+        else:
+            exibir_mensagem("Erro na atualização", message, "error")
         
     def exportar_excel(self):
         desktop_path = os.path.join(os.path.expanduser("~"), 'Desktop')
@@ -379,6 +420,7 @@ class QpClosedApp(QWidget):
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
         self.label_line_number.hide()
+        self.btn_atualizar_tabela.hide()
 
     def abrir_nova_janela(self):
         if not self.nova_janela or not self.nova_janela.isVisible():
@@ -425,9 +467,10 @@ class QpClosedApp(QWidget):
         # Ordenar a tabela pela coluna clicada
         self.tree.sortItems(logical_index, order)
 
-    def controle_campos_formulario(self, status):
+    def controle_ativacao_de_objetos(self, status):
         self.campo_qp.setEnabled(status)
         self.btn_exportar_excel.setEnabled(status)
+        self.btn_atualizar_tabela.setEnabled(status)
 
     def fechar_janela(self):
         self.close()
@@ -489,7 +532,7 @@ class QpClosedApp(QWidget):
 
             else:
                 exibir_mensagem("EUREKA® PCP", 'Nenhuma QP encontrada!', "info")
-                self.controle_campos_formulario(True)
+                self.controle_ativacao_de_objetos(True)
                 return
 
             dataframe = pd.read_sql(query, self.engine)
@@ -533,7 +576,11 @@ class QpClosedApp(QWidget):
                     self.tree.setItem(i, j, item)
 
             self.tree.setSortingEnabled(True)
-            self.controle_campos_formulario(True)
+            self.controle_ativacao_de_objetos(True)
+            if status_qp == 'A':
+                self.btn_atualizar_tabela.hide()
+            else:
+                self.btn_atualizar_tabela.show()
 
         except Exception as ex:
             exibir_mensagem('Erro ao consultar tabela', f'Erro: {str(ex)}', 'error')

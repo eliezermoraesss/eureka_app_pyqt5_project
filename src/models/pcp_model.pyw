@@ -82,7 +82,7 @@ class PcpApp(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("EUREKA® PCP - v2.0")
+        self.setWindowTitle("EUREKA® PCP - Home")
         locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
         self.engine = None
