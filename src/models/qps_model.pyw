@@ -62,7 +62,7 @@ class UpdateTableThread(QThread):
 
     def run(self):
         try:
-            url = "http://localhost:5000/indicators/save?qp=closed"
+            url = "http://192.175.175.41:5000/indicators/save?qp=closed"
             response = requests.post(url)
 
             if response.status_code == 201:
