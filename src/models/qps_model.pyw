@@ -371,9 +371,9 @@ class QpClosedApp(QWidget):
         self.btn_atualizar_qp_aberta.hide()
 
         if tipo_qp == 'closed':
-            url = "http://localhost:5000/indicators/save?qp=closed"
+            url = "http://192.175.175.41:5000/indicators/save?qp=closed"
         elif tipo_qp == 'open':
-            url = "http://localhost:5000/indicators/save?qp=open"
+            url = "http://192.175.175.41:5000/indicators/save?qp=open"
         else:
             exibir_mensagem("Erro", "Tipo de QP não suportado!", "error")
             self.btn_atualizar_qp_concluida.show()
