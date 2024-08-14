@@ -523,10 +523,10 @@ class QpClosedApp(QWidget):
         
         if status_qp == 'A':
             tooltip_map['SALDO (EM DIAS)'] = 'SALDO (EM DIAS) = (PRAZO DE ENTREGA) - (DATA DE HOJE))'
-            tooltip_map['STATUS QP'] = 'ABERTO\nQP localizada na pasta QP ABERTA no Sharepoint)'
+            tooltip_map['STATUS QP'] = 'ABERTO\nQP localizada na pasta QP ABERTA no Sharepoint'
             del tooltip_map['DATA DE ENTREGA']
         elif status_qp == 'F':
-            tooltip_map['STATUS QP'] = 'FINALIZADO\nQP localizada na pasta QP CONCLUÍDA no Sharepoint)'
+            tooltip_map['STATUS QP'] = 'FINALIZADO\nQP localizada na pasta QP CONCLUÍDA no Sharepoint'
 
         # Obtenha os cabeçalhos das colunas do dataframe
         headers = dataframe.columns
