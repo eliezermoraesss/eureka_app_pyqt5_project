@@ -510,6 +510,33 @@ class QpClosedApp(QWidget):
 
     def fechar_janela(self):
         self.close()
+        
+    def configurar_tabela_tooltips(self, dataframe, status_qp):
+        # Mapa de tooltips correspondentes às colunas da consulta SQL
+        tooltip_map = {
+            "STATUS QP": "FINALIZADO\nQP localizada na pasta QP CONCLUÍDA no Sharepoint\n\nABERTO\nQP localizada na pasta QP ABERTA no Sharepoint",
+            "SALDO (EM DIAS)": "1. Se a data de entrega estiver vazia:\nSALDO (EM DIAS) = (PRAZO DE ENTREGA) - (DATA DE HOJE)\n\n2. Se a data de entrega NÃO estiver vazia:\nSALDO (EM DIAS) = (PRAZO DE ENTREGA) - (DATA DE ENTREGA)",
+            "DATA DE EMISSÃO": "Data de abertura da QP\nrealizada pela ENGENHARIA",
+            "PRAZO DE ENTREGA": "Data do prazo de entrega\nindicada na OFERTA enviada pelo COMERCIAL",
+            "DATA DE ENTREGA": "Data do envio do último produto manufaturado\npertencente a QP que indica sua conclusão.\nDeve ser preenchida pelo PCP"
+        }
+        
+        if status_qp == 'A':
+            tooltip_map['SALDO (EM DIAS)'] = 'SALDO (EM DIAS) = (PRAZO DE ENTREGA) - (DATA DE HOJE))'
+            tooltip_map['STATUS QP'] = 'ABERTO\nQP localizada na pasta QP ABERTA no Sharepoint)'
+            del tooltip_map['DATA DE ENTREGA']
+        elif status_qp == 'F':
+            tooltip_map['STATUS QP'] = 'FINALIZADO\nQP localizada na pasta QP CONCLUÍDA no Sharepoint)'
+
+        # Obtenha os cabeçalhos das colunas do dataframe
+        headers = dataframe.columns
+
+        # Adicione os cabeçalhos e os tooltips
+        for i, header in enumerate(headers):
+            item = QTableWidgetItem(header)
+            tooltip = tooltip_map.get(header)
+            item.setToolTip(tooltip)
+            self.tree.setHorizontalHeaderItem(i, item)
 
     def query_consulta_qps(self, status_qp):
         numero_qp = self.campo_qp.text().upper().strip()
@@ -528,7 +555,7 @@ class QpClosedApp(QWidget):
                 dt_open_qp AS "DATA DE EMISSÃO",
                 dt_end_qp AS "PRAZO DE ENTREGA",
                 dt_completed_qp AS "DATA DE ENTREGA",
-                vl_delay AS "DIAS EM ATRASO",
+                vl_delay AS "SALDO (EM DIAS)",
                 status_delivery AS "STATUS ENTREGA"
             FROM 
                 enaplic_management.dbo.tb_qps
@@ -577,6 +604,7 @@ class QpClosedApp(QWidget):
             dataframe[''] = ''
 
             self.configurar_tabela(dataframe)
+            self.configurar_tabela_tooltips(dataframe, status_qp)
             self.tree.setRowCount(0)
 
             # Construir caminhos relativos
