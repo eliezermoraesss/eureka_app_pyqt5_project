@@ -87,7 +87,7 @@ class QpClosedApp(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("EUREKA® PCP - Consulta de QP")
+        self.setWindowTitle("EUREKA® QPS")
         locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
         self.update_thread = None
@@ -97,6 +97,7 @@ class QpClosedApp(QWidget):
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
         self.process = QProcess(self)
+        self.nova_janela = None
 
         self.altura_linha = 30
         self.tamanho_fonte_tabela = 10
@@ -107,7 +108,7 @@ class QpClosedApp(QWidget):
 
         self.setStyleSheet("""
             * {
-                background-color: #373A40;
+                background-color: #222831;
             }
 
             QLabel {
@@ -138,7 +139,7 @@ class QpClosedApp(QWidget):
             }
 
             QPushButton {
-                background-color: #EB5B00;
+                background-color: #00ADB5;
                 color: #EEEEEE;
                 padding: 10px;
                 border: 2px;
@@ -165,11 +166,11 @@ class QpClosedApp(QWidget):
             }
             
             QPushButton#btn_atualizar_qp_concluida {
-                background-color: #180161;
+                background-color: #3F72AF;
             }
             
             QPushButton#btn_atualizar_qp_aberta {
-                background-color: #180161;
+                background-color: #3F72AF;
             }
 
             QPushButton:hover, QPushButton:hover#btn_qps_finalizadas, QPushButton:hover#btn_qps_abertas, 
@@ -182,7 +183,7 @@ class QpClosedApp(QWidget):
 
             QTableWidget {
                 border: 1px solid #000000;
-                background-color: #686D76;
+                background-color: #393E46;
                 padding-left: 10px;
                 margin: 5px 0;
             }
@@ -199,7 +200,7 @@ class QpClosedApp(QWidget):
             }
 
             QTableWidget::item {
-                background-color: #363636;
+                background-color: #393E46;
                 color: #fff;
                 font-weight: bold;
                 padding-right: 8px;
@@ -228,7 +229,7 @@ class QpClosedApp(QWidget):
         self.logo_label.setPixmap(pixmap_logo)
         self.logo_label.setAlignment(Qt.AlignRight)
 
-        self.label_title = QLabel("CONSULTA DE QP", self)
+        self.label_title = QLabel("GESTÃO DE QPS", self)
         self.label_title.setObjectName('label-title')
 
         self.line = QFrame(self)
@@ -261,28 +262,28 @@ class QpClosedApp(QWidget):
         self.campo_qp.setFixedWidth(110)
         self.add_clear_button(self.campo_qp)
 
-        self.btn_qps = QPushButton("Exibir todas QPS", self)
+        self.btn_qps = QPushButton("Exibir todas", self)
         self.btn_qps.clicked.connect(lambda: self.consultar_qps('T'))
         self.btn_qps.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.btn_qps.setObjectName("btn_qps")
 
-        self.btn_qps_finalizadas = QPushButton("QPS concluídas", self)
+        self.btn_qps_finalizadas = QPushButton("Concluídas", self)
         self.btn_qps_finalizadas.clicked.connect(lambda: self.consultar_qps('F'))
         self.btn_qps_finalizadas.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.btn_qps_finalizadas.setObjectName("btn_qps_finalizadas")
 
-        self.btn_qps_abertas = QPushButton("QPS em aberto", self)
+        self.btn_qps_abertas = QPushButton("Em aberto", self)
         self.btn_qps_abertas.clicked.connect(lambda: self.consultar_qps('A'))
         self.btn_qps_abertas.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.btn_qps_abertas.setObjectName("btn_qps_abertas")
 
-        self.btn_atualizar_qp_concluida = QPushButton("Atualizar QPS CONCLUÍDAS", self)
+        self.btn_atualizar_qp_concluida = QPushButton("Atualizar concluídas", self)
         self.btn_atualizar_qp_concluida.clicked.connect(lambda: self.atualizar_tabela('closed'))
         self.btn_atualizar_qp_concluida.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.btn_atualizar_qp_concluida.hide()
         self.btn_atualizar_qp_concluida.setObjectName("btn_atualizar_qp_concluida")
 
-        self.btn_atualizar_qp_aberta = QPushButton("Atualizar QPS EM ABERTO", self)
+        self.btn_atualizar_qp_aberta = QPushButton("Atualizar abertas", self)
         self.btn_atualizar_qp_aberta.clicked.connect(lambda: self.atualizar_tabela('open'))
         self.btn_atualizar_qp_aberta.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.btn_atualizar_qp_aberta.hide()
