@@ -189,7 +189,7 @@ class PcpApp(QWidget):
             }
             
              QPushButton#btn_qps_concluidas {
-                background-color: #E4003A;
+                background-color: #00ADB5;
             }
 
             QPushButton:hover, QPushButton:hover#btn_engenharia, QPushButton:hover#btn_compras, 
