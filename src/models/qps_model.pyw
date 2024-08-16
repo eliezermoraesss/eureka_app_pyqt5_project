@@ -165,7 +165,7 @@ class QpClosedApp(QWidget):
                 color: #021526;
             }
             
-            QPushButton#btn_atualizar_qp_concluida {
+            QPushButton#btn_atualizar_qp {
                 background-color: #3F72AF;
             }
             
@@ -174,11 +174,11 @@ class QpClosedApp(QWidget):
             }
 
             QPushButton:hover, QPushButton:hover#btn_qps_finalizadas, QPushButton:hover#btn_qps_abertas, 
-            QPushButton:hover#btn_qps, QPushButton:hover#btn_atualizar_qp_concluida, 
+            QPushButton:hover#btn_qps, QPushButton:hover#btn_atualizar_qp, 
             QPushButton:hover#btn_atualizar_qp_aberta { background-color: #E84545; color: #fff }
     
             QPushButton:pressed, QPushButton:pressed#btn_qps_finalizadas, QPushButton:pressed#btn_qps_abertas, 
-            QPushButton:pressed#btn_qps, QPushButton:pressed#btn_atualizar_qp_concluida, 
+            QPushButton:pressed#btn_qps, QPushButton:pressed#btn_atualizar_qp, 
             QPushButton:pressed#btn_atualizar_qp_aberta { background-color: #6703c5; color: #fff; }
 
             QTableWidget {
@@ -277,11 +277,11 @@ class QpClosedApp(QWidget):
         self.btn_qps_abertas.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.btn_qps_abertas.setObjectName("btn_qps_abertas")
 
-        self.btn_atualizar_qp_concluida = QPushButton("Atualizar concluídas", self)
-        self.btn_atualizar_qp_concluida.clicked.connect(lambda: self.atualizar_tabela('closed'))
-        self.btn_atualizar_qp_concluida.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-        self.btn_atualizar_qp_concluida.hide()
-        self.btn_atualizar_qp_concluida.setObjectName("btn_atualizar_qp_concluida")
+        self.btn_atualizar_qp = QPushButton("Atualizar", self)
+        self.btn_atualizar_qp.clicked.connect(lambda: self.atualizar_tabela('closed'))
+        self.btn_atualizar_qp.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        self.btn_atualizar_qp.hide()
+        self.btn_atualizar_qp.setObjectName("btn_atualizar_qp")
 
         self.btn_atualizar_qp_aberta = QPushButton("Atualizar abertas", self)
         self.btn_atualizar_qp_aberta.clicked.connect(lambda: self.atualizar_tabela('open'))
@@ -345,8 +345,7 @@ class QpClosedApp(QWidget):
         self.layout_buttons.addWidget(self.btn_qps)
         self.layout_buttons.addWidget(self.btn_qps_finalizadas)
         self.layout_buttons.addWidget(self.btn_qps_abertas)
-        self.layout_buttons.addWidget(self.btn_atualizar_qp_concluida)
-        self.layout_buttons.addWidget(self.btn_atualizar_qp_aberta)
+        self.layout_buttons.addWidget(self.btn_atualizar_qp)
         self.layout_buttons.addWidget(self.btn_exportar_excel)
         self.layout_buttons.addWidget(self.btn_limpar)
         self.layout_buttons.addWidget(self.btn_fechar)
@@ -368,7 +367,7 @@ class QpClosedApp(QWidget):
         exibir_mensagem("Atualização em andamento",
                         "A atualização está em andamento e demorará cerca de 5 minutos.",
                         "info")
-        self.btn_atualizar_qp_concluida.hide()
+        self.btn_atualizar_qp.hide()
         self.btn_atualizar_qp_aberta.hide()
 
         if tipo_qp == 'closed':
@@ -377,7 +376,7 @@ class QpClosedApp(QWidget):
             url = "http://192.175.175.41:5000/indicators/save?qp=open"
         else:
             exibir_mensagem("Erro", "Tipo de QP não suportado!", "error")
-            self.btn_atualizar_qp_concluida.show()
+            self.btn_atualizar_qp.show()
             self.btn_atualizar_qp_aberta.show()
             return
 
@@ -457,7 +456,7 @@ class QpClosedApp(QWidget):
         self.tree.setColumnCount(0)
         self.tree.setRowCount(0)
         self.label_line_number.hide()
-        self.btn_atualizar_qp_concluida.hide()
+        self.btn_atualizar_qp.hide()
         self.btn_atualizar_qp_aberta.hide()
 
     def abrir_nova_janela(self):
@@ -642,15 +641,10 @@ class QpClosedApp(QWidget):
 
             self.tree.setSortingEnabled(True)
             self.controle_ativacao_de_objetos(True)
-            if status_qp == 'A' and not self.status_atualizacao:
-                self.btn_atualizar_qp_concluida.hide()
-                self.btn_atualizar_qp_aberta.show()
-            elif status_qp == 'F' and not self.status_atualizacao:
-                self.btn_atualizar_qp_aberta.hide()
-                self.btn_atualizar_qp_concluida.show()
-            elif status_qp == 'T' and not self.status_atualizacao:
-                self.btn_atualizar_qp_concluida.show()
-                self.btn_atualizar_qp_aberta.show()
+            if not self.status_atualizacao:
+                self.btn_atualizar_qp.show()
+            else:
+                self.btn_atualizar_qp.hide()
 
         except Exception as ex:
             exibir_mensagem('Erro ao consultar tabela', f'Erro: {str(ex)}', 'error')
