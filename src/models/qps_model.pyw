@@ -549,7 +549,7 @@ class QpClosedApp(QWidget):
                 AND des_qp LIKE '{descricao}%'
                 AND {clausulas_contem_descricao}
                 AND status_qp = '{status_qp}'
-                ORDER BY status_qp DESC
+                ORDER BY status_qp ASC
             """
 
         return query if status_qp in ('F', 'A') else query.replace("AND status_qp = 'T'", '')
@@ -559,7 +559,7 @@ class QpClosedApp(QWidget):
         line_number = f"""
             SELECT
                 COUNT(*) AS count
-            FROM ({query.replace("ORDER BY id DESC", "")}) AS results
+            FROM ({query.replace("ORDER BY status_qp ASC", "")}) AS results
         """
 
         conn_str = f'DRIVER={driver};SERVER={server};UID={username};PWD={password}'
