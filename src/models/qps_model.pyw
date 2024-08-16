@@ -549,7 +549,7 @@ class QpClosedApp(QWidget):
                 AND des_qp LIKE '{descricao}%'
                 AND {clausulas_contem_descricao}
                 AND status_qp = '{status_qp}'
-                ORDER BY id DESC
+                ORDER BY status_qp DESC
             """
 
         return query if status_qp in ('F', 'A') else query.replace("AND status_qp = 'T'", '')
