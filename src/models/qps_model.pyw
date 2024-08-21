@@ -362,7 +362,7 @@ class QpClosedApp(QWidget):
         elif tipo_qp == 'open':
             url = "http://192.175.175.41:5000/indicators/save?qp=open"
         else:
-            exibir_mensagem("Erro", "Tipo de QP não suportado!", "error")
+            exibir_mensagem("Erro", "Status de QP não suportado!", "error")
             self.btn_atualizar_qp.show()
             return
 
@@ -373,6 +373,7 @@ class QpClosedApp(QWidget):
 
     def on_update_complete(self, success, message):
         self.status_atualizacao = False
+        self.btn_atualizar_qp.show()
         if success:
             exibir_mensagem("Atualização concluída", message, "info")
         else:

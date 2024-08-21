@@ -715,11 +715,12 @@ class EngenhariaApp(QWidget):
 
     def executar_consulta(self):
         query_consulta = self.query_consulta_tabela_produtos()
-        query_contagem_linhas = numero_linhas_consulta(query_consulta)
 
         if isinstance(query_consulta, bool) and query_consulta:
             self.btn_consultar.setEnabled(True)
             return
+        
+        query_contagem_linhas = numero_linhas_consulta(query_consulta)
 
         self.label_line_number.hide()
         self.controle_campos_formulario(False)
