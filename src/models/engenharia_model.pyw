@@ -280,7 +280,7 @@ class EngenhariaApp(QWidget):
         self.btn_abrir_desenho.setMinimumWidth(100)
 
         self.btn_exportar_excel = QPushButton("Exportar Excel", self)
-        self.btn_exportar_excel.clicked.connect(self.exportar_excel)
+        self.btn_exportar_excel.clicked.connect(lambda: self.exportar_excel(self.tree))
         self.btn_exportar_excel.setMinimumWidth(100)
         self.btn_exportar_excel.setEnabled(False)  # Desativar inicialmente
 
@@ -491,7 +491,7 @@ class EngenhariaApp(QWidget):
         clear_action.triggered.connect(line_edit.clear)
         line_edit.addAction(clear_action, QLineEdit.TrailingPosition)
 
-    def exportar_excel(self):
+    def exportar_excel(self, table=None):
 
         desktop_path = os.path.join(os.path.expanduser("~"), 'Desktop')
 
@@ -502,8 +502,8 @@ class EngenhariaApp(QWidget):
                                                    'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
 
         if file_path:
-            data = self.obter_dados_tabela()
-            column_headers = [self.tree.horizontalHeaderItem(i).text() for i in range(self.tree.columnCount())]
+            data = self.obter_dados_tabela(table)
+            column_headers = [table.horizontalHeaderItem(i).text() for i in range(table.columnCount())]
             df = pd.DataFrame(data, columns=column_headers)
 
             writer = pd.ExcelWriter(file_path, engine='xlsxwriter')
@@ -519,13 +519,13 @@ class EngenhariaApp(QWidget):
 
             os.startfile(file_path)
 
-    def obter_dados_tabela(self):
+    def obter_dados_tabela(self, table):
         # Obter os dados da tabela
         data = []
-        for i in range(self.tree.rowCount()):
+        for i in range(table.rowCount()):
             row_data = []
-            for j in range(self.tree.columnCount()):
-                item = self.tree.item(i, j)
+            for j in range(table.columnCount()):
+                item = table.item(i, j)
                 if item is not None:
                     row_data.append(item.text())
                 else:
@@ -871,17 +871,28 @@ class EngenhariaApp(QWidget):
 
             if codigo not in self.guias_abertas and codigo is not None:
                 select_query_estrutura = f"""
-                    SELECT struct.G1_COMP AS "Código", prod.B1_DESC AS "Descrição", struct.G1_QUANT AS "QTD.", 
-                    struct.G1_XUM AS "UNID.", struct.G1_REVFIM AS "REVISÃO", 
-                    struct.G1_INI AS "INSERIDO EM:"
-                    FROM {database}.dbo.SG1010 struct
-                    INNER JOIN {database}.dbo.SB1010 prod
-                    ON struct.G1_COMP = prod.B1_COD AND prod.D_E_L_E_T_ <> '*'
-                    WHERE G1_COD = '{codigo}' 
-                    AND G1_REVFIM <> 'ZZZ' AND struct.D_E_L_E_T_ <> '*' 
-                    AND G1_REVFIM = (SELECT MAX(G1_REVFIM) FROM {database}.dbo.SG1010 WHERE G1_COD = '{codigo}' 
-                    AND G1_REVFIM <> 'ZZZ' AND D_E_L_E_T_ <> '*')
-                    ORDER BY B1_DESC ASC;
+                    SELECT 
+                        struct.G1_COMP AS "Código", 
+                        prod.B1_DESC AS "Descrição", 
+                        struct.G1_QUANT AS "Qtd..", 
+                        struct.G1_XUM AS "Unid.", 
+                        struct.G1_REVFIM AS "Revisão", 
+                        struct.G1_INI AS "Inserido em:",
+                        prod.B1_MSBLQL AS "Bloqueado?"
+                    FROM 
+                        {database}.dbo.SG1010 struct
+                    INNER JOIN 
+                        {database}.dbo.SB1010 prod
+                    ON 
+                        struct.G1_COMP = prod.B1_COD AND prod.D_E_L_E_T_ <> '*'
+                    WHERE 
+                        G1_COD = '{codigo}' 
+                        AND G1_REVFIM <> 'ZZZ' 
+                        AND struct.D_E_L_E_T_ <> '*' 
+                        AND G1_REVFIM = (SELECT MAX(G1_REVFIM) FROM {database}.dbo.SG1010 WHERE G1_COD = '{codigo}' 
+                        AND G1_REVFIM <> 'ZZZ' AND D_E_L_E_T_ <> '*')
+                    ORDER BY 
+                        B1_DESC ASC;
                 """
 
                 try:
@@ -894,6 +905,7 @@ class EngenhariaApp(QWidget):
                     nova_guia_estrutura = QWidget()
                     layout_nova_guia_estrutura = QVBoxLayout()
                     layout_cabecalho = QHBoxLayout()
+                    layout_buttons = QHBoxLayout()
 
                     tree_estrutura = QTableWidget(nova_guia_estrutura)
 
@@ -928,6 +940,12 @@ class EngenhariaApp(QWidget):
                             elif j == 5:
                                 data_obj = datetime.strptime(value, "%Y%m%d")
                                 valor_formatado = data_obj.strftime("%d/%m/%Y")
+                            elif j == 6:  # Verifica se o valor é da coluna B1_MSBLQL
+                                # Converte o valor 1 para 'Sim' e 2 para 'Não'
+                                if value == '1':
+                                    valor_formatado = 'Sim'
+                                else:
+                                    valor_formatado = 'Não'
                             else:
                                 valor_formatado = str(value).strip()
 
@@ -943,10 +961,18 @@ class EngenhariaApp(QWidget):
 
                     # Ajustar automaticamente a largura da coluna "Descrição"
                     ajustar_largura_coluna_descricao(tree_estrutura)
+                    
+                    btn_exportar_excel_estrutura = QPushButton("Exportar Excel", self)
+                    btn_exportar_excel_estrutura.clicked.connect(lambda: self.exportar_excel(tree_estrutura))
+                    btn_exportar_excel_estrutura.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
 
-                    layout_cabecalho.addWidget(QLabel(f"CONSULTA DE ESTRUTURA\n\n{codigo} - {descricao}"),
+                    layout_cabecalho.addWidget(QLabel(f"🏗️ CONSULTA DE ESTRUTURA \n\n{codigo} - {descricao}"),
                                                alignment=Qt.AlignLeft)
+                    layout_cabecalho.addSpacerItem(QSpacerItem(20, 10, QSizePolicy.Expanding, QSizePolicy.Minimum))
+                    layout_cabecalho.addWidget(btn_exportar_excel_estrutura)
+                    
                     layout_nova_guia_estrutura.addLayout(layout_cabecalho)
+                    # layout_nova_guia_estrutura.addLayout(layout_buttons)
                     layout_nova_guia_estrutura.addWidget(tree_estrutura)
                     nova_guia_estrutura.setLayout(layout_nova_guia_estrutura)
 
@@ -959,6 +985,28 @@ class EngenhariaApp(QWidget):
                             color: #A7A6A6;
                             font-size: 18px;
                             font-weight: bold;
+                        }
+                        
+                        QPushButton {
+                            background-color: #0a79f8;
+                            color: #fff;
+                            padding: 5px 15px;
+                            border: 2px;
+                            border-radius: 8px;
+                            font-size: 11px;
+                            height: 20px;
+                            font-weight: bold;
+                            margin: 10px 5px;
+                        }
+                        
+                        QPushButton:hover {
+                            background-color: #fff;
+                            color: #0a79f8
+                        }
+
+                        QPushButton:pressed {
+                            background-color: #6703c5;
+                            color: #fff;
                         }
 
                         QTableWidget {
