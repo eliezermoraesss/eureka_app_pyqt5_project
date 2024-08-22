@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QAb
     QTableWidgetItem, QPushButton, QSizePolicy, QLabel, QSpacerItem, QHeaderView
 
 from src.app.utils.db_mssql import setup_mssql
+from src.app.utils.utils import ajustar_largura_coluna_descricao
 
 
 def executar_consulta_estrutura(self, table):
@@ -64,13 +65,12 @@ def executar_consulta_estrutura(self, table):
                     nova_guia_estrutura = QWidget()
                     layout_nova_guia_estrutura = QVBoxLayout()
                     layout_cabecalho = QHBoxLayout()
-                    layout_buttons = QHBoxLayout()
 
                     tree_estrutura = QTableWidget(nova_guia_estrutura)
 
                     tree_estrutura.setContextMenuPolicy(Qt.CustomContextMenu)
                     tree_estrutura.customContextMenuRequested.connect(
-                        lambda pos: self.showContextMenu(pos, tree_estrutura))
+                        lambda pos: self.show_context_menu(pos, tree_estrutura))
 
                     tree_estrutura.setColumnCount(len(cursor_estrutura.description))
                     tree_estrutura.setHorizontalHeaderLabels([desc[0] for desc in cursor_estrutura.description])
@@ -206,11 +206,6 @@ def executar_consulta_estrutura(self, table):
                         lambda item: handle_item_change(item, tree_estrutura, codigo))
                     self.guias_abertas.append(codigo)
                     conn_estrutura.close()
-
-
-def ajustar_largura_coluna_descricao(tree_widget):
-    header = tree_widget.horizontalHeader()
-    header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
 
 
 def alterar_quantidade_estrutura(codigo_pai, codigo_filho, quantidade):

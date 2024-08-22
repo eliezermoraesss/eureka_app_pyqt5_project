@@ -1,59 +1,25 @@
+import locale
 import sys
+import time
 
-from PyQt5.QtSql import QSqlDatabase, QSqlQueryModel
+import pyodbc
+from PyQt5.QtCore import Qt, pyqtSignal, QProcess
+from PyQt5.QtGui import QFont, QIcon, QPixmap
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, \
     QTableWidget, \
-    QTableWidgetItem, QHeaderView, QSizePolicy, QSpacerItem, QMessageBox, QFileDialog, QTabWidget, \
-    QItemDelegate, QAbstractItemView, QCheckBox, QMenu, QAction, QComboBox, QStyle, QDialog, QTableView
-from PyQt5.QtGui import QFont, QIcon, QDesktopServices, QColor, QPixmap
-from PyQt5.QtCore import Qt, QUrl, QCoreApplication, pyqtSignal, QProcess
-import pyodbc
-import pyperclip
-import os
-import time
-import pandas as pd
-import ctypes
-from datetime import datetime
-import tkinter as tk
-from tkinter import messagebox
-import locale
+    QTableWidgetItem, QSizePolicy, QSpacerItem, QTabWidget, \
+    QCheckBox, QMenu, QAction, QComboBox, QStyle
 from sqlalchemy import create_engine
 
 from src.app.utils.consultar_estrutura import executar_consulta_estrutura
+from src.app.utils.consultar_onde_usado import executar_consulta_onde_usado
+from src.app.utils.consultar_saldo_estoque import executar_saldo_em_estoque
 from src.app.utils.db_mssql import setup_mssql
+from src.app.utils.utils import *
 
 
 def abrir_tabela_pesos():
     os.startfile(r'\\192.175.175.4\f\INTEGRANTES\ELIEZER\DOCUMENTOS_UTEIS\TABELA_PESO.xlsx')
-
-
-def copiar_linha(item):
-    # Verificar se um item foi clicado
-    if item is not None:
-        valor_campo = item.text()
-        pyperclip.copy(str(valor_campo))
-
-
-def exibir_mensagem(title, message, icon_type):
-    root = tk.Tk()
-    root.withdraw()
-    root.lift()  # Garante que a janela esteja na frente
-    root.title(title)
-    root.attributes('-topmost', True)
-
-    if icon_type == 'info':
-        messagebox.showinfo(title, message)
-    elif icon_type == 'warning':
-        messagebox.showwarning(title, message)
-    elif icon_type == 'error':
-        messagebox.showerror(title, message)
-
-    root.destroy()
-
-
-def ajustar_largura_coluna_descricao(tree_widget):
-    header = tree_widget.horizontalHeader()
-    header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
 
 
 def numero_linhas_consulta(query_consulta):
@@ -196,12 +162,12 @@ class EngenhariaApp(QWidget):
         self.btn_consultar_estrutura.setEnabled(False)
 
         self.btn_onde_e_usado = QPushButton("Onde é usado?", self)
-        self.btn_onde_e_usado.clicked.connect(lambda: self.executar_consulta_onde_usado(self.tree))
+        self.btn_onde_e_usado.clicked.connect(lambda: executar_consulta_onde_usado(self, self.tree))
         self.btn_onde_e_usado.setMinimumWidth(150)
         self.btn_onde_e_usado.setEnabled(False)
 
         self.btn_saldo_estoque = QPushButton("Saldos em Estoque", self)
-        self.btn_saldo_estoque.clicked.connect(lambda: self.executar_saldo_em_estoque(self.tree))
+        self.btn_saldo_estoque.clicked.connect(lambda: executar_saldo_em_estoque(self, self.tree))
         self.btn_saldo_estoque.setMinimumWidth(150)
         self.btn_saldo_estoque.setEnabled(False)
 
@@ -210,15 +176,15 @@ class EngenhariaApp(QWidget):
         self.btn_limpar.setMinimumWidth(100)
 
         self.btn_nova_janela = QPushButton("Nova Janela", self)
-        self.btn_nova_janela.clicked.connect(self.abrir_nova_janela)
+        self.btn_nova_janela.clicked.connect(lambda: abrir_nova_janela(self, EngenhariaApp()))
         self.btn_nova_janela.setMinimumWidth(100)
 
         self.btn_abrir_desenho = QPushButton("Abrir Desenho", self)
-        self.btn_abrir_desenho.clicked.connect(lambda: self.abrir_desenho(self.tree))
+        self.btn_abrir_desenho.clicked.connect(lambda: abrir_desenho(self, self.tree))
         self.btn_abrir_desenho.setMinimumWidth(100)
 
         self.btn_exportar_excel = QPushButton("Exportar Excel", self)
-        self.btn_exportar_excel.clicked.connect(lambda: self.exportar_excel(self.tree))
+        self.btn_exportar_excel.clicked.connect(lambda: exportar_excel(self, self.tree))
         self.btn_exportar_excel.setMinimumWidth(100)
         self.btn_exportar_excel.setEnabled(False)  # Desativar inicialmente
 
@@ -273,7 +239,7 @@ class EngenhariaApp(QWidget):
         self.layout_footer_label.addStretch(1)
         self.layout_footer_label.addWidget(self.label_line_number)
         self.layout_footer_label.addStretch(1)
-        
+
         layout_footer_logo.addWidget(self.logo_label)
 
         layout.addLayout(layout_campos_01)
@@ -429,48 +395,6 @@ class EngenhariaApp(QWidget):
         clear_action.triggered.connect(line_edit.clear)
         line_edit.addAction(clear_action, QLineEdit.TrailingPosition)
 
-    def exportar_excel(self, table=None):
-
-        desktop_path = os.path.join(os.path.expanduser("~"), 'Desktop')
-
-        now = datetime.now()
-        default_filename = f'ENG-report_{now.today().strftime('%Y-%m-%d_%H%M%S')}.xlsx'
-
-        file_path, _ = QFileDialog.getSaveFileName(self, 'Salvar como', os.path.join(desktop_path, default_filename),
-                                                   'Arquivos Excel (*.xlsx);;Todos os arquivos (*)')
-
-        if file_path:
-            data = self.obter_dados_tabela(table)
-            column_headers = [table.horizontalHeaderItem(i).text() for i in range(table.columnCount())]
-            df = pd.DataFrame(data, columns=column_headers)
-
-            writer = pd.ExcelWriter(file_path, engine='xlsxwriter')
-            df.to_excel(writer, sheet_name='Dados', index=False)
-
-            worksheet = writer.sheets['Dados']
-
-            for i, col in enumerate(df.columns):
-                max_len = df[col].astype(str).map(len).max()
-                worksheet.set_column(i, i, max_len + 2)
-
-            writer.close()
-
-            os.startfile(file_path)
-
-    def obter_dados_tabela(self, table):
-        # Obter os dados da tabela
-        data = []
-        for i in range(table.rowCount()):
-            row_data = []
-            for j in range(table.columnCount()):
-                item = table.item(i, j)
-                if item is not None:
-                    row_data.append(item.text())
-                else:
-                    row_data.append("")
-            data.append(row_data)
-        return data
-
     def configurar_tabela(self, dataframe):
         self.tree.setColumnCount(len(dataframe.columns))
         self.tree.setHorizontalHeaderLabels(dataframe.columns)
@@ -484,9 +408,19 @@ class EngenhariaApp(QWidget):
         self.tree.horizontalHeader().sectionClicked.connect(self.ordenar_tabela)
         self.tree.horizontalHeader().setStretchLastSection(True)
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.tree.customContextMenuRequested.connect(lambda pos: self.showContextMenu(pos, self.tree))
+        self.tree.customContextMenuRequested.connect(lambda pos: self.show_context_menu(pos, self.tree))
 
-    def showContextMenu(self, position, table):
+    def ordenar_tabela(self, logical_index):
+        # Obter o índice real da coluna (considerando a ordem de classificação)
+        index = self.tree.horizontalHeader().sortIndicatorOrder()
+
+        # Definir a ordem de classificação
+        order = Qt.AscendingOrder if index == 0 else Qt.DescendingOrder
+
+        # Ordenar a tabela pela coluna clicada
+        self.tree.sortItems(logical_index, order)
+
+    def show_context_menu(self, position, table):
         indexes = table.selectedIndexes()
         if indexes:
             # Obtém o índice do item clicado
@@ -500,19 +434,19 @@ class EngenhariaApp(QWidget):
             menu = QMenu()
 
             context_menu_abrir_desenho = QAction('Abrir desenho', self)
-            context_menu_abrir_desenho.triggered.connect(lambda: self.abrir_desenho(table))
+            context_menu_abrir_desenho.triggered.connect(lambda: abrir_desenho(self, table))
 
             context_menu_consultar_estrutura = QAction('Consultar estrutura', self)
             context_menu_consultar_estrutura.triggered.connect(lambda: executar_consulta_estrutura(self, table))
 
             context_menu_consultar_onde_usado = QAction('Onde é usado?', self)
-            context_menu_consultar_onde_usado.triggered.connect(lambda: self.executar_consulta_onde_usado(table))
+            context_menu_consultar_onde_usado.triggered.connect(lambda: executar_consulta_onde_usado(self, table))
 
             context_menu_saldo_estoque = QAction('Saldo em estoque', self)
-            context_menu_saldo_estoque.triggered.connect(lambda: self.executar_saldo_em_estoque(table))
+            context_menu_saldo_estoque.triggered.connect(lambda: executar_saldo_em_estoque(self, table))
 
             context_menu_nova_janela = QAction('Nova janela', self)
-            context_menu_nova_janela.triggered.connect(lambda: self.abrir_nova_janela())
+            context_menu_nova_janela.triggered.connect(lambda: abrir_nova_janela(self, EngenhariaApp()))
 
             menu.addAction(context_menu_abrir_desenho)
             menu.addAction(context_menu_consultar_estrutura)
@@ -550,16 +484,6 @@ class EngenhariaApp(QWidget):
             tooltip = tooltips.get(header)
             item.setToolTip(tooltip)
             self.tree.setHorizontalHeaderItem(i, item)
-
-    def ordenar_tabela(self, logical_index):
-        # Obter o índice real da coluna (considerando a ordem de classificação)
-        index = self.tree.horizontalHeader().sortIndicatorOrder()
-
-        # Definir a ordem de classificação
-        order = Qt.AscendingOrder if index == 0 else Qt.DescendingOrder
-
-        # Ordenar a tabela pela coluna clicada
-        self.tree.sortItems(logical_index, order)
 
     def limpar_campos(self):
         # Limpar os dados dos campos
@@ -657,7 +581,7 @@ class EngenhariaApp(QWidget):
         if isinstance(query_consulta, bool) and query_consulta:
             self.btn_consultar.setEnabled(True)
             return
-        
+
         query_contagem_linhas = numero_linhas_consulta(query_consulta)
 
         self.label_line_number.hide()
@@ -738,27 +662,6 @@ class EngenhariaApp(QWidget):
                 self.engine = None
             self.interromper_consulta_sql = False
 
-    def abrir_desenho(self, table):
-        item_selecionado = table.currentItem()
-
-        if item_selecionado:
-            codigo = table.item(item_selecionado.row(), 0).text()
-            pdf_path = os.path.join(r"\\192.175.175.4\dados\EMPRESA\PROJETOS\PDF-OFICIAL", f"{codigo}.PDF")
-            pdf_path = os.path.normpath(pdf_path)
-
-            if os.path.exists(pdf_path):
-                QCoreApplication.processEvents()
-                QDesktopServices.openUrl(QUrl.fromLocalFile(pdf_path))
-            else:
-                mensagem = f"Desenho não encontrado!\n\n:-("
-                QMessageBox.information(self, f"{codigo}", mensagem)
-
-    def abrir_nova_janela(self):
-        if not self.nova_janela or not self.nova_janela.isVisible():
-            self.nova_janela = EngenhariaApp()
-            self.nova_janela.setGeometry(self.x() + 50, self.y() + 50, self.width(), self.height())
-            self.nova_janela.show()
-
     def fechar_janela(self):
         self.close()
 
@@ -788,278 +691,6 @@ class EngenhariaApp(QWidget):
 
     def existe_guias_abertas(self):
         return self.tabWidget.count() > 0
-
-    def executar_consulta_onde_usado(self, table):
-        item_selecionado = table.currentItem()
-        codigo, descricao = None, None
-
-        if item_selecionado:
-            header = table.horizontalHeader()
-            codigo_col = None
-            descricao_col = None
-
-            for col in range(header.count()):
-                header_text = table.horizontalHeaderItem(col).text()
-                if header_text == 'Código':
-                    codigo_col = col
-                elif header_text == 'Descrição':
-                    descricao_col = col
-
-            if codigo_col is not None and descricao_col is not None:
-                codigo = table.item(item_selecionado.row(), codigo_col).text()
-                descricao = table.item(item_selecionado.row(), descricao_col).text()
-
-            if codigo not in self.guias_abertas_onde_usado:
-                query_onde_usado = f"""
-                    SELECT 
-                        STRUT.G1_COD AS "Código", 
-                        PROD.B1_DESC "Descrição"
-                    FROM 
-                        {database}.dbo.SG1010 STRUT 
-                    INNER JOIN 
-                        {database}.dbo.SB1010 PROD 
-                    ON 
-                        G1_COD = B1_COD 
-                    WHERE G1_COMP = '{codigo}' 
-                        AND STRUT.G1_REVFIM <> 'ZZZ' 
-                        AND STRUT.D_E_L_E_T_ <> '*'
-                        AND PROD.D_E_L_E_T_ <> '*'
-                    ORDER BY B1_DESC ASC;
-                """
-                self.guias_abertas_onde_usado.append(codigo)
-                try:
-                    conn_estrutura = pyodbc.connect(
-                        f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}')
-
-                    cursor_estrutura = conn_estrutura.cursor()
-                    cursor_estrutura.execute(query_onde_usado)
-
-                    nova_guia_estrutura = QWidget()
-                    layout_nova_guia_estrutura = QVBoxLayout()
-                    layout_cabecalho = QHBoxLayout()
-
-                    tabela_onde_usado = QTableWidget(nova_guia_estrutura)
-
-                    tabela_onde_usado.setContextMenuPolicy(Qt.CustomContextMenu)
-                    tabela_onde_usado.customContextMenuRequested.connect(
-                        lambda pos: self.showContextMenu(pos, tabela_onde_usado))
-
-                    tabela_onde_usado.setColumnCount(len(cursor_estrutura.description))
-                    tabela_onde_usado.setHorizontalHeaderLabels([desc[0] for desc in cursor_estrutura.description])
-
-                    # Tornar a tabela somente leitura
-                    tabela_onde_usado.setEditTriggers(QTableWidget.NoEditTriggers)
-
-                    # Configurar a fonte da tabela
-                    fonte_tabela = QFont("Segoe UI", 8)  # Substitua por sua fonte desejada e tamanho
-                    tabela_onde_usado.setFont(fonte_tabela)
-
-                    # Ajustar a altura das linhas
-                    altura_linha = 22  # Substitua pelo valor desejado
-                    tabela_onde_usado.verticalHeader().setDefaultSectionSize(altura_linha)
-
-                    for i, row in enumerate(cursor_estrutura.fetchall()):
-                        tabela_onde_usado.insertRow(i)
-                        for j, value in enumerate(row):
-                            valor_formatado = str(value).strip()
-
-                            item = QTableWidgetItem(valor_formatado)
-                            tabela_onde_usado.setItem(i, j, item)
-
-                    tabela_onde_usado.setSortingEnabled(True)
-
-                    # Ajustar automaticamente a largura da coluna "Descrição"
-                    ajustar_largura_coluna_descricao(tabela_onde_usado)
-
-                    layout_cabecalho.addWidget(QLabel(f'Onde é usado?\n\n{codigo} - {descricao}'),
-                                               alignment=Qt.AlignLeft)
-                    layout_nova_guia_estrutura.addLayout(layout_cabecalho)
-                    layout_nova_guia_estrutura.addWidget(tabela_onde_usado)
-                    nova_guia_estrutura.setLayout(layout_nova_guia_estrutura)
-
-                    nova_guia_estrutura.setStyleSheet("""                                           
-                        * {
-                            background-color: #262626;
-                        }
-
-                        QLabel {
-                            color: #A7A6A6;
-                            font-size: 18px;
-                            font-weight: bold;
-                        }
-
-                        QTableWidget {
-                            border: 1px solid #000000;
-                        }
-
-                        QTableWidget QHeaderView::section {
-                            background-color: #575a5f;
-                            color: #fff;
-                            padding: 5px;
-                            height: 18px;
-                        }
-
-                        QTableWidget QHeaderView::section:horizontal {
-                            border-top: 1px solid #333;
-                        }
-
-                        QTableWidget::item:selected {
-                            background-color: #0066ff;
-                            color: #fff;
-                            font-weight: bold;
-                        }        
-                    """)
-
-                    if not self.existe_guias_abertas():
-                        # Se não houver guias abertas, adicione a guia ao layout principal
-                        self.layout().addWidget(self.tabWidget)
-                        self.tabWidget.setVisible(True)
-
-                    self.tabWidget.addTab(nova_guia_estrutura, f"Onde é usado? - {codigo}")
-                    tabela_onde_usado.itemDoubleClicked.connect(copiar_linha)
-
-                except pyodbc.Error as ex:
-                    print(f"Falha na consulta de estrutura. Erro: {str(ex)}")
-
-                finally:
-                    self.tabWidget.setCurrentIndex(self.tabWidget.indexOf(nova_guia_estrutura))
-                    conn_estrutura.close()
-
-    def executar_saldo_em_estoque(self, table):
-        item_selecionado = table.currentItem()
-
-        if item_selecionado:
-            codigo = table.item(item_selecionado.row(), 0).text()
-            descricao = table.item(item_selecionado.row(), 1).text()
-
-            if codigo not in self.guias_abertas_saldo:
-                query_saldo = f"""
-                    SELECT 
-                        B2_QATU AS "Saldo Atual",
-                        EST.B2_QATU - EST.B2_QEMP AS "Qtd. Disponível",
-                        B2_QEMP AS "Qtd. Empenhada",
-                        B2_SALPEDI AS "Qtd. Prev. Entrada",
-                        PROD.B1_UM AS "Unid. Med.",
-                        B2_VATU1 AS "Valor Saldo Atual (R$)", 
-                        B2_CM1 AS "Custo Unit. (R$)",
-                        B2_DMOV AS "Dt. Últ. Mov.", 
-                        B2_HMOV AS "Hora Últ. Mov.",
-                        B2_DINVENT AS "Dt. Últ. Inventário"
-                    FROM 
-                        {database}.dbo.SB2010 EST
-                    INNER JOIN
-                        {database}.dbo.SB1010 PROD
-                    ON
-                        PROD.B1_COD = EST.B2_COD 
-                    WHERE 
-                        B2_COD = '{codigo}';
-                """
-                self.guias_abertas_saldo.append(codigo)
-                try:
-                    conn_saldo = pyodbc.connect(
-                        f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}')
-
-                    cursor_saldo_estoque = conn_saldo.cursor()
-                    cursor_saldo_estoque.execute(query_saldo)
-
-                    nova_guia_saldo = QWidget()
-                    layout_nova_guia_saldo = QVBoxLayout()
-                    layout_cabecalho = QHBoxLayout()
-
-                    tabela_saldo_estoque = QTableWidget(nova_guia_saldo)
-
-                    tabela_saldo_estoque.setContextMenuPolicy(Qt.CustomContextMenu)
-                    tabela_saldo_estoque.customContextMenuRequested.connect(
-                        lambda pos: self.showContextMenu(pos, tabela_saldo_estoque))
-
-                    tabela_saldo_estoque.setColumnCount(len(cursor_saldo_estoque.description))
-                    tabela_saldo_estoque.setHorizontalHeaderLabels(
-                        [desc[0] for desc in cursor_saldo_estoque.description])
-
-                    tabela_saldo_estoque.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-
-                    # Tornar a tabela somente leitura
-                    tabela_saldo_estoque.setEditTriggers(QTableWidget.NoEditTriggers)
-
-                    # Configurar a fonte da tabela1
-                    fonte_tabela = QFont("Segoe UI", 10)  # Substitua por sua fonte desejada e tamanho
-                    tabela_saldo_estoque.setFont(fonte_tabela)
-
-                    # Ajustar a altura das linhas
-                    altura_linha = 20  # Substitua pelo valor desejado
-                    tabela_saldo_estoque.verticalHeader().setDefaultSectionSize(altura_linha)
-
-                    for i, row in enumerate(cursor_saldo_estoque.fetchall()):
-                        tabela_saldo_estoque.insertRow(i)
-                        for j, value in enumerate(row):
-
-                            if j in (0, 1, 2, 3, 5, 6):
-                                value = locale.format_string("%.2f", value, grouping=True)
-
-                            elif j in (7, 9) and not value.isspace():
-                                data_obj = datetime.strptime(value, "%Y%m%d")
-                                value = data_obj.strftime("%d/%m/%Y")
-
-                            valor_formatado = str(value).strip()
-                            item = QTableWidgetItem(valor_formatado)
-                            item.setTextAlignment(Qt.AlignCenter)
-                            tabela_saldo_estoque.setItem(i, j, item)
-
-                    tabela_saldo_estoque.setSortingEnabled(True)
-
-                    layout_cabecalho.addWidget(QLabel(f'Saldos em Estoque\n\n{codigo} - {descricao}'),
-                                               alignment=Qt.AlignLeft)
-                    layout_nova_guia_saldo.addLayout(layout_cabecalho)
-                    layout_nova_guia_saldo.addWidget(tabela_saldo_estoque)
-                    nova_guia_saldo.setLayout(layout_nova_guia_saldo)
-
-                    nova_guia_saldo.setStyleSheet("""                                           
-                        * {
-                            background-color: #262626;
-                        }
-
-                        QLabel {
-                            color: #A7A6A6;
-                            font-size: 18px;
-                            font-weight: bold;
-                        }
-
-                        QTableWidget {
-                            border: 1px solid #000000;
-                        }
-
-                        QTableWidget QHeaderView::section {
-                            background-color: #575a5f;
-                            color: #fff;
-                            padding: 5px;
-                            height: 18px;
-                        }
-
-                        QTableWidget QHeaderView::section:horizontal {
-                            border-top: 1px solid #333;
-                        }
-
-                        QTableWidget::item:selected {
-                            background-color: #0066ff;
-                            color: #fff;
-                            font-weight: bold;
-                        }        
-                    """)
-
-                    if not self.existe_guias_abertas():
-                        # Se não houver guias abertas, adicione a guia ao layout principal
-                        self.layout().addWidget(self.tabWidget)
-                        self.tabWidget.setVisible(True)
-
-                    self.tabWidget.addTab(nova_guia_saldo, f"Saldos em Estoque - {codigo}")
-                    tabela_saldo_estoque.itemDoubleClicked.connect(copiar_linha)
-
-                except pyodbc.Error as ex:
-                    print(f"Falha na consulta de estrutura. Erro: {str(ex)}")
-
-                finally:
-                    self.tabWidget.setCurrentIndex(self.tabWidget.indexOf(nova_guia_saldo))
-                    conn_saldo.close()
 
 
 if __name__ == "__main__":
